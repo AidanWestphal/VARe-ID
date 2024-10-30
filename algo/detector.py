@@ -152,10 +152,19 @@ def filtration(predicted_df, original_df, iou_thresh=0.50) :
         keep = False
 
         for org_index, org_row in image_df.iterrows():
-            org_bbox_x0 = org_row["bbox x"]
-            org_bbox_y0 = org_row["bbox y"]
-            org_bbox_x1 = org_row["bbox w"] + org_bbox_x0
-            org_bbox_y1 = org_row["bbox h"] + org_bbox_y0
+            # org_bbox_x0 = org_row["bbox x"]
+            # org_bbox_y0 = org_row["bbox y"]
+            # org_bbox_x1 = org_row["bbox w"] + org_bbox_x0
+            # org_bbox_y1 = org_row["bbox h"] + org_bbox_y0
+
+            # Parse bbox as a list of four elements from original_df
+            org_bbox = ast.literal_eval(org_row["bbox"])
+
+            # Ensure org_bbox is a list of four values
+            if isinstance(org_bbox, list) and len(org_bbox) == 4:
+                org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1 = org_bbox
+            else:
+                raise ValueError(f"Expected bbox to be a list of 4 elements, got {org_bbox}")
 
             org_bbox = [org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1]
 
