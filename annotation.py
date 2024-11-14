@@ -56,11 +56,15 @@ def annotate_image(row, df, output_row, key):
     st.write("Viewpoint (Select all that apply):")
     cols = st.columns(len(labels))
 
-    loaded_checks = [i for i in labels if i in output_row["viewpoint"]]
+    loaded_checks = (
+        [i for i in labels if i in output_row["viewpoint"]]
+        if output_row is not None
+        else None
+    )
 
     for i, label in enumerate(labels):
         is_checked = False
-        if label in loaded_checks:
+        if loaded_checks and label in loaded_checks:
             is_checked = True
 
         if cols[i].checkbox(label, value=is_checked, key=key + label):
@@ -84,7 +88,11 @@ def annotate_image(row, df, output_row, key):
             ia_options,
             horizontal=True,
             key=key + "ia_radio",
-            index=1 if output_row["ia_annotation"] == True else 2,
+            index=(
+                0
+                if output_row is None
+                else (1 if output_row["ia_annotation"] is True else 2)
+            ),
             label_visibility="collapsed",
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -97,7 +105,11 @@ def annotate_image(row, df, output_row, key):
             ca_options,
             horizontal=True,
             key=key + "ca_radio",
-            index=1 if output_row["ca_annotation"] == True else 2,
+            index=(
+                0
+                if output_row is None
+                else (1 if output_row["ca_annotation"] is True else 2)
+            ),
             label_visibility="collapsed",
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -110,7 +122,11 @@ def annotate_image(row, df, output_row, key):
             species_options,
             horizontal=True,
             key=key + "species_radio",
-            index=species_options.index(output_row["species_id"]),
+            index=(
+                species_options.index(output_row["species_id"])
+                if output_row is not None
+                else 0
+            ),
             label_visibility="collapsed",
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -188,10 +204,14 @@ def main():
 
     # Render N annotation blocks
     for i, row in bbox_df.iloc[start:end].iterrows():
+        output_row = (
+            None if len(st.session_state.df) <= i else st.session_state.df.iloc[i]
+        )
+
         st.session_state.df = annotate_image(
             row,
             st.session_state.df,
-            output_row=st.session_state.df.iloc[i],
+            output_row=output_row,
             key=str(page) + "_" + str(i),
         )
 
