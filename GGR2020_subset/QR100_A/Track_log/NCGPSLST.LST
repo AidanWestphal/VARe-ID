@@ -1,0 +1,1740 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CoolpixGpssort 
+xmlns:nc ="http://www.nikon.co.jp/imaging/coolpix/gpssort">
+<header>
+	<version>01.00</version>
+	<creator>NikonCorp.</creator>
+	<modelname>S9900</modelname>
+	<datetime>2019-09-12T17:01:19.000+09:00</datetime>
+	<firmversion>01.03</firmversion>
+</header>
+<gpssort ver="01.00">
+	<filelist>
+		<file>
+			<fileid>6558616</fileid>
+			<wpt>lat=37221664 lng=-68944512</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558617</fileid>
+			<wpt>lat=37221672 lng=-68944528</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558618</fileid>
+			<wpt>lat=37221680 lng=-68944544</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558619</fileid>
+			<wpt>lat=37221668 lng=-68944552</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558620</fileid>
+			<wpt>lat=37221612 lng=-68944560</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558621</fileid>
+			<wpt>lat=37221604 lng=-68944584</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558622</fileid>
+			<wpt>lat=37221644 lng=-68944560</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558623</fileid>
+			<wpt>lat=37221608 lng=-68944608</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558624</fileid>
+			<wpt>lat=37221492 lng=-68944688</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558625</fileid>
+			<wpt>lat=37221600 lng=-68944608</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558626</fileid>
+			<wpt>lat=37221920 lng=-68944344</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558627</fileid>
+			<wpt>lat=37221824 lng=-68944416</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558628</fileid>
+			<wpt>lat=37221772 lng=-68944464</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558629</fileid>
+			<wpt>lat=37221760 lng=-68944488</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558630</fileid>
+			<wpt>lat=37221716 lng=-68944512</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558631</fileid>
+			<wpt>lat=37221676 lng=-68944528</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558632</fileid>
+			<wpt>lat=37221668 lng=-68944576</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558633</fileid>
+			<wpt>lat=37221704 lng=-68944568</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558634</fileid>
+			<wpt>lat=37221712 lng=-68944552</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558635</fileid>
+			<wpt>lat=37221704 lng=-68944616</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558636</fileid>
+			<wpt>lat=37221708 lng=-68944608</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558638</fileid>
+			<wpt>lat=00038120 lng=34069932</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558639</fileid>
+			<wpt>lat=00038159 lng=34069896</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558640</fileid>
+			<wpt>lat=00038160 lng=34069908</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558642</fileid>
+			<wpt>lat=00050932 lng=34027420</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558643</fileid>
+			<wpt>lat=00051147 lng=34027712</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558644</fileid>
+			<wpt>lat=00051083 lng=34027744</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558646</fileid>
+			<wpt>lat=00051330 lng=34027480</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558647</fileid>
+			<wpt>lat=00051322 lng=34027484</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558649</fileid>
+			<wpt>lat=00051651 lng=34027696</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558650</fileid>
+			<wpt>lat=00051613 lng=34027704</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558651</fileid>
+			<wpt>lat=00051617 lng=34027736</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558652</fileid>
+			<wpt>lat=00051631 lng=34027780</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558653</fileid>
+			<wpt>lat=00052608 lng=34028364</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558654</fileid>
+			<wpt>lat=00052614 lng=34028352</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558655</fileid>
+			<wpt>lat=00057878 lng=34028716</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558656</fileid>
+			<wpt>lat=00057896 lng=34028744</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558657</fileid>
+			<wpt>lat=00057861 lng=34028736</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558658</fileid>
+			<wpt>lat=00057789 lng=34028752</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558659</fileid>
+			<wpt>lat=00057618 lng=34028932</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558660</fileid>
+			<wpt>lat=00057658 lng=34028900</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558661</fileid>
+			<wpt>lat=00059288 lng=34028912</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558662</fileid>
+			<wpt>lat=00059297 lng=34028936</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558663</fileid>
+			<wpt>lat=00059299 lng=34028928</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558664</fileid>
+			<wpt>lat=00059300 lng=34028916</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558665</fileid>
+			<wpt>lat=00059300 lng=34028912</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558666</fileid>
+			<wpt>lat=00059303 lng=34028908</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558667</fileid>
+			<wpt>lat=00059299 lng=34028920</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558668</fileid>
+			<wpt>lat=00059294 lng=34028916</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558669</fileid>
+			<wpt>lat=00059290 lng=34028912</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558670</fileid>
+			<wpt>lat=00059291 lng=34028916</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558671</fileid>
+			<wpt>lat=00059290 lng=34028912</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558672</fileid>
+			<wpt>lat=00050903 lng=34050600</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558673</fileid>
+			<wpt>lat=00050848 lng=34050568</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558674</fileid>
+			<wpt>lat=00050860 lng=34050568</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558675</fileid>
+			<wpt>lat=00050851 lng=34050580</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558676</fileid>
+			<wpt>lat=00050848 lng=34050584</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558677</fileid>
+			<wpt>lat=00050848 lng=34050588</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558679</fileid>
+			<wpt>lat=00039252 lng=34030600</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558680</fileid>
+			<wpt>lat=00039881 lng=34030776</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558681</fileid>
+			<wpt>lat=00039895 lng=34030728</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558682</fileid>
+			<wpt>lat=00039905 lng=34030728</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558683</fileid>
+			<wpt>lat=00039904 lng=34030724</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558687</fileid>
+			<wpt>lat=00289068 lng=34014180</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558688</fileid>
+			<wpt>lat=00289068 lng=34014184</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558689</fileid>
+			<wpt>lat=00289066 lng=34014172</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558690</fileid>
+			<wpt>lat=00274674 lng=34011144</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558691</fileid>
+			<wpt>lat=00274672 lng=34011156</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558692</fileid>
+			<wpt>lat=00274661 lng=34011156</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558693</fileid>
+			<wpt>lat=00274632 lng=34011104</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558694</fileid>
+			<wpt>lat=00274631 lng=34011108</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558695</fileid>
+			<wpt>lat=00274621 lng=34011104</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558696</fileid>
+			<wpt>lat=00274623 lng=34011104</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558697</fileid>
+			<wpt>lat=00274628 lng=34011108</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558698</fileid>
+			<wpt>lat=00274628 lng=34011112</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558699</fileid>
+			<wpt>lat=00274626 lng=34011108</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558700</fileid>
+			<wpt>lat=00274623 lng=34011100</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558701</fileid>
+			<wpt>lat=00274626 lng=34011100</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558704</fileid>
+			<wpt>lat=00337385 lng=34027016</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558705</fileid>
+			<wpt>lat=00337346 lng=34027024</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558706</fileid>
+			<wpt>lat=00337845 lng=34027536</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558707</fileid>
+			<wpt>lat=00337809 lng=34027504</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558708</fileid>
+			<wpt>lat=00337773 lng=34027480</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558709</fileid>
+			<wpt>lat=00349815 lng=34028688</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558710</fileid>
+			<wpt>lat=00270775 lng=33982092</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558711</fileid>
+			<wpt>lat=00270745 lng=33982108</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558712</fileid>
+			<wpt>lat=00270734 lng=33982092</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558713</fileid>
+			<wpt>lat=00270740 lng=33982144</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558714</fileid>
+			<wpt>lat=00270731 lng=33982152</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558716</fileid>
+			<wpt>lat=00269255 lng=34005556</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558717</fileid>
+			<wpt>lat=00269256 lng=34005560</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558718</fileid>
+			<wpt>lat=00269424 lng=34005532</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558719</fileid>
+			<wpt>lat=00269379 lng=34005536</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558720</fileid>
+			<wpt>lat=00269445 lng=34005636</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558721</fileid>
+			<wpt>lat=00269121 lng=34005516</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558722</fileid>
+			<wpt>lat=00269172 lng=34005580</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558723</fileid>
+			<wpt>lat=00269204 lng=34005512</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558724</fileid>
+			<wpt>lat=00269207 lng=34005504</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558725</fileid>
+			<wpt>lat=00269258 lng=34005552</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558726</fileid>
+			<wpt>lat=00269244 lng=34005564</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558727</fileid>
+			<wpt>lat=00269261 lng=34005488</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558728</fileid>
+			<wpt>lat=00269376 lng=34005576</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558729</fileid>
+			<wpt>lat=00270138 lng=34005756</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558730</fileid>
+			<wpt>lat=00270159 lng=34005740</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558731</fileid>
+			<wpt>lat=00270161 lng=34005736</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558732</fileid>
+			<wpt>lat=00270170 lng=34005744</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558733</fileid>
+			<wpt>lat=00270179 lng=34005752</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558734</fileid>
+			<wpt>lat=00270161 lng=34005772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558735</fileid>
+			<wpt>lat=00269984 lng=34005776</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558736</fileid>
+			<wpt>lat=00269912 lng=34005724</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558737</fileid>
+			<wpt>lat=00269874 lng=34005696</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558738</fileid>
+			<wpt>lat=00269864 lng=34005688</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558739</fileid>
+			<wpt>lat=00327093 lng=34024500</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558740</fileid>
+			<wpt>lat=00327099 lng=34024512</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558741</fileid>
+			<wpt>lat=00327111 lng=34024508</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558742</fileid>
+			<wpt>lat=00326958 lng=34024568</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558743</fileid>
+			<wpt>lat=00326959 lng=34024572</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558744</fileid>
+			<wpt>lat=00326961 lng=34024576</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558745</fileid>
+			<wpt>lat=00326961 lng=34024576</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558746</fileid>
+			<wpt>lat=00326959 lng=34024552</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558747</fileid>
+			<wpt>lat=00326955 lng=34024564</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558748</fileid>
+			<wpt>lat=00326873 lng=34024588</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558749</fileid>
+			<wpt>lat=00326870 lng=34024592</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558750</fileid>
+			<wpt>lat=00326890 lng=34024608</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558751</fileid>
+			<wpt>lat=00286211 lng=34013972</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558752</fileid>
+			<wpt>lat=00286158 lng=34013996</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558753</fileid>
+			<wpt>lat=00286094 lng=34014028</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558754</fileid>
+			<wpt>lat=00286413 lng=34013748</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558755</fileid>
+			<wpt>lat=00286335 lng=34013780</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558756</fileid>
+			<wpt>lat=00002150 lng=34170084</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558757</fileid>
+			<wpt>lat=00002215 lng=34170080</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558758</fileid>
+			<wpt>lat=00002224 lng=34170076</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558759</fileid>
+			<wpt>lat=00131013 lng=34128756</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558760</fileid>
+			<wpt>lat=00131024 lng=34128756</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558761</fileid>
+			<wpt>lat=00131250 lng=34128956</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558762</fileid>
+			<wpt>lat=00131234 lng=34129160</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558763</fileid>
+			<wpt>lat=00131230 lng=34129176</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558764</fileid>
+			<wpt>lat=00131213 lng=34129272</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558765</fileid>
+			<wpt>lat=00131154 lng=34129348</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558766</fileid>
+			<wpt>lat=00131111 lng=34129404</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558767</fileid>
+			<wpt>lat=00131150 lng=34129404</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558769</fileid>
+			<wpt>lat=00130770 lng=34128744</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558770</fileid>
+			<wpt>lat=00130769 lng=34128744</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558771</fileid>
+			<wpt>lat=00130763 lng=34128748</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558772</fileid>
+			<wpt>lat=00130792 lng=34128580</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558773</fileid>
+			<wpt>lat=00130651 lng=34128504</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558779</fileid>
+			<wpt>lat=00324233 lng=34003396</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558780</fileid>
+			<wpt>lat=00324259 lng=34003376</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558781</fileid>
+			<wpt>lat=00324302 lng=34003392</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558782</fileid>
+			<wpt>lat=00324293 lng=34003360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558783</fileid>
+			<wpt>lat=00324285 lng=34003344</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558784</fileid>
+			<wpt>lat=00321006 lng=33988772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558785</fileid>
+			<wpt>lat=00320944 lng=33988760</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558786</fileid>
+			<wpt>lat=00321003 lng=33988760</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558787</fileid>
+			<wpt>lat=00320952 lng=33988752</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558788</fileid>
+			<wpt>lat=00320990 lng=33988772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558789</fileid>
+			<wpt>lat=00313966 lng=33982828</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558790</fileid>
+			<wpt>lat=00313917 lng=33982772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558791</fileid>
+			<wpt>lat=00313949 lng=33982796</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558792</fileid>
+			<wpt>lat=00313955 lng=33982788</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558793</fileid>
+			<wpt>lat=00313909 lng=33982764</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558794</fileid>
+			<wpt>lat=00313955 lng=33982804</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558795</fileid>
+			<wpt>lat=00313989 lng=33982780</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558796</fileid>
+			<wpt>lat=00313980 lng=33982768</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558797</fileid>
+			<wpt>lat=00313934 lng=33982792</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558798</fileid>
+			<wpt>lat=00313926 lng=33982788</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558799</fileid>
+			<wpt>lat=00313909 lng=33982820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558800</fileid>
+			<wpt>lat=00313925 lng=33982836</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558801</fileid>
+			<wpt>lat=00313926 lng=33982812</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558802</fileid>
+			<wpt>lat=00313942 lng=33982804</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558803</fileid>
+			<wpt>lat=00313943 lng=33982804</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558804</fileid>
+			<wpt>lat=00313943 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558805</fileid>
+			<wpt>lat=00313945 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558806</fileid>
+			<wpt>lat=00313942 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558807</fileid>
+			<wpt>lat=00313920 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558808</fileid>
+			<wpt>lat=00313903 lng=33982816</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558809</fileid>
+			<wpt>lat=00313914 lng=33982820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558810</fileid>
+			<wpt>lat=00313914 lng=33982820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558811</fileid>
+			<wpt>lat=00313914 lng=33982824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558812</fileid>
+			<wpt>lat=00313915 lng=33982820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558813</fileid>
+			<wpt>lat=00313918 lng=33982820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558814</fileid>
+			<wpt>lat=00313918 lng=33982820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558815</fileid>
+			<wpt>lat=00313926 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558816</fileid>
+			<wpt>lat=00313872 lng=33982844</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558817</fileid>
+			<wpt>lat=00313928 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558818</fileid>
+			<wpt>lat=00313897 lng=33982792</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558819</fileid>
+			<wpt>lat=00313900 lng=33982780</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558820</fileid>
+			<wpt>lat=00313903 lng=33982776</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558821</fileid>
+			<wpt>lat=00313900 lng=33982768</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558823</fileid>
+			<wpt>lat=00313922 lng=33982812</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558824</fileid>
+			<wpt>lat=00313922 lng=33982816</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558825</fileid>
+			<wpt>lat=00313915 lng=33982816</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558826</fileid>
+			<wpt>lat=00313908 lng=33982824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558827</fileid>
+			<wpt>lat=00313903 lng=33982832</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558828</fileid>
+			<wpt>lat=00313899 lng=33982832</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558829</fileid>
+			<wpt>lat=00313917 lng=33982824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558830</fileid>
+			<wpt>lat=00313920 lng=33982824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558831</fileid>
+			<wpt>lat=00313946 lng=33982792</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558832</fileid>
+			<wpt>lat=00313931 lng=33982808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558833</fileid>
+			<wpt>lat=00269229 lng=34005696</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558834</fileid>
+			<wpt>lat=00269236 lng=34005668</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558835</fileid>
+			<wpt>lat=00269462 lng=34005496</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558836</fileid>
+			<wpt>lat=00269253 lng=34005656</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558837</fileid>
+			<wpt>lat=00269175 lng=34005672</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558838</fileid>
+			<wpt>lat=00269213 lng=34005664</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558839</fileid>
+			<wpt>lat=00269259 lng=34005612</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624376</fileid>
+			<wpt>lat=00269396 lng=34005824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624377</fileid>
+			<wpt>lat=00269376 lng=34005768</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624378</fileid>
+			<wpt>lat=00269421 lng=34005780</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624379</fileid>
+			<wpt>lat=00269436 lng=34005808</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624380</fileid>
+			<wpt>lat=00269430 lng=34005788</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624381</fileid>
+			<wpt>lat=00269441 lng=34005788</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624382</fileid>
+			<wpt>lat=00269235 lng=34005656</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624383</fileid>
+			<wpt>lat=00269141 lng=34005676</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624384</fileid>
+			<wpt>lat=00269136 lng=34005696</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624385</fileid>
+			<wpt>lat=00269331 lng=34005628</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624386</fileid>
+			<wpt>lat=00269333 lng=34005628</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624387</fileid>
+			<wpt>lat=00273118 lng=33988916</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624388</fileid>
+			<wpt>lat=00273124 lng=33988920</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624389</fileid>
+			<wpt>lat=00273125 lng=33988920</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624390</fileid>
+			<wpt>lat=00273122 lng=33988912</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624391</fileid>
+			<wpt>lat=00273096 lng=33988948</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624392</fileid>
+			<wpt>lat=00273101 lng=33988952</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624393</fileid>
+			<wpt>lat=00273101 lng=33988948</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624397</fileid>
+			<wpt>lat=00002576 lng=34170356</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624398</fileid>
+			<wpt>lat=00002505 lng=34170284</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6624399</fileid>
+			<wpt>lat=00002439 lng=34170148</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558864</fileid>
+			<wpt>lat=00297654 lng=34010504</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558865</fileid>
+			<wpt>lat=00269001 lng=34005372</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558866</fileid>
+			<wpt>lat=00328254 lng=33998256</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558867</fileid>
+			<wpt>lat=00328249 lng=33998256</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558868</fileid>
+			<wpt>lat=00328242 lng=33998356</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558869</fileid>
+			<wpt>lat=00328240 lng=33998364</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558870</fileid>
+			<wpt>lat=00328239 lng=33998360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558871</fileid>
+			<wpt>lat=00328223 lng=33998360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558872</fileid>
+			<wpt>lat=00328222 lng=33998360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558873</fileid>
+			<wpt>lat=00328222 lng=33998360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558874</fileid>
+			<wpt>lat=00328223 lng=33998360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558875</fileid>
+			<wpt>lat=00328223 lng=33998356</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558876</fileid>
+			<wpt>lat=00328223 lng=33998356</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558877</fileid>
+			<wpt>lat=00328223 lng=33998356</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558878</fileid>
+			<wpt>lat=00328220 lng=33998356</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558879</fileid>
+			<wpt>lat=00308186 lng=34012744</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558880</fileid>
+			<wpt>lat=00308154 lng=34012700</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558881</fileid>
+			<wpt>lat=00308108 lng=34012688</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558882</fileid>
+			<wpt>lat=00308099 lng=34012692</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558883</fileid>
+			<wpt>lat=00308091 lng=34012696</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558884</fileid>
+			<wpt>lat=00308074 lng=34012992</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558885</fileid>
+			<wpt>lat=00308481 lng=34013172</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558886</fileid>
+			<wpt>lat=00308484 lng=34013164</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558887</fileid>
+			<wpt>lat=00308489 lng=34013168</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558888</fileid>
+			<wpt>lat=00308523 lng=34013168</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558889</fileid>
+			<wpt>lat=00308524 lng=34013164</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558890</fileid>
+			<wpt>lat=00324180 lng=34020888</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558891</fileid>
+			<wpt>lat=00324188 lng=34020884</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558892</fileid>
+			<wpt>lat=00324182 lng=34020872</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558893</fileid>
+			<wpt>lat=00324180 lng=34020872</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558894</fileid>
+			<wpt>lat=00324177 lng=34020892</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558895</fileid>
+			<wpt>lat=00324177 lng=34020892</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558896</fileid>
+			<wpt>lat=00322463 lng=34005792</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558897</fileid>
+			<wpt>lat=00322528 lng=34005732</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558898</fileid>
+			<wpt>lat=00322691 lng=34005824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558899</fileid>
+			<wpt>lat=00322678 lng=34005824</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558900</fileid>
+			<wpt>lat=00322672 lng=34005820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558901</fileid>
+			<wpt>lat=00322666 lng=34005816</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558902</fileid>
+			<wpt>lat=00322661 lng=34005816</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558903</fileid>
+			<wpt>lat=00322645 lng=34005804</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558904</fileid>
+			<wpt>lat=00323002 lng=34005820</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558905</fileid>
+			<wpt>lat=00323237 lng=34005876</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558906</fileid>
+			<wpt>lat=00323118 lng=34006252</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558907</fileid>
+			<wpt>lat=00322875 lng=34006664</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558908</fileid>
+			<wpt>lat=00322873 lng=34006924</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558909</fileid>
+			<wpt>lat=00322870 lng=34006928</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558910</fileid>
+			<wpt>lat=00322872 lng=34006928</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558911</fileid>
+			<wpt>lat=00322875 lng=34006928</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558912</fileid>
+			<wpt>lat=00323270 lng=34007220</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558913</fileid>
+			<wpt>lat=00323276 lng=34007228</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558914</fileid>
+			<wpt>lat=00323276 lng=34007232</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558915</fileid>
+			<wpt>lat=00323930 lng=34007140</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558916</fileid>
+			<wpt>lat=00323935 lng=34007140</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558917</fileid>
+			<wpt>lat=00323935 lng=34007148</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558918</fileid>
+			<wpt>lat=00323939 lng=34007148</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558919</fileid>
+			<wpt>lat=00323942 lng=34007148</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558920</fileid>
+			<wpt>lat=00323944 lng=34007144</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558921</fileid>
+			<wpt>lat=00323947 lng=34007144</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558922</fileid>
+			<wpt>lat=00323947 lng=34007144</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558923</fileid>
+			<wpt>lat=00323949 lng=34007148</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558924</fileid>
+			<wpt>lat=00323942 lng=34007152</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558925</fileid>
+			<wpt>lat=00323938 lng=34007144</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558926</fileid>
+			<wpt>lat=00323938 lng=34007140</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558927</fileid>
+			<wpt>lat=00323938 lng=34007136</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558928</fileid>
+			<wpt>lat=00323932 lng=34007132</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558929</fileid>
+			<wpt>lat=00323933 lng=34007136</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558930</fileid>
+			<wpt>lat=00323935 lng=34007136</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558931</fileid>
+			<wpt>lat=00326713 lng=34023768</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558932</fileid>
+			<wpt>lat=00326852 lng=34023772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558933</fileid>
+			<wpt>lat=00326908 lng=34023772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558934</fileid>
+			<wpt>lat=00326910 lng=34023772</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558935</fileid>
+			<wpt>lat=00327296 lng=34023748</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558936</fileid>
+			<wpt>lat=00327345 lng=34023724</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558937</fileid>
+			<wpt>lat=00327346 lng=34023724</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558938</fileid>
+			<wpt>lat=00355894 lng=33973380</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558939</fileid>
+			<wpt>lat=00355908 lng=33973396</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558940</fileid>
+			<wpt>lat=00355936 lng=33973436</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558941</fileid>
+			<wpt>lat=00355939 lng=33973444</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558942</fileid>
+			<wpt>lat=00355939 lng=33973444</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558943</fileid>
+			<wpt>lat=00355925 lng=33973440</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558944</fileid>
+			<wpt>lat=00355913 lng=33973420</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558945</fileid>
+			<wpt>lat=00332195 lng=33979332</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558946</fileid>
+			<wpt>lat=00332186 lng=33979308</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558947</fileid>
+			<wpt>lat=00332191 lng=33979296</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558948</fileid>
+			<wpt>lat=00332203 lng=33979292</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558949</fileid>
+			<wpt>lat=00332214 lng=33979200</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558950</fileid>
+			<wpt>lat=00332197 lng=33979200</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558951</fileid>
+			<wpt>lat=00332162 lng=33979196</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558952</fileid>
+			<wpt>lat=00332185 lng=33979188</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558953</fileid>
+			<wpt>lat=00332225 lng=33979188</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558954</fileid>
+			<wpt>lat=00332258 lng=33979200</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558955</fileid>
+			<wpt>lat=00332284 lng=33979252</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558956</fileid>
+			<wpt>lat=00332286 lng=33979240</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558957</fileid>
+			<wpt>lat=00312980 lng=33981920</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558958</fileid>
+			<wpt>lat=00313003 lng=33981912</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558959</fileid>
+			<wpt>lat=00313005 lng=33981908</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558960</fileid>
+			<wpt>lat=00313005 lng=33981908</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558961</fileid>
+			<wpt>lat=00313006 lng=33981908</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558962</fileid>
+			<wpt>lat=00313008 lng=33981908</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558963</fileid>
+			<wpt>lat=00269049 lng=34005468</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558964</fileid>
+			<wpt>lat=00269236 lng=34005572</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558965</fileid>
+			<wpt>lat=00325870 lng=33999388</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558966</fileid>
+			<wpt>lat=00325873 lng=33999392</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558967</fileid>
+			<wpt>lat=00325884 lng=33999432</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558968</fileid>
+			<wpt>lat=00325638 lng=33999972</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558969</fileid>
+			<wpt>lat=00325644 lng=33999968</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558970</fileid>
+			<wpt>lat=00338499 lng=34026368</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558971</fileid>
+			<wpt>lat=00338501 lng=34026360</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558972</fileid>
+			<wpt>lat=00338494 lng=34026352</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558973</fileid>
+			<wpt>lat=00338984 lng=34027580</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558974</fileid>
+			<wpt>lat=00338988 lng=34027636</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558975</fileid>
+			<wpt>lat=00338991 lng=34027640</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558976</fileid>
+			<wpt>lat=00338994 lng=34027644</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558977</fileid>
+			<wpt>lat=00339003 lng=34027640</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558978</fileid>
+			<wpt>lat=00338949 lng=34027784</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558979</fileid>
+			<wpt>lat=00334191 lng=34002464</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558980</fileid>
+			<wpt>lat=00334192 lng=34002492</wpt>
+			<angle>--</angle>
+		</file>
+		<file>
+			<fileid>6558981</fileid>
+			<wpt>lat=00269422 lng=34005688</wpt>
+			<angle>--</angle>
+		</file>
+	</filelist>
+</gpssort>
+</CoolpixGpssort>

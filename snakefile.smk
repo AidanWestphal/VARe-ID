@@ -40,14 +40,24 @@ rule all:
         si_out_path,
         cac_out_path
 
+# rule import_data:
+#     input:
+#         dir=config["data_dir_in"],
+#         script="import_data.py"
+#     output:
+#         import_out_path
+#     shell:
+#         "python {input.script} {input.dir} {img_data_path} {output}"
+
 rule import_data:
     input:
         dir=config["data_dir_in"],
         script="import_data.py"
     output:
-        import_out_path
+        import_out_path  # Define this variable appropriately
     shell:
-        "python {input.script} {input.dir} {img_data_path} {output}"
+        "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {img_data_path} {output}"
+
 
 rule detector:
     input:
@@ -69,7 +79,7 @@ rule species_identifier:
     
 rule viewpoint_classifier:
     input:
-        file=annots_filtered_path,
+        file=si_out_path,
         script="algo/viewpoint_classifier.py"
     output:
         vc_out_path
