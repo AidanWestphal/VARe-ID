@@ -11,6 +11,7 @@ import warnings
 import subprocess
 import numpy as np
 import ultralytics
+from tqdm import tqdm
 
 ultralytics.checks()
 import pandas as pd
@@ -146,7 +147,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
         x0, y0, x1, y1 = ast.literal_eval(row["bbox"])
         pred_bbox = [x0, y0, x1, y1]
 
-        image_uuid = row["image uuid"]
+        image_uuid = row["image uuid"] + ".jpg"
         image_df = df[df["image uuid"] == image_uuid]
 
         print(f"Filtering annotations: ({index + 1}/{len(pred_df)})", end="")
@@ -156,21 +157,10 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
         keep = False
 
         for org_index, org_row in image_df.iterrows():
-            # org_bbox_x0 = org_row["bbox x"]
-            # org_bbox_y0 = org_row["bbox y"]
-            # org_bbox_x1 = org_row["bbox w"] + org_bbox_x0
-            # org_bbox_y1 = org_row["bbox h"] + org_bbox_y0
-
-            # Parse bbox as a list of four elements from original_df
-            org_bbox = ast.literal_eval(org_row["bbox"])
-
-            # Ensure org_bbox is a list of four values
-            if isinstance(org_bbox, list) and len(org_bbox) == 4:
-                org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1 = org_bbox
-            else:
-                raise ValueError(
-                    f"Expected bbox to be a list of 4 elements, got {org_bbox}"
-                )
+            org_bbox_x0 = org_row["bbox x"]
+            org_bbox_y0 = org_row["bbox y"]
+            org_bbox_x1 = org_row["bbox w"] + org_bbox_x0
+            org_bbox_y1 = org_row["bbox h"] + org_bbox_y0
 
             org_bbox = [org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1]
 
@@ -179,7 +169,8 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
                 keep = True
                 species = org_row["annot species"]
                 ca = org_row["annot census"]
-                image_fname = org_row["image fname"]
+                # image_fname = org_row["image fname"]
+                image_fname = org_row["image uuid"]
                 break
 
         if keep:
@@ -286,7 +277,13 @@ if __name__ == "__main__":
 
     threshold = config["confidence_threshold"]
     print("Running detection...", end="")
-    results = detector(im_path, conf=threshold, verbose=False)
+    results = []
+    chunk_size = 10
+    im_path_chunks = [
+        im_path[i : i + chunk_size] for i in range(0, len(im_path), chunk_size)
+    ]
+    for i in tqdm(im_path_chunks):
+        results.extend(detector(i, conf=threshold, verbose=False))
     print(", done.")
     predictions = yolo_predictions(results, im_path)
 
@@ -301,7 +298,7 @@ if __name__ == "__main__":
 
     base_df = load_annotations_from_csv(annotations_csv_fullpath)
 
-    if base_df:
+    if base_df is not None:
         pred_df = load_annotations_from_csv(annot_csv_path)
 
         filtered_annotations = filtration(pred_df, base_df)
