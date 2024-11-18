@@ -6,7 +6,7 @@ from PIL import Image
 
 IMAGE_DIR = "test_dataset/images"
 DETECTIONS_PATH = "test_dataset/annots/pred_annots_yolov10l.csv"
-OUT_PATH = "annotations.csv"
+OUT_PATH = "annotations_archive_.csv"
 
 # Load the CSV file
 bbox_df = pd.read_csv(DETECTIONS_PATH)
@@ -26,7 +26,7 @@ species_options = [
 
 def annotate_image(row, df, output_row, key):
     """Image annotation block"""
-    image_path = os.path.join(IMAGE_DIR, row["filename"]) + ".jpg"
+    image_path = os.path.join(IMAGE_DIR, row["image uuid"]) + ".jpg"
     img = Image.open(image_path)
     bbox = list(
         map(
