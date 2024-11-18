@@ -1,3 +1,6 @@
+/GGR2020_subset
+/test_dataset
+config.yaml
 weights/yolov10x.pt
 weights/yolov10s.pt
 weights/yolov10n.pt
