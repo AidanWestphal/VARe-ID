@@ -1,7 +1,7 @@
 .DS_Store
 GZCD_Cleaned.csv
-/GGR2020_subset
-/test_dataset
+GGR2020_subset/
+test_dataset/
 config.yaml
 weights/yolov10x.pt
 weights/yolov10s.pt
