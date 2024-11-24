@@ -1,0 +1,34 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job                     count
+--------------------  -------
+all                         1
+ca_classifier               1
+viewpoint_classifier        1
+total                       3
+
+Select jobs to execute...
+
+[Mon Nov 11 20:53:58 2024]
+rule viewpoint_classifier:
+    input: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv, algo/viewpoint_classifier.py
+    output: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+    jobid: 5
+    reason: Missing output files: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+    resources: tmpdir=/var/folders/p3/0zlpsjwn5qg2cs76gk4zyryr0000gn/T
+
+[Mon Nov 11 20:54:01 2024]
+Error in rule viewpoint_classifier:
+    jobid: 5
+    input: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv, algo/viewpoint_classifier.py
+    output: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+    shell:
+        python algo/viewpoint_classifier.py /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/images/ /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/annots/filtered_pred_annots_yolov10l.csv /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/drone_VC_july_18_tf_efficientnet_b4_ns_8.pth.pth /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2024-11-11T205358.196418.snakemake.log

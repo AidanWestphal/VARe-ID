@@ -42,15 +42,49 @@ def clone_pyBioCLIP_from_github(directory, repo_url):
         print("Repository already cloned...")
 
 
+# def install_pyBioCLIP_from_directory(directory):
+#     try:
+#         print(f"Installing package from {directory}...")
+#         subprocess.run([sys.executable, '-m', 'pip', 'install', directory], check=True)
+#         print("Package installed successfully...")
+#     except subprocess.CalledProcessError as e:
+#         print(f"Error installing package from {directory}: {e}")
+#     except Exception as e:
+#         print(f"An unexpected error occurred: {e}")
+
+
+import subprocess
+import sys
+import shutil
+import os
+
+
 def install_pyBioCLIP_from_directory(directory):
     try:
         print(f"Installing package from {directory}...")
         subprocess.run([sys.executable, '-m', 'pip', 'install', directory], check=True)
         print("Package installed successfully...")
+
+        # Define the path to your custom predict.py file
+        custom_predict_path = "/Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/predict.py"
+
+        # Locate the installed package path
+        # import bioclip  # Import to get the package's directory
+        # package_path = os.path.dirname(bioclip.__file__)
+        package_path = "/Users/jaeseok/miniforge3/envs/smk_pipeline/lib/python3.9/site-packages/bioclip"
+
+        # Define the path to the target predict.py file in the installed package
+        target_predict_path = os.path.join(package_path, "predict.py")
+
+        # Copy the custom predict.py file to the installed package directory
+        shutil.copy(custom_predict_path, target_predict_path)
+        print(f"Replaced predict.py with custom file from {custom_predict_path}")
+
     except subprocess.CalledProcessError as e:
         print(f"Error installing package from {directory}: {e}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
 
 
 def get_bioCLIP(url, target_dir):

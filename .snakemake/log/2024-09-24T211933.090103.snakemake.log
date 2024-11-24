@@ -1,0 +1,7 @@
+host: Jaeseokui-MacBookPro.local
+Building DAG of jobs...
+MissingInputException in rule import_data in file /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/snakefile.smk, line 43:
+Missing input files for rule import_data:
+    output: /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/image_data.json
+    affected files:
+        /mnt/c/Users/Julian/Research/Pipeline/data/GGR2020_subset_small

@@ -11,7 +11,7 @@ weight_decay: 1e-6
 num_workers: 1
 accum_iter: 2
 verbose_step: 1
-device: 'cuda:0'
+device: 'cpu'
 label_cols: ['back', 'front', 'left', 'right', 'up']
 species: 'zebra_grevys'
 threshold: 0.5

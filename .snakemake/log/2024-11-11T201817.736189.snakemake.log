@@ -1,0 +1,48 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job                     count
+--------------------  -------
+all                         1
+ca_classifier               1
+species_identifier          1
+viewpoint_classifier        1
+total                       4
+
+Select jobs to execute...
+
+[Mon Nov 11 20:18:17 2024]
+rule species_identifier:
+    input: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/annots/filtered_pred_annots_yolov10l.csv, algo/species_identifier.py
+    output: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv
+    jobid: 1
+    reason: Missing output files: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv
+    resources: tmpdir=/var/folders/p3/0zlpsjwn5qg2cs76gk4zyryr0000gn/T
+
+[Mon Nov 11 20:19:15 2024]
+Finished job 1.
+1 of 4 steps (25%) done
+Select jobs to execute...
+
+[Mon Nov 11 20:19:15 2024]
+rule viewpoint_classifier:
+    input: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv, algo/viewpoint_classifier.py
+    output: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+    jobid: 5
+    reason: Missing output files: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv; Input files updated by another job: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv
+    resources: tmpdir=/var/folders/p3/0zlpsjwn5qg2cs76gk4zyryr0000gn/T
+
+[Mon Nov 11 20:19:19 2024]
+Error in rule viewpoint_classifier:
+    jobid: 5
+    input: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/species_identifier/predictions/filtered_pred_annots_yolov10l_bioCLIP_predictions.csv, algo/viewpoint_classifier.py
+    output: /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+    shell:
+        python algo/viewpoint_classifier.py /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/images/ /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/annots/filtered_pred_annots_yolov10l.csv /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/VC_july_22_tf_efficientnet_b4_ns_5-3.pth /Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/test_dataset/test_dataset/viewpoint_classifier/output_with_viewpoint.csv
+        (one of the commands exited with non-zero exit code; note that snakemake uses bash strict mode!)
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2024-11-11T201817.736189.snakemake.log
