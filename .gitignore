@@ -1,7 +1,9 @@
 GZCD_Cleaned.csv
 GGR2020_subset/
 test_dataset/
-config.yaml
 *__pycache__/
 .snakemake/
+scratch/
+# Mac system
 .DS_Store
+
