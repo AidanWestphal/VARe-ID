@@ -3,5 +3,7 @@ GGR2020_subset/
 test_dataset/
 *__pycache__/
 .snakemake/
-.DS_Store
 scratch/
+# Mac system
+.DS_Store
+

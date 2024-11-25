@@ -49,7 +49,11 @@ snakemake -s snakefile.smk --cores 1
 ```
 python extrapolate_ggr_gps.py /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/image_data.json /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/image_data_complete.json
 ```
+## Tools
+[YOLO](https://github.com/THU-MIG/yolov10.git)
+[BioCLIP](https://github.com/Imageomics/pybioclip)
+## Data Description
+fill in 
 ## Future Tasks
-- Remove dependence of detector on ground truth .csv file.
 - Implement threading for image parameter computation and validity checking if image import is too slow.
 - Set up pipeline within IDEA cluster and perform larger tests.
