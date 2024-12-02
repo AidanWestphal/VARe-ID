@@ -6,10 +6,14 @@ from PIL import Image
 
 IMAGE_DIR = "test_dataset/images"
 DETECTIONS_PATH = "test_dataset/annots/pred_annots_yolov10l.csv"
-OUT_PATH = "annotations_archive_.csv"
+OUT_PATH = "annotation/annotations_lawrence.csv"
 
 # Load the CSV file
-bbox_df = pd.read_csv(DETECTIONS_PATH)
+bbox_df = (
+    pd.read_csv(DETECTIONS_PATH)
+    .sort_values(by=["image uuid", "bbox"])
+    .reset_index(drop=True)
+)
 
 labels = ["Left", "Right", "Up", "Down", "Front", "Back"]
 ia_options = ["Select...", "True", "False"]
@@ -89,9 +93,7 @@ def annotate_image(row, df, output_row, key):
             horizontal=True,
             key=key + "ia_radio",
             index=(
-                0
-                if output_row is None
-                else (1 if output_row["ia_annotation"] is True else 2)
+                0 if output_row is None else (1 if output_row["ia_annotation"] else 2)
             ),
             label_visibility="collapsed",
         )
@@ -106,9 +108,7 @@ def annotate_image(row, df, output_row, key):
             horizontal=True,
             key=key + "ca_radio",
             index=(
-                0
-                if output_row is None
-                else (1 if output_row["ca_annotation"] is True else 2)
+                0 if output_row is None else (1 if output_row["ca_annotation"] else 2)
             ),
             label_visibility="collapsed",
         )
@@ -146,9 +146,9 @@ def annotate_image(row, df, output_row, key):
     )
 
     if st.button("Save", key=key + "button", disabled=save_button_disabled):
-        filename = row["filename"] + ".jpg"
+        filename = row["image uuid"] + ".jpg"
         bbox_str = row["bbox"]
-        mask = (df["filename"] == filename) & (df["bbox"] == bbox_str)
+        mask = (df["image uuid"] == filename) & (df["bbox"] == bbox_str)
         selected_labels_str = ", ".join(selected_labels)
         if mask.any():
             df.loc[mask, "viewpoint"] = selected_labels_str
@@ -170,13 +170,14 @@ def annotate_image(row, df, output_row, key):
 
 def save_annotations(df):
     """Read annotations to file"""
+    df = df.sort_values(by=["image uuid", "bbox"]).reset_index(drop=True)
     df.to_csv(OUT_PATH, index=False)
     st.success("Annotations saved to CSV file.")
 
 
 def main():
     """Streamlit app"""
-    page_size = 10
+    page_size = 20
 
     st.title("Image Annotation Tool")
     page = st.number_input(
@@ -188,12 +189,16 @@ def main():
     if "df" not in st.session_state:
         if os.path.exists(OUT_PATH):
             # Load pre-existing annotation file
-            st.session_state.df = pd.read_csv(OUT_PATH)
+            st.session_state.df = (
+                pd.read_csv(OUT_PATH)
+                .sort_values(by=["image uuid", "bbox"])
+                .reset_index(drop=True)
+            )
         else:
             # Create new annotation file
             st.session_state.df = pd.DataFrame(
                 columns=[
-                    "filename",
+                    "image uuid",
                     "bbox",
                     "viewpoint",
                     "ia_annotation",
@@ -204,6 +209,7 @@ def main():
 
     # Render N annotation blocks
     for i, row in bbox_df.iloc[start:end].iterrows():
+
         output_row = (
             None if len(st.session_state.df) <= i else st.session_state.df.iloc[i]
         )
