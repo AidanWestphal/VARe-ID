@@ -173,52 +173,6 @@ def postprerocess_dataframe(df):
     return df
 
 
-def plot_confusion_matrix(prediction_df, labels):
-
-    true_labels = prediction_df["species_true_simple"]
-    pred_labels = prediction_df["species_pred_simple"]
-
-    conf_matrix = confusion_matrix(
-        true_labels, pred_labels, labels=true_labels.unique()
-    )
-    conf_matrix_df = pd.DataFrame(
-        conf_matrix, index=true_labels.unique(), columns=true_labels.unique()
-    )
-
-    accuracy = accuracy_score(true_labels, pred_labels)
-    precision = precision_score(true_labels, pred_labels, average="weighted")
-    recall = recall_score(true_labels, pred_labels, average="weighted")
-    f1 = f1_score(true_labels, pred_labels, average="weighted")
-
-    class_accuracy = {}
-    classes = true_labels.unique()
-    for ix in classes:
-        correct = conf_matrix_df.loc[ix, ix]
-        total = np.sum(conf_matrix_df.loc[ix, :])
-        class_accuracy[ix] = correct / total
-
-    print("PERFORMANCE SUMMARY")
-    print("=" * 40)
-    print(f"Accuracy  : {accuracy:.2f}")
-    print(f"Precision : {precision:.2f}")
-    print(f"Recall    : {recall:.2f}")
-    print(f"F-1 Score : {f1:.2f}")
-
-    print("-" * 40)
-    print("\nClass-wise Accuracy:")
-    print("-" * 40)
-    for ix in classes:
-        print(f"Accuracy of {labels[ix]:<20}: {class_accuracy[ix]:.2f}")
-
-    print("\n\nPlotting Confusion Matrix ...")
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(conf_matrix_df, annot=True, fmt="d", cmap="Blues")
-    plt.xlabel("Predicted Labels")
-    plt.ylabel("True Labels")
-    plt.title("Confusion Matrix")
-    plt.show()
-
-
 if __name__ == "__main__":
 
     # Loading Configuration File ...
@@ -280,10 +234,6 @@ if __name__ == "__main__":
     print("Post-Processing ...")
     df = postprerocess_dataframe(df)
     print("Post-Processing Completed ...")
-
-    print("Showing Results and Plotting Confusion Matrix ...")
-    plot_confusion_matrix(df, labels)
-    print("Confusion Matrix Plotted ...")
 
     prediction_dir = os.path.dirname(args.out_csv_path)
     shutil.rmtree(prediction_dir, ignore_errors=True)
