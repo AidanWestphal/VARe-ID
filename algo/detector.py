@@ -166,6 +166,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
                 keep = True
                 species = org_row["annot species"]
                 ca = org_row["annot census"]
+                viewpoint = org_row["viewpoint"]
                 # image_fname = org_row["image fname"]
                 image_fname = org_row["image uuid"]
                 break
@@ -179,6 +180,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
             annotation["bbox pred y"] = y0
             annotation["bbox pred w"] = x1 - x0
             annotation["bbox pred h"] = y1 - y0
+            annotation["viewpoint"] = viewpoint
             annotation["annot census"] = ca
             annotation["image uuid"] = image_uuid
             annotation["image fname"] = image_fname
@@ -202,6 +204,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
             "bbox y": annotation["bbox pred y"],
             "bbox w": annotation["bbox pred w"],
             "bbox h": annotation["bbox pred h"],
+            "viewpoint gt": annotation["viewpoint"],
             "image fname": annotation["image fname"],
         }
         for annotation in filtered_annotations
