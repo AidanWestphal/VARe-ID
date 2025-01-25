@@ -1,4 +1,4 @@
-bioclip_dirname : BioCLIP/
+bioclip_dirname: BioCLIP/
 
 org_predict_file: src/bioclip/predict.py
 new_predict_file: algo/predict.py
@@ -8,6 +8,6 @@ custom_labels:
   - "plains zebra"
   - "neither"
 
-github_bioclip_url : "https://github.com/Imageomics/pybioclip"
+github_bioclip_url: "https://github.com/Imageomics/pybioclip"
 
-confidence_threshold : 0.75
+confidence_threshold: 0.75

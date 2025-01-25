@@ -15,3 +15,5 @@ device: "cpu"
 label_cols: ["back", "front", "left", "right", "up"]
 species: "zebra_grevys"
 threshold: 0.5
+filtered_classes: [0, 1]
+filter_by: "gt" # "pred"
