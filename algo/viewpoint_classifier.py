@@ -188,28 +188,34 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     original_csv = pd.read_csv(args.in_csv_path)
+
+    print(original_csv.columns)
+    # Remove rows that are not the correct species
+    filtered_csv = original_csv[
+        original_csv["species_true_simple"].isin(config["filtered_classes"])
+    ]
     # Append image_dir to the 'image fname' column
-    original_csv["path"] = original_csv["image fname"].apply(
+    filtered_csv["path"] = filtered_csv["image fname"].apply(
         lambda x: os.path.join(args.image_dir, x)
     )
     # Create a single 'bbox' column from the four bbox columns
-    original_csv["bbox"] = list(
+    filtered_csv["bbox"] = list(
         zip(
-            original_csv["bbox x"],
-            original_csv["bbox y"],
-            original_csv["bbox w"],
-            original_csv["bbox h"],
+            filtered_csv["bbox x"],
+            filtered_csv["bbox y"],
+            filtered_csv["bbox w"],
+            filtered_csv["bbox h"],
         )
     )
 
     # Split the original dataframe into two based on the filtering criteria
-    filtered_test = original_csv[
-        (original_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
-        & (original_csv["annot species"] == config["species"])
+    filtered_test = filtered_csv[
+        (filtered_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
+        & (filtered_csv["annot species"] == config["species"])
     ].reset_index(drop=True)
-    other_test = original_csv[
-        ~(original_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
-        | (original_csv["annot species"] != config["species"])
+    other_test = filtered_csv[
+        ~(filtered_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
+        | (filtered_csv["annot species"] != config["species"])
     ].reset_index(drop=True)
     # Add a 'predicted_viewpoint' column filled with NaNs to the other_test dataframe
     other_test["predicted_viewpoint"] = np.nan

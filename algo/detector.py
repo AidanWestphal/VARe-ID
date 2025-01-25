@@ -63,7 +63,6 @@ def select_model(yolo_model, config, model_dir):
 def yolo_predictions(results, images):
     annotations = []
     for i, result in enumerate(results):
-
         print(f"Formatting annotations for images: ({i + 1}/{len(results)})", end="")
         if i < len(results) - 1:
             print("\r", end="")
@@ -72,13 +71,15 @@ def yolo_predictions(results, images):
         image_uuid, _ = os.path.splitext(image_filename)
 
         bboxes = result.boxes
+
+        # Check if any detection in the image is a person (class 0)
+        if any(box.cls.item() == 0 for box in bboxes):
+            # Skip this entire image
+            continue
+
+        # Process the image only if no person was detected
         for box in bboxes:
-
             class_label = box.cls.item()
-            # Skip if the detected class is "person" (class label 0)
-            if class_label == 0:
-                continue
-
             annot_uuid = str(uuid.uuid4())
             coordinates = box.xyxy
             conf_scores = box.conf.item()

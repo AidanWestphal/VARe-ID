@@ -84,7 +84,7 @@ rule viewpoint_classifier:
     output:
         vc_out_path
     shell:
-        "python {input.script} {image_dir} {annots_filtered_path} {vc_model_checkpoint} {output}"
+        "python {input.script} {image_dir} {input.file} {vc_model_checkpoint} {output}"
 
 rule ca_classifier:
     input:
