@@ -74,7 +74,7 @@ def install_pyBioCLIP_from_directory(directory):
         # Locate the installed package path
         # import bioclip  # Import to get the package's directory
         # package_path = os.path.dirname(bioclip.__file__)
-        package_path = "/home/lawre/mambaforge/envs/smk_pipeline/lib/python3.11/site-packages/bioclip"
+        package_path = "/Users/jaeseok/miniforge3/envs/smk_pipeline/lib/python3.9/site-packages/bioclip"
 
         # Define the path to the target predict.py file in the installed package
         target_predict_path = os.path.join(package_path, "predict.py")
@@ -116,10 +116,10 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
 
     for index, row in df.iterrows():
 
-        x0, y0, x1, y1 = ast.literal_eval(row["bbox pred"])
+        x0, y0, x1, y1 = ast.literal_eval(row["bbox"])
         image_filename = row["image uuid"]
 
-        image_filepath = os.path.join(image_dir, image_filename)
+        image_filepath = os.path.join(image_dir, f"{image_filename}.jpg")
         original_image = Image.open(image_filepath)
         cropped_image = original_image.crop((x0, y0, x1, y1))
 
@@ -160,10 +160,11 @@ def simplify_species(species_name, category_map):
 
 def postprerocess_dataframe(df):
 
-    category_map_true = {"zebra_grevys": 0, "zebra_plains": 1, "neither": 2}
-    df["species_true_simple"] = df["annot species"].apply(
-        lambda x: simplify_species(x, category_map_true)
-    )
+    # this is only when dectection has filter (ground truth) 
+    # category_map_true = {"zebra_grevys": 0, "zebra_plains": 1, "neither": 2}
+    # df["species_true_simple"] = df["annot species"].apply(
+    #     lambda x: simplify_species(x, category_map_true)
+    # )
 
     category_map_pred = {"grevy's zebra": 0, "plains zebra": 1, "neither": 2}
     df["species_pred_simple"] = df["species_prediction"].apply(

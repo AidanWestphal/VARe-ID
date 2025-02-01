@@ -13,7 +13,7 @@ accum_iter: 2
 verbose_step: 1
 device: "cpu"
 label_cols: ["back", "front", "left", "right", "up"]
-species: "zebra_grevys"
+species: "grevy's zebra"
 threshold: 0.5
 filtered_classes: [0, 1]
 filter_by: "gt" # "pred"

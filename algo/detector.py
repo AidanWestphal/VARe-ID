@@ -317,3 +317,13 @@ if __name__ == "__main__":
         save_annotations_to_csv(filtered_annotations, filtered_annot_csv_path)
     else:
         print("No ground truth annotations detected. Skipped filtering.")
+        non_filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
+        non_filtered_pred_csv_name = args.annots_filtered_csv_filename + ".csv"
+
+        non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
+        print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
+        save_annotations_to_json(predictions, non_filtered_annot_json_path)
+
+        non_filtered_annot_csv_path = os.path.join(annots, non_filtered_pred_csv_name)
+        print("Saving annotations to CSV:", non_filtered_annot_csv_path)
+        save_annotations_to_csv(predictions, non_filtered_annot_csv_path)
