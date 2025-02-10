@@ -60,44 +60,42 @@ def select_model(yolo_model, config, model_dir):
     return model
 
 
-def yolo_predictions(results, images):
+def yolo_predictions(result_gen, num_images):
+
     annotations = []
-    for i, result in enumerate(results):
-        print(f"Formatting annotations for images: ({i + 1}/{len(results)})", end="")
-        if i < len(results) - 1:
-            print("\r", end="")
+    with tqdm(result_gen,total=num_images,desc="Writing annotations...") as pbar:
+        for result in pbar:
+            image_filename = os.path.basename(result.path)
+            image_uuid, _ = os.path.splitext(image_filename)
 
-        image_filename = os.path.basename(result.path)
-        image_uuid, _ = os.path.splitext(image_filename)
+            bboxes = result.boxes
 
-        bboxes = result.boxes
+            # Check if any detection in the image is a person (class 0)
+            if any(box.cls.item() == 0 for box in bboxes):
+                # Skip this entire image
+                continue
 
-        # Check if any detection in the image is a person (class 0)
-        if any(box.cls.item() == 0 for box in bboxes):
-            # Skip this entire image
-            continue
+            # Process the image only if no person was detected
+            for box in bboxes:
+                class_label = box.cls.item()
+                annot_uuid = str(uuid.uuid4())
+                coordinates = box.xyxy
+                conf_scores = box.conf.item()
 
-        # Process the image only if no person was detected
-        for box in bboxes:
-            class_label = box.cls.item()
-            annot_uuid = str(uuid.uuid4())
-            coordinates = box.xyxy
-            conf_scores = box.conf.item()
+                x1 = coordinates[0][0].item()
+                y1 = coordinates[0][1].item()
+                x2 = coordinates[0][2].item()
+                y2 = coordinates[0][3].item()
 
-            x1 = coordinates[0][0].item()
-            y1 = coordinates[0][1].item()
-            x2 = coordinates[0][2].item()
-            y2 = coordinates[0][3].item()
-
-            bbox_values = [x1, y1, x2, y2]
-            annotation = {
-                "uuid": annot_uuid,
-                "image uuid": image_uuid,
-                "bbox": bbox_values,
-                "bbox pred score": conf_scores,
-                "category id": int(class_label),
-            }
-            annotations.append(annotation)
+                bbox_values = [x1, y1, x2, y2]
+                annotation = {
+                    "uuid": annot_uuid,
+                    "image uuid": image_uuid,
+                    "bbox": bbox_values,
+                    "bbox pred score": conf_scores,
+                    "category id": int(class_label),
+                }
+                annotations.append(annotation)
 
     annotations_dict = {"annotations": annotations}
     print(", done.")
@@ -257,8 +255,7 @@ if __name__ == "__main__":
     exp_dir = Path(args.exp_dir)
     images = Path(args.image_dir)
     annots = Path(args.annot_dir)
-    im_list = os.listdir(images)
-    im_path = [os.path.join(images, img) for img in im_list]
+    num_images = len(os.listdir(images))
 
     os.makedirs(exp_dir, exist_ok=True)
     shutil.rmtree(annots, ignore_errors=True)
@@ -277,17 +274,11 @@ if __name__ == "__main__":
     detector = select_model(yolo_model, config, model_dir)
 
     threshold = config["confidence_threshold"]
-    print("Running detection...", end="")
-    results = []
-    chunk_size = 10
-    im_path_chunks = [
-        im_path[i : i + chunk_size] for i in range(0, len(im_path), chunk_size)
-    ]
-    for i in tqdm(im_path_chunks):
-        results.extend(detector(i, conf=threshold, verbose=False))
-    print(", done.")
-    predictions = yolo_predictions(results, im_path)
-
+    print("Running detection...",end="")
+    result_gen = detector(images,conf=threshold,stream=True,verbose=False)
+    print(" done.")
+    predictions = yolo_predictions(result_gen,num_images)
+    
     pred_json_name = args.annots_csv_filename + ".json"
     pred_csv_name = args.annots_csv_filename + ".csv"
 
