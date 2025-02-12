@@ -13,6 +13,7 @@ import pandas as pd
 import seaborn as sns
 from pathlib import Path
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 from PIL import Image
@@ -45,44 +46,11 @@ def clone_pyBioCLIP_from_github(directory, repo_url):
         print("Repository already cloned...")
 
 
-# def install_pyBioCLIP_from_directory(directory):
-#     try:
-#         print(f"Installing package from {directory}...")
-#         subprocess.run([sys.executable, '-m', 'pip', 'install', directory], check=True)
-#         print("Package installed successfully...")
-#     except subprocess.CalledProcessError as e:
-#         print(f"Error installing package from {directory}: {e}")
-#     except Exception as e:
-#         print(f"An unexpected error occurred: {e}")
-
-
-import subprocess
-import sys
-import shutil
-import os
-
-
 def install_pyBioCLIP_from_directory(directory):
     try:
         print(f"Installing package from {directory}...")
-        subprocess.run([sys.executable, "-m", "pip", "install", directory], check=True)
+        subprocess.run([sys.executable, '-m', 'pip', 'install', directory], check=True)
         print("Package installed successfully...")
-
-        # Define the path to your custom predict.py file
-        custom_predict_path = "predict.py"
-
-        # Locate the installed package path
-        # import bioclip  # Import to get the package's directory
-        # package_path = os.path.dirname(bioclip.__file__)
-        package_path = "/Users/jaeseok/miniforge3/envs/smk_pipeline/lib/python3.9/site-packages/bioclip"
-
-        # Define the path to the target predict.py file in the installed package
-        target_predict_path = os.path.join(package_path, "predict.py")
-
-        # Copy the custom predict.py file to the installed package directory
-        shutil.copy(custom_predict_path, target_predict_path)
-        print(f"Replaced predict.py with custom file from {custom_predict_path}")
-
     except subprocess.CalledProcessError as e:
         print(f"Error installing package from {directory}: {e}")
     except Exception as e:
@@ -102,19 +70,12 @@ def get_bioCLIP(url, target_dir):
         print(e.stderr.decode("utf-8"))
 
 
-def cache_BioCLIP(previous_file_path, updated_file_path):
-    assert os.path.exists(previous_file_path) == True, f"ERROR!"
-    assert os.path.exists(updated_file_path) == True, f"ERROR!"
-    os.remove(previous_file_path)
-    shutil.copy(updated_file_path, os.path.dirname(previous_file_path))
-
-
 def run_pyBioclip(bioclip_classifier, image_dir, df):
 
     predicted_labels = []
     predicted_scores = []
 
-    for index, row in df.iterrows():
+    for index, row in tqdm(df.iterrows()):
 
         x0, y0, x1, y1 = ast.literal_eval(row["bbox"])
         image_filename = row["image uuid"]
@@ -219,12 +180,6 @@ if __name__ == "__main__":
     from bioclip import CustomLabelsClassifier
 
     print("pyBioCLIP Installation Completed ....")
-
-    print("Caching pyBioCLIP ...")
-    prev_predict_filepath = os.path.join(bioCLIP_dir, config["org_predict_file"])
-    new_predict_filepath = Path(config["new_predict_file"])
-    cache_BioCLIP(prev_predict_filepath, new_predict_filepath)
-    print("Caching Completed ...")
 
     print("Running pyBioCLIP ...")
     labels = config["custom_labels"]

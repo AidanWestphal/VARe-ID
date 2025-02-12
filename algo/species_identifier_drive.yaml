@@ -8,6 +8,6 @@ custom_labels:
   - "plains zebra"
   - "neither"
 
-github_bioclip_url: "https://github.com/Imageomics/pybioclip"
+github_bioclip_url: "https://github.com/AidanWestphal/pybioclip"
 
 confidence_threshold: 0.75
