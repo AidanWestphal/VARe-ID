@@ -77,12 +77,15 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
 
     for index, row in tqdm(df.iterrows()):
 
-        x0, y0, x1, y1 = ast.literal_eval(row["bbox"])
+        x0 = row["bbox x"]
+        y0 = row["bbox y"]
+        w = row["bbox w"]
+        h = row["bbox h"]
         image_filename = row["image uuid"]
 
         image_filepath = os.path.join(image_dir, f"{image_filename}.jpg")
         original_image = Image.open(image_filepath)
-        cropped_image = original_image.crop((x0, y0, x1, y1))
+        cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
         temp_file.close()

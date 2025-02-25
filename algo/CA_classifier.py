@@ -16,6 +16,7 @@ from torchvision.ops import nms
 import shutil
 import warnings
 import argparse
+import ast
 
 
 class CustomImageDataset(Dataset):
@@ -34,15 +35,11 @@ class CustomImageDataset(Dataset):
         image = Image.open(img_path).convert('RGB')
 
         # Get the bounding box coordinates
-        bbox = [
-            self.img_data.iloc[idx]['bbox x'],
-            self.img_data.iloc[idx]['bbox y'],
-            self.img_data.iloc[idx]['bbox w'],
-            self.img_data.iloc[idx]['bbox h']
-        ]
-
+        bbox = self.img_data.iloc[idx]['bbox_xyxy']
+        bbox = ast.literal_eval(bbox)
+        
         # Crop the image according to bbox
-        image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3])))
+        image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
 
         if self.transform:
             image = self.transform(image)
@@ -96,8 +93,12 @@ def filter_dataframe(df, config):
 
     # Filter conditions
     bbox_condition = df['bbox x'].notna() & df['bbox y'].notna() & df['bbox w'].notna() & df['bbox h'].notna()
-    species_condition = df['annot species'] == config['species']
     viewpoint_condition = df['predicted_viewpoint'].isin(config['viewpoints'])
+    # Special condition - only applies to gt annotated data where the species was correctly identified
+    if 'annot species' in df.keys():
+        species_condition = df['annot species'] == config['species']
+    else:
+        species_condition = True
 
     # Create a mask for rows to be filtered out
     filter_mask = ~(bbox_condition & species_condition & viewpoint_condition)
@@ -118,7 +119,7 @@ def test_new(dataloader, model, device):
     all_softmax_outputs = []
 
     with torch.no_grad():
-        for X in dataloader:
+        for X in dataloader: #
             X = X.to(device)
             pred = model(X)
             pred_softmax = torch.softmax(pred, dim=1)
@@ -130,10 +131,7 @@ def test_new(dataloader, model, device):
 
 def apply_nms(df, iou_threshold):
     df = df.sort_values('softmax_output_1', ascending=False)
-    boxes = df[['bbox x', 'bbox y', 'bbox w', 'bbox h']].values
-    # Convert from (x, y, w, h) to (x1, y1, x2, y2)
-    boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
-    boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
+    boxes = np.array(df['bbox_xyxy'].apply(ast.literal_eval).to_list())
     scores = df['softmax_output_1'].values
     boxes = torch.as_tensor(boxes).float()
     scores = torch.as_tensor(scores).float()
@@ -174,7 +172,7 @@ def main():
         model = load_model(args.model_checkpoint_path, device)
 
     print("Starting testing...")
-    all_softmax_outputs = test_new(dataloader, model, device)
+    all_softmax_outputs = test_new(dataloader, model, device) #
 
     print("Testing completed. Appending softmax outputs to CSV and starting post-processing...")
     filtered_test['softmax_output_0'] = all_softmax_outputs[:, 0]

@@ -87,13 +87,16 @@ def yolo_predictions(result_gen, num_images):
                 x2 = coordinates[0][2].item()
                 y2 = coordinates[0][3].item()
 
-                bbox_values = [x1, y1, x2, y2]
                 annotation = {
                     "uuid": annot_uuid,
                     "image uuid": image_uuid,
-                    "bbox": bbox_values,
+                    "bbox x": x1,
+                    "bbox y": y1,
+                    "bbox w": x2 - x1,
+                    "bbox h": y2 - y1,
                     "bbox pred score": conf_scores,
                     "category id": int(class_label),
+                    "image fname": image_filename,
                 }
                 annotations.append(annotation)
 
@@ -140,11 +143,18 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
 
     for index, row in pred_df.iterrows():
 
-        x0, y0, x1, y1 = ast.literal_eval(row["bbox"])
-        pred_bbox = [x0, y0, x1, y1]
+        x0 = row["bbox x"]
+        y0 = row["bbox y"]
+        w = row["bbox w"]
+        h = row["bbox h"]
+        pred_bbox = [x0, y0, x0 + w, y0 + h]
 
-        image_uuid = row["image uuid"] + ".jpg"
-        image_df = df[df["image uuid"] == image_uuid]
+        image_uuid = row["image uuid"]
+        image_fname = row["image fname"]
+
+        # TODO: RELABEL image uuid TO image fname
+
+        image_df = df[df["image uuid"] == image_fname]
 
         print(f"Filtering annotations: ({index + 1}/{len(pred_df)})", end="")
         if index < len(pred_df) - 1:
@@ -166,8 +176,6 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
                 species = org_row["annot species"]
                 ca = org_row["annot census"]
                 viewpoint = org_row["viewpoint"]
-                # image_fname = org_row["image fname"]
-                image_fname = org_row["image uuid"]
                 break
 
         if keep:
@@ -177,8 +185,8 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
             annotation["bbox pred"] = [int(coord) for coord in pred_bbox]
             annotation["bbox pred x"] = x0
             annotation["bbox pred y"] = y0
-            annotation["bbox pred w"] = x1 - x0
-            annotation["bbox pred h"] = y1 - y0
+            annotation["bbox pred w"] = w
+            annotation["bbox pred h"] = h
             annotation["viewpoint"] = viewpoint
             annotation["annot census"] = ca
             annotation["image uuid"] = image_uuid
