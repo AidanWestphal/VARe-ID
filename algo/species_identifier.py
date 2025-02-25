@@ -49,7 +49,7 @@ def clone_pyBioCLIP_from_github(directory, repo_url):
 def install_pyBioCLIP_from_directory(directory):
     try:
         print(f"Installing package from {directory}...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', directory], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", directory], check=True)
         print("Package installed successfully...")
     except subprocess.CalledProcessError as e:
         print(f"Error installing package from {directory}: {e}")
@@ -124,7 +124,7 @@ def simplify_species(species_name, category_map):
 
 def postprerocess_dataframe(df):
 
-    # this is only when dectection has filter (ground truth) 
+    # this is only when dectection has filter (ground truth)
     # category_map_true = {"zebra_grevys": 0, "zebra_plains": 1, "neither": 2}
     # df["species_true_simple"] = df["annot species"].apply(
     #     lambda x: simplify_species(x, category_map_true)
