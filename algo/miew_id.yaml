@@ -1,0 +1,4 @@
+valid_bs: 4
+num_workers: 1
+device: "cpu"
+img_size: 440

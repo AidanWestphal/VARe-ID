@@ -21,3 +21,7 @@ vc_out_file: "output_with_viewpoint.csv"
 cac_dir: "test_dataset/ca_classifier/"
 cac_model_checkpoint: "test_dataset/best_july_8_cuda_extended_aug_sample_annot_classifier.pth"
 cac_out_file: "final_output_with_softmax_and_census.csv"
+
+mid_dir: "test_dataset/miew_id/"
+mid_model_url: "conservationxlabs/miewid-msv3"
+mid_out_file: "final_output_wth_miewid.csv"

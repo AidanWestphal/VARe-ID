@@ -4,6 +4,8 @@ channels:
 dependencies:
   - snakemake-minimal >=8.4.4
   - python ==3.11
+  - pyzbar >= 0.1.9
+  - albumentations >= 2.0.4
   - pip:
     #  at the time of writing - 7. Feb 24 - pysam on bioconda will require
     #  a lower python version than snakemake, install pysam
@@ -16,7 +18,5 @@ dependencies:
     - six ==1.16.0
     - geopandas ==1.0.1
     - scikit-learn ==1.5.1
-    - albumentations ==1.4.11
     - timm ==1.0.7
-
-# TODO: PYZBAR AND UPDATED VERSION OF ALBUMENTATIONS TO 2.*
+    - transformers ==4.49.0

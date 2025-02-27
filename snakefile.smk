@@ -35,10 +35,15 @@ cac_dir = config["cac_dir"]
 cac_model_checkpoint = config["cac_model_checkpoint"]
 cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
 
+# for miew id embedding generator
+mid_dir = config["mid_dir"]
+mid_model_url = config["mid_model_url"]
+mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
+
 rule all: 
     input:
         si_out_path,
-        cac_out_path
+        mid_out_path
 
 # rule import_data:
 #     input:
@@ -94,3 +99,12 @@ rule ca_classifier:
         cac_out_path
     shell:
         "python {input.script} {image_dir} {input.file} {cac_model_checkpoint} {output}"
+
+rule miew_id:
+    input:
+        file=cac_out_path,
+        script="algo/miew_id.py"
+    output:
+        mid_out_path
+    shell: 
+        "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
