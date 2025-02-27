@@ -3,11 +3,11 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+import json
 
 import torch
 import yaml
 from tqdm import tqdm
-
 
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
@@ -111,14 +111,14 @@ def get_embeddings(loader, model, device):
     all_embeddings = []
 
     with torch.no_grad():
-        for imgs in loader:
-            imgs = imgs.to(device).float()
-            img_embeds = model(imgs)
-            all_embeddings.append(img_embeds.detach().cpu())
-    print(all_embeddings)
+        with tqdm(loader,total=len(loader),desc="Running model...") as pbar:
+            for imgs in pbar:
+                imgs = imgs.to(device).float()
+                img_embeds = model(imgs)
+                all_embeddings.append(img_embeds.detach().cpu())
     all_embeddings = torch.cat(all_embeddings, dim=0).numpy()
 
-    return all_embeddings
+    return all_embeddings    
 
 
 if __name__ == "__main__":
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         help="The url to the hugging face model for miewid embeddings"
     )
     parser.add_argument(
-        "out_csv_path", type=str, help="The full path to the output csv file"
+        "out_path", type=str, help="The full path to the output json file"
     )
     args = parser.parse_args()
 
@@ -177,12 +177,16 @@ if __name__ == "__main__":
         pin_memory=False,
     )
 
-    print("Running model...")
     device = torch.device(config["device"])
     embeddings = get_embeddings(dl, model, device)
 
-    print("Processing the model predictions...")
-    
-    # TODO: SAVE TO JSON
+    print("Building the new annotations...")
+    df['miewid'] = embeddings.tolist()
+    annots = df.to_dict('records')
 
+    print(f"Saving in json format to {args.out_path}...")
+    with open(args.out_path, "w") as f:
+        f.write(json.dumps(annots,indent=4))
+
+    print("Done!")
     
