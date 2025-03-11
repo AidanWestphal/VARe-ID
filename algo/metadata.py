@@ -39,15 +39,17 @@ import os
 from datetime import datetime
 
 # Path to the image file
-image_path = "/Users/jaeseok/Developer/GGR/Imageomics-Species-ReID/GGR2020_subset/QR21_C/Day1/IMG_6461.JPG"
+image_path = "GGR2020_subset/QR21_C/Day1/IMG_6461.JPG"
 
 # Get the creation and modification times from the filesystem
 creation_time = os.path.getctime(image_path)
 modification_time = os.path.getmtime(image_path)
 
 # Convert to human-readable format
-creation_date = datetime.fromtimestamp(creation_time).strftime('%Y/%m/%d %H:%M:%S')
-modification_date = datetime.fromtimestamp(modification_time).strftime('%Y/%m/%d %H:%M:%S')
+creation_date = datetime.fromtimestamp(creation_time).strftime("%Y/%m/%d %H:%M:%S")
+modification_date = datetime.fromtimestamp(modification_time).strftime(
+    "%Y/%m/%d %H:%M:%S"
+)
 
 creation_date, modification_date
 

@@ -80,7 +80,7 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
         x0, y0, x1, y1 = ast.literal_eval(row["bbox pred"])
         image_filename = row["image uuid"]
 
-        image_filepath = os.path.join(image_dir, f"{image_filename}.jpg")
+        image_filepath = os.path.join(image_dir, f"{image_filename}")
         original_image = Image.open(image_filepath)
         cropped_image = original_image.crop((x0, y0, x1, y1))
 

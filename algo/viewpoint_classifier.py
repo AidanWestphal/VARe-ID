@@ -152,6 +152,7 @@ def crop_rect(img, rect):
     img_crop = cv2.getRectSubPix(img_rot, size, center)
     return img_crop, img_rot
 
+
 #
 # def get_chip(row):
 #     # box = ast.literal_eval(row['bbox'])
@@ -164,6 +165,7 @@ def crop_rect(img, rect):
 #     xm = (x1 + x2) // 2
 #     ym = (y1 + y2) // 2
 #     return crop_rect(img, ((xm, ym), (x2 - x1, y2 - y1), theta))[0]
+
 
 def get_chip(row):
     box = row["bbox_xywh"]  # Changed from bbox to bbox_xywh
@@ -213,9 +215,9 @@ if __name__ == "__main__":
     # )
 
     filtered_csv["path"] = filtered_csv["image uuid"].apply(
-        lambda x: os.path.join(args.image_dir, x + ".jpg")
+        lambda x: os.path.join(args.image_dir, x)
     )
-    
+
     # # Create a single 'bbox' column from the four bbox columns
     # filtered_csv["bbox"] = list(
     #     zip(
@@ -229,8 +231,7 @@ if __name__ == "__main__":
     import ast
 
     # First convert string bbox to list
-    filtered_csv['bbox_xyxy'] = filtered_csv['bbox'].apply(ast.literal_eval)
-
+    filtered_csv["bbox_xyxy"] = filtered_csv["bbox pred"].apply(ast.literal_eval)
 
     # Convert xyxy to xywh
     def xyxy_to_xywh(bbox):
@@ -241,8 +242,7 @@ if __name__ == "__main__":
         y = y1
         return [x, y, w, h]
 
-
-    filtered_csv['bbox_xywh'] = filtered_csv['bbox_xyxy'].apply(xyxy_to_xywh)
+    filtered_csv["bbox_xywh"] = filtered_csv["bbox_xyxy"].apply(xyxy_to_xywh)
 
     #
     # # Split the original dataframe into two based on the filtering criteria
@@ -259,17 +259,16 @@ if __name__ == "__main__":
 
     # Split based on bbox_xywh and species criteria
     filtered_test = filtered_csv[
-        filtered_csv['bbox_xywh'].notna() &
-        (filtered_csv["species_prediction"] == config["species"])
-        ].reset_index(drop=True)
+        filtered_csv["bbox_xywh"].notna()
+        & (filtered_csv["species_prediction"] == config["species"])
+    ].reset_index(drop=True)
 
     other_test = filtered_csv[
-        filtered_csv['bbox_xywh'].isna() |
-        (filtered_csv["species_prediction"] != config["species"])
-        ].reset_index(drop=True)
+        filtered_csv["bbox_xywh"].isna()
+        | (filtered_csv["species_prediction"] != config["species"])
+    ].reset_index(drop=True)
 
     other_test["predicted_viewpoint"] = np.nan
-
 
     # print(f'Filtered dataset is: \n {filtered_test}')
     # print(f'\n Other dataset is: \n {other_test}')

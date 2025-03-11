@@ -63,7 +63,7 @@ def select_model(yolo_model, config, model_dir):
 def yolo_predictions(result_gen, num_images):
 
     annotations = []
-    with tqdm(result_gen,total=num_images,desc="Writing annotations...") as pbar:
+    with tqdm(result_gen, total=num_images, desc="Writing annotations...") as pbar:
         for result in pbar:
             image_filename = os.path.basename(result.path)
             image_uuid, _ = os.path.splitext(image_filename)
@@ -133,7 +133,6 @@ def calculate_iou(box1, box2):
 
 
 def filtration(predicted_df, original_df, iou_thresh=0.50):
-    df = original_df
     pred_df = predicted_df
 
     filtered_annotations = []
@@ -144,7 +143,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
         pred_bbox = [x0, y0, x1, y1]
 
         image_uuid = row["image uuid"] + ".jpg"
-        image_df = df[df["image uuid"] == image_uuid]
+        image_df = original_df[original_df["image uuid"] == image_uuid]
 
         print(f"Filtering annotations: ({index + 1}/{len(pred_df)})", end="")
         if index < len(pred_df) - 1:
@@ -152,7 +151,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
 
         keep = False
 
-        for org_index, org_row in image_df.iterrows():
+        for _, org_row in image_df.iterrows():
             org_bbox_x0 = org_row["bbox x"]
             org_bbox_y0 = org_row["bbox y"]
             org_bbox_x1 = org_row["bbox w"] + org_bbox_x0
@@ -160,13 +159,11 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
 
             org_bbox = [org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1]
 
-            iou = calculate_iou(pred_bbox, org_bbox)
-            if iou >= iou_thresh:
+            if calculate_iou(pred_bbox, org_bbox) >= iou_thresh:
                 keep = True
                 species = org_row["annot species"]
                 ca = org_row["annot census"]
                 viewpoint = org_row["viewpoint"]
-                # image_fname = org_row["image fname"]
                 image_fname = org_row["image uuid"]
                 break
 
@@ -274,11 +271,11 @@ if __name__ == "__main__":
     detector = select_model(yolo_model, config, model_dir)
 
     threshold = config["confidence_threshold"]
-    print("Running detection...",end="")
-    result_gen = detector(images,conf=threshold,stream=True,verbose=False)
+    print("Running detection...", end="")
+    result_gen = detector(images, conf=threshold, stream=True, verbose=False)
     print(" done.")
-    predictions = yolo_predictions(result_gen,num_images)
-    
+    predictions = yolo_predictions(result_gen, num_images)
+
     pred_json_name = args.annots_csv_filename + ".json"
     pred_csv_name = args.annots_csv_filename + ".csv"
 
@@ -318,3 +315,5 @@ if __name__ == "__main__":
         non_filtered_annot_csv_path = os.path.join(annots, non_filtered_pred_csv_name)
         print("Saving annotations to CSV:", non_filtered_annot_csv_path)
         save_annotations_to_csv(predictions, non_filtered_annot_csv_path)
+
+    raise Exception("DETECTOR DONE")

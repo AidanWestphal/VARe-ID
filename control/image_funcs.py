@@ -12,43 +12,45 @@ import control.ggr_funcs as ggr
 EXIF_NORMAL = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_000]
 EXIF_UNDEFINED = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_UNDEFINED]
 IMAGE_COLNAMES = (
-    'uuid',
-    'uri',
-    'uri_original',
-    'original_name',
-    'ext',
-    'width',
-    'height',
-    'time_posix',
-    'gps_lat',
-    'gps_lon',
-    'orientation',
-    'note',
+    "uuid",
+    "uri",
+    "uri_original",
+    "original_name",
+    "ext",
+    "width",
+    "height",
+    "time_posix",
+    "gps_lat",
+    "gps_lon",
+    "orientation",
+    "note",
 )
 
 
 def _compute_image_params(gpath_list, sanitize=True, ensure=True, doctest_mode=False):
     """
     Compute image uuids and collect image exif data
-    
+
     Parameters:
         gpath_list (list): list of image paths
         sanitize (bool): if true, fixes image paths
         ensure (bool): if true, reports additional data on import failure
         doctest_mode (bool): if true, replaces carriage returns with newlines
-    
+
     Returns:
         params_list (list): list of tuples containing image metadata
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
-    
+
     Example:
         >>> import os
         >>> import numpy
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
+        >>> if os.path.exists(db_path):
+        ...     shutil.rmtree(db_path)
         >>> os.makedirs(db_path + "test_data")
         >>> for n in range(2):
         ...     a = numpy.random.rand(30,30,3) * 255
@@ -68,7 +70,7 @@ def _compute_image_params(gpath_list, sanitize=True, ensure=True, doctest_mode=F
 
     if not gpath_list:
         return []
-    
+
     # Processing an image might fail, yeilding a None instead of a tup
     if sanitize:
         gpath_list = ut.ensure_unix_gpaths(gpath_list)
@@ -78,23 +80,31 @@ def _compute_image_params(gpath_list, sanitize=True, ensure=True, doctest_mode=F
     for gpath_idx in range(len(gpath_list)):
         params_list.append(preproc.parse_imageinfo(gpath_list[gpath_idx]))
         if doctest_mode:
-            print('[parse_imageinfo] parsing images [%d/%d]\n' % (gpath_idx + 1, len(gpath_list)), end="")
+            print(
+                "[parse_imageinfo] parsing images [%d/%d]\n"
+                % (gpath_idx + 1, len(gpath_list)),
+                end="",
+            )
         else:
-            print('[parse_imageinfo] parsing images [%d/%d]\r' % (gpath_idx + 1, len(gpath_list)), end="")
-
-
+            print(
+                "[parse_imageinfo] parsing images [%d/%d]\r"
+                % (gpath_idx + 1, len(gpath_list)),
+                end="",
+            )
 
     # Error reporting
     failed_list = [
-        gpath
-        for (gpath, params_) in zip(gpath_list, params_list)
-        if not params_
+        gpath for (gpath, params_) in zip(gpath_list, params_list) if not params_
     ]
 
-    print('\n'.join([' ! Failed reading gpath={!r}'.format(gpath) for gpath in failed_list]))
+    print(
+        "\n".join(
+            [" ! Failed reading gpath={!r}".format(gpath) for gpath in failed_list]
+        )
+    )
 
     if ensure and len(failed_list) > 0:
-        print(f'Importing {len(failed_list)} files failed: {failed_list}')
+        print(f"Importing {len(failed_list)} files failed: {failed_list}")
 
     return params_list
 
@@ -102,14 +112,14 @@ def _compute_image_params(gpath_list, sanitize=True, ensure=True, doctest_mode=F
 def compute_image_uuids(gpath_list, doctest_mode=False, **kwargs):
     """
     Compute image uuids
-    
+
     Parameters:
         gpath_list (list): list of image paths
         doctest_mode (bool): if true, replaces carriage returns with newlines
-    
+
     Returns:
         params_list (list): list of tuples containing image metadata
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
@@ -118,7 +128,7 @@ def compute_image_uuids(gpath_list, doctest_mode=False, **kwargs):
         >>> import numpy
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_data")
         >>> for n in range(2):
         ...     a = numpy.random.rand(30,30,3) * 255
@@ -137,10 +147,9 @@ def compute_image_uuids(gpath_list, doctest_mode=False, **kwargs):
     """
     params_list = _compute_image_params(gpath_list, doctest_mode, **kwargs)
 
-    uuid_colx = IMAGE_COLNAMES.index('uuid')
+    uuid_colx = IMAGE_COLNAMES.index("uuid")
     uuid_list = [
-        None if params_ is None else params_[uuid_colx]
-        for params_ in params_list
+        None if params_ is None else params_[uuid_colx] for params_ in params_list
     ]
 
     return uuid_list
@@ -152,11 +161,11 @@ def filter_image_set(
     require_unixtime=False,
     require_gps=False,
     is_reviewed=False,
-    sort=False
+    sort=False,
 ):
     """
     Filters undesired images out of image set
-    
+
     Parameters:
         imgtable (ImageTable): table containing image metadata
         gid_list (list): list of image gids
@@ -164,7 +173,7 @@ def filter_image_set(
         require_gps (bool): if true, filters our images that do not have gps data
         is_reviewed (bool): if true, filters out images that are not reviewed
         sort (bool): if true, sorts image set
-    
+
     Returns:
         gid_list (list): filtered list of image gids
 
@@ -173,9 +182,9 @@ def filter_image_set(
 
     Example:
         >>> from db.table import ImageTable
-        >>> table = ImageTable("/mnt/c/Users/Julian/Research/Pipeline/data/", ["grevy's zebra"])
+        >>> table = ImageTable("doctest_files/", ["grevy's zebra"])
         >>> gid_list = table.add_image_data(['uuid', 'time_posix', 'gps_lat', 'gps_lon', 'reviewed'],
-        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 1579961262, 0.291885, 36.89818833333333, True], 
+        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 1579961262, 0.291885, 36.89818833333333, True],
         ... ['11ca4e9b-1de9-4ee5-8d90-615bf93077c8', -1, 0.291885, 36.89818833333333, True],
         ... ['6830cd43-ca00-28ee-8843-fe64d789d7f7', 1579961262, -1, -1, True],
         ... ['b54193f2-8507-8441-5bf3-cd9f0ed8a883', 1579961262, 0.291885, 36.89818833333333, False]])
@@ -236,15 +245,15 @@ def get_valid_gids(
 
     Returns:
         list: gid_list
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
     Example:
         >>> from db.table import ImageTable
-        >>> table = ImageTable("/mnt/c/Users/Julian/Research/Pipeline/data/", ["grevy's zebra"])
+        >>> table = ImageTable("doctest_files/", ["grevy's zebra"])
         >>> gid_list = table.add_image_data(['uuid', 'time_posix', 'gps_lat', 'gps_lon', 'reviewed'],
-        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 1579961262, 0.291885, 36.89818833333333, True], 
+        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 1579961262, 0.291885, 36.89818833333333, True],
         ... ['11ca4e9b-1de9-4ee5-8d90-615bf93077c8', -1, 0.291885, 36.89818833333333, True],
         ... ['6830cd43-ca00-28ee-8843-fe64d789d7f7', 1579961262, -1, -1, True],
         ... ['b54193f2-8507-8441-5bf3-cd9f0ed8a883', 1579961262, 0.291885, 36.89818833333333, False]])
@@ -274,7 +283,7 @@ def get_valid_gids(
         require_unixtime=require_unixtime,
         require_gps=require_gps,
         is_reviewed=is_reviewed,
-        sort=sort
+        sort=sort,
     )
 
     return gid_list
@@ -298,7 +307,7 @@ def localize_images(imgtable, gid_list_=None):
         >>> import shutil
         >>> from PIL import Image
         >>> from db.table import ImageTable
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_data/QR_100/Day1")
         >>> os.makedirs(db_path + "test_data/QR_100/Day2")
         >>> os.makedirs(db_path + "test_dataset/images")
@@ -312,46 +321,46 @@ def localize_images(imgtable, gid_list_=None):
         ...     img.save(db_path + ('test_data/QR_100/Day2/img%000d.jpg' % n))
         >>> table = ImageTable(db_path + "test_dataset/", ["grevy's zebra"])
         >>> gid_list = table.add_image_data(['uuid', 'uri', 'original_name', 'ext'],
-        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', db_path + 'test_data/QR_100/Day1/img0.JPG', 'img0', '.JPG'], 
+        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', db_path + 'test_data/QR_100/Day1/img0.JPG', 'img0', '.JPG'],
         ... ['11ca4e9b-1de9-4ee5-8d90-615bf93077c8', db_path + 'test_data/QR_100/Day1/img1.JPG', 'img1', '.JPG'],
         ... ['6830cd43-ca00-28ee-8843-fe64d789d7f7', db_path + 'test_data/QR_100/Day2/img0.JPG', 'img0', '.JPG'],
         ... ['b54193f2-8507-8441-5bf3-cd9f0ed8a883', db_path + 'test_data/QR_100/Day2/img1.JPG', 'img1', '.JPG']])
         >>> localize_images(table, gid_list)
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR_100/Day1/img0.JPG -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/0fdef8e8-cec0-b460-bac2-6ee3e39f0798.JPG
+        Localizing doctest_files/test_data/QR_100/Day1/img0.JPG ->
+        doctest_files/test_dataset/images/0fdef8e8-cec0-b460-bac2-6ee3e39f0798.JPG
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR_100/Day1/img1.JPG -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/11ca4e9b-1de9-4ee5-8d90-615bf93077c8.JPG
+        Localizing doctest_files/test_data/QR_100/Day1/img1.JPG ->
+        doctest_files/test_dataset/images/11ca4e9b-1de9-4ee5-8d90-615bf93077c8.JPG
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR_100/Day2/img0.JPG -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/6830cd43-ca00-28ee-8843-fe64d789d7f7.JPG
+        Localizing doctest_files/test_data/QR_100/Day2/img0.JPG ->
+        doctest_files/test_dataset/images/6830cd43-ca00-28ee-8843-fe64d789d7f7.JPG
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR_100/Day2/img1.JPG -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/b54193f2-8507-8441-5bf3-cd9f0ed8a883.JPG
+        Localizing doctest_files/test_data/QR_100/Day2/img1.JPG ->
+        doctest_files/test_dataset/images/b54193f2-8507-8441-5bf3-cd9f0ed8a883.JPG
             ...image copied
-        >>> print(len([name for name in os.listdir(db_path + "test_dataset/images") 
+        >>> print(len([name for name in os.listdir(db_path + "test_dataset/images")
         ...            if os.path.isfile(os.path.join(db_path + "test_dataset/images", name)) and name[-3:] == "JPG"]))
         4
         >>> print(table.get_image_uris(gid_list))
-        ['0fdef8e8-cec0-b460-bac2-6ee3e39f0798.JPG', '11ca4e9b-1de9-4ee5-8d90-615bf93077c8.JPG', 
+        ['0fdef8e8-cec0-b460-bac2-6ee3e39f0798.JPG', '11ca4e9b-1de9-4ee5-8d90-615bf93077c8.JPG',
          '6830cd43-ca00-28ee-8843-fe64d789d7f7.JPG', 'b54193f2-8507-8441-5bf3-cd9f0ed8a883.JPG']
-        >>> table.set_image_uris(gid_list, ['test_data/QR_100/Day1/img0.JPG', 'test_data/QR_100/Day1/img1.JPG', 
+        >>> table.set_image_uris(gid_list, ['test_data/QR_100/Day1/img0.JPG', 'test_data/QR_100/Day1/img1.JPG',
         ...                                 'test_data/QR_100/Day2/img0.JPG', 'test_data/QR_100/Day2/img1.JPG'])
         >>> localize_images(table, gid_list)
-        Localizing test_data/QR_100/Day1/img0.JPG -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/0fdef8e8-cec0-b460-bac2-6ee3e39f0798.JPG
+        Localizing test_data/QR_100/Day1/img0.JPG -> doctest_files/test_dataset/images/0fdef8e8-cec0-b460-bac2-6ee3e39f0798.JPG
             ...skipping (already localized)
-        Localizing test_data/QR_100/Day1/img1.JPG -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/11ca4e9b-1de9-4ee5-8d90-615bf93077c8.JPG
+        Localizing test_data/QR_100/Day1/img1.JPG -> doctest_files/test_dataset/images/11ca4e9b-1de9-4ee5-8d90-615bf93077c8.JPG
             ...skipping (already localized)
-        Localizing test_data/QR_100/Day2/img0.JPG -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/6830cd43-ca00-28ee-8843-fe64d789d7f7.JPG
+        Localizing test_data/QR_100/Day2/img0.JPG -> doctest_files/test_dataset/images/6830cd43-ca00-28ee-8843-fe64d789d7f7.JPG
             ...skipping (already localized)
-        Localizing test_data/QR_100/Day2/img1.JPG -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/b54193f2-8507-8441-5bf3-cd9f0ed8a883.JPG
+        Localizing test_data/QR_100/Day2/img1.JPG -> doctest_files/test_dataset/images/b54193f2-8507-8441-5bf3-cd9f0ed8a883.JPG
             ...skipping (already localized)
         >>> shutil.rmtree(db_path + "test_data")
         >>> shutil.rmtree(db_path + "test_dataset")
     """
 
     if gid_list_ is None:
-        print('WARNING: you are localizing all gids')
+        print("WARNING: you are localizing all gids")
         gid_list_ = get_valid_gids(imgtable)
     isvalid_list = [gid is not None for gid in gid_list_]
     gid_list = ut.list_unique(ut.list_compress(gid_list_, isvalid_list))
@@ -368,33 +377,33 @@ def localize_images(imgtable, gid_list_=None):
     loc_gpath_list = [join(imgtable.imgdir, gname) for gname in loc_gname_list]
     # Copy images to local directory
     for uri, loc_gpath in zip(uri_list, loc_gpath_list):
-        print(f'Localizing {uri} -> {loc_gpath}')
+        print(f"Localizing {uri} -> {loc_gpath}")
 
         if not exists(loc_gpath):
             uri if islocal(uri) else join(imgtable.imgdir, uri)
             ut.copy_file_list([uri], [loc_gpath])
-            print('\t...image copied')
+            print("\t...image copied")
         else:
-            print('\t...skipping (already localized)')
+            print("\t...skipping (already localized)")
 
     # Update database uris
     imgtable.set_image_uris(gid_list, loc_gname_list)
-    assert all(map(exists, loc_gpath_list)), 'not all images copied'
+    assert all(map(exists, loc_gpath_list)), "not all images copied"
 
 
 def check_image_loadable_worker(gpath, orient):
     """
     Check whether an image can be loaded and standardize exif orientation.
-    
+
     Parameters:
         gpath (str): path to image
         orient (int): orientation of image
-    
+
     Returns:
         loadable (bool): whether or not the image is loadable
         rewritten (bool): whether or not the image was rewritten
         orient (bool): updated image orientation
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
@@ -403,7 +412,7 @@ def check_image_loadable_worker(gpath, orient):
         >>> import numpy
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> a = numpy.random.rand(30,30,3) * 255
         >>> img = Image.fromarray(a.astype('uint8')).convert('RGB')
@@ -415,7 +424,7 @@ def check_image_loadable_worker(gpath, orient):
         >>> with open(db_path + "test_dataset/images/fake_img.txt", "w") as img:
         ...     size = img.write("fake")
         >>> check_image_loadable_worker(db_path + "test_dataset/images/fake_img.txt", 0)
-        [utils.imread] Cannot read img_fpath=/mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/fake_img.txt, 
+        [utils.imread] Cannot read img_fpath=doctest_files/test_dataset/images/fake_img.txt,
         seems corrupted or memory error.
         (False, False, 0)
         >>> shutil.rmtree(db_path + "test_dataset")
@@ -442,15 +451,15 @@ def check_image_loadable_worker(gpath, orient):
 def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
     """
     Check whether images are loadable and standardize exif orientation.
-    
+
     Parameters:
         imgtable (ImageTable): table containing image metadata
         gid_list (list): list of image gids
         doctest_mode (bool): if true, replaces carriage returns with newlines
-    
+
     Returns:
         bad_loadable_list (list): list of gids of unloadable images
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
@@ -460,7 +469,7 @@ def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
         >>> import shutil
         >>> from PIL import Image
         >>> from db.table import ImageTable
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> for n in range(4):
         ...     a = numpy.random.rand(30,30,3) * 255
@@ -468,7 +477,7 @@ def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
         ...     img.save(db_path + ('test_dataset/images/img%000d.JPG' % n))
         >>> table = ImageTable(db_path + "test_dataset", ["grevy's zebra"])
         >>> gid_list = table.add_image_data(['uuid', 'uri', 'original_name', 'ext', 'orientation'],
-        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 'img0.JPG', 'img0', '.JPG', 0], 
+        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 'img0.JPG', 'img0', '.JPG', 0],
         ... ['11ca4e9b-1de9-4ee5-8d90-615bf93077c8', 'img1.JPG', 'img1', '.JPG', 0],
         ... ['6830cd43-ca00-28ee-8843-fe64d789d7f7', 'img2.JPG', 'img0', '.JPG', 0],
         ... ['b54193f2-8507-8441-5bf3-cd9f0ed8a883', 'img3.JPG', 'img1', '.JPG', 0]])
@@ -482,7 +491,7 @@ def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
         >>> shutil.rmtree(db_path + "test_dataset")
     """
 
-    print('checking image loadable')
+    print("checking image loadable")
     if gid_list is None:
         gid_list = get_valid_gids(imgtable)
 
@@ -493,11 +502,21 @@ def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
     for gpath_idx in range(len(gpath_list)):
         gpath, orient = gpath_list[gpath_idx], existing_orient_list[gpath_idx]
         loadable, rewritten, new_orient = check_image_loadable_worker(gpath, orient)
-        loadable_list.append(loadable), rewritten_list.append(rewritten), new_orient_list.append(new_orient)
+        loadable_list.append(loadable), rewritten_list.append(
+            rewritten
+        ), new_orient_list.append(new_orient)
         if doctest_mode:
-            print('[check_image_loadable] validating images [%d/%d]\n' % (gpath_idx + 1, len(gpath_list)), end="")
+            print(
+                "[check_image_loadable] validating images [%d/%d]\n"
+                % (gpath_idx + 1, len(gpath_list)),
+                end="",
+            )
         else:
-            print('[check_image_loadable] validating images [%d/%d]\r' % (gpath_idx + 1, len(gpath_list)), end="")
+            print(
+                "[check_image_loadable] validating images [%d/%d]\r"
+                % (gpath_idx + 1, len(gpath_list)),
+                end="",
+            )
 
     print()
     update_gid_list = []
@@ -517,7 +536,9 @@ def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
             len(update_gid_list),
             len(rewritten_list),
         )
-        print(f'[check_image_loadable] Updating {len(update_gid_list)} orientations from {len(rewritten_list)} rewritten images')
+        print(
+            f"[check_image_loadable] Updating {len(update_gid_list)} orientations from {len(rewritten_list)} rewritten images"
+        )
         imgtable.set_image_orientation(update_gid_list, update_orient_list)
 
     bad_loadable_list = ut.list_compress(gid_list, loadable_list, inverse=True)
@@ -527,14 +548,14 @@ def check_image_loadable(imgtable, gid_list=None, doctest_mode=False):
 def check_image_bit_depth_worker(gpath):
     """
     Check bit depth of image and convert to 8-bit RGB if necessary.
-    
+
     Parameters:
         gpath (str): path to image
-    
+
     Returns:
-        flag (bool): None if image was not changed, true if image was successfully changed, 
+        flag (bool): None if image was not changed, true if image was successfully changed,
         false if image could not be changed
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
@@ -543,7 +564,7 @@ def check_image_bit_depth_worker(gpath):
         >>> import numpy
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> a = numpy.random.rand(30,30,3) * 255
         >>> img = Image.fromarray(a.astype('uint8')).convert('RGB')
@@ -554,14 +575,14 @@ def check_image_bit_depth_worker(gpath):
 
     flag = None
     try:
-        img = Image.open(gpath, 'r')
+        img = Image.open(gpath, "r")
         assert img is not None
 
         # Convert 16-bit RGBA images on disk to 8-bit RGB
-        if img.mode == 'RGBA':
+        if img.mode == "RGBA":
             img.load()
 
-            canvas = Image.new('RGB', img.size, (255, 255, 255))
+            canvas = Image.new("RGB", img.size, (255, 255, 255))
             canvas.paste(img, mask=img.split()[3])  # 3 is the alpha channel
             canvas.save(gpath)
             canvas = None
@@ -577,16 +598,16 @@ def check_image_bit_depth(imgtable, gid_list=None, doctest_mode=False):
     """
     Check bit depth of images and convert to 8-bit RGB when necessary.
     Also checks uuids for correctness.
-    
+
     Parameters:
         imgtable (ImageTable): table containing image metadata
         gid_list (list): list of image gids
         doctest_mode (bool): if true, replaces carriage returns with newlines
-    
+
     Returns:
         update_gid_list (list): list of gids of images that were updated
         update_uuid_list (list): list of updated uuids
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
@@ -596,7 +617,7 @@ def check_image_bit_depth(imgtable, gid_list=None, doctest_mode=False):
         >>> import shutil
         >>> from PIL import Image
         >>> from db.table import ImageTable
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> for n in range(4):
         ...     a = numpy.random.rand(30,30,3) * 255
@@ -604,7 +625,7 @@ def check_image_bit_depth(imgtable, gid_list=None, doctest_mode=False):
         ...     img.save(db_path + ('test_dataset/images/img%000d.JPG' % n))
         >>> table = ImageTable(db_path + "test_dataset", ["grevy's zebra"])
         >>> gid_list = table.add_image_data(['uuid', 'uri', 'original_name', 'ext', 'orientation'],
-        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 'img0.JPG', 'img0', '.JPG', 0], 
+        ... [['0fdef8e8-cec0-b460-bac2-6ee3e39f0798', 'img0.JPG', 'img0', '.JPG', 0],
         ... ['11ca4e9b-1de9-4ee5-8d90-615bf93077c8', 'img1.JPG', 'img1', '.JPG', 0],
         ... ['6830cd43-ca00-28ee-8843-fe64d789d7f7', 'img2.JPG', 'img0', '.JPG', 0],
         ... ['b54193f2-8507-8441-5bf3-cd9f0ed8a883', 'img3.JPG', 'img1', '.JPG', 0]])
@@ -619,7 +640,7 @@ def check_image_bit_depth(imgtable, gid_list=None, doctest_mode=False):
         >>> shutil.rmtree(db_path + "test_dataset")
     """
 
-    print('checking image depth')
+    print("checking image depth")
     if gid_list is None:
         gid_list = get_valid_gids(imgtable)
 
@@ -629,14 +650,22 @@ def check_image_bit_depth(imgtable, gid_list=None, doctest_mode=False):
     for gpath_idx in range(len(gpath_list)):
         flag_list.append(check_image_bit_depth_worker(gpath_list[gpath_idx]))
         if doctest_mode:
-            print('[check_image_bit_depth] checking image bit depth [%d/%d]\n' % (gpath_idx + 1, len(gpath_list)), end="")
+            print(
+                "[check_image_bit_depth] checking image bit depth [%d/%d]\n"
+                % (gpath_idx + 1, len(gpath_list)),
+                end="",
+            )
         else:
-            print('[check_image_bit_depth] checking image bit depth [%d/%d]\r' % (gpath_idx + 1, len(gpath_list)), end="")
+            print(
+                "[check_image_bit_depth] checking image bit depth [%d/%d]\r"
+                % (gpath_idx + 1, len(gpath_list)),
+                end="",
+            )
 
     print()
     update_gid_list = ut.list_compress(gid_list, flag_list)
 
-    print(f'[check_image_bit_depth] updated {len(update_gid_list)} images')
+    print(f"[check_image_bit_depth] updated {len(update_gid_list)} images")
 
     update_gpath_list = imgtable.get_image_paths(update_gid_list)
     update_uuid_list = compute_image_uuids(update_gpath_list)
@@ -650,9 +679,9 @@ def add_images(
     params_list=None,
     as_annots=False,
     auto_localize=True,
-    location_for_names='GGR',
+    location_for_names="GGR",
     ensure_loadable=True,
-    doctest_mode=False
+    doctest_mode=False,
 ):
     """
     Adds a list of image paths to the image table.
@@ -669,14 +698,14 @@ def add_images(
         as_annots (bool): if True, an annotation is automatically added for the entire
             image
         auto_localize (bool): if None uses the default specified in ibs.cfg
-        location_for_names (str): 
+        location_for_names (str):
         ensure_loadable (bool): check whether imported images can be loaded.  Defaults to
             True
         doctest_mode (bool): if true, replaces carriage returns with newlines
 
     Returns:
         gid_list (list of rowids): gids are image rowids
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
 
@@ -687,7 +716,9 @@ def add_images(
         >>> from numpy.random import RandomState
         >>> from PIL import Image
         >>> from db.table import ImageTable
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
+        >>> if os.path.exists(db_path):
+        ...     shutil.rmtree(db_path)
         >>> os.makedirs(db_path + "test_data/QR100_A/Day1")
         >>> os.makedirs(db_path + "test_data/QR100_A/Day2")
         >>> os.makedirs(db_path + "test_dataset")
@@ -717,13 +748,13 @@ def add_images(
         [parse_imageinfo] parsing images [4/4]
         Adding 4 image records to DB
             ...added 4 image rows to DB (4 unique)
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day1/img0.jpg -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/df53d013-889f-e6bf-2636-764a0cd2ce72.jpg
+        Localizing doctest_files/test_data/QR100_A/Day1/img0.jpg -> doctest_files/test_dataset/images/df53d013-889f-e6bf-2636-764a0cd2ce72.jpg
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day1/img1.jpg -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/9320f5c0-adf7-2b93-632e-c5537a7ffd15.jpg
+        Localizing doctest_files/test_data/QR100_A/Day1/img1.jpg -> doctest_files/test_dataset/images/9320f5c0-adf7-2b93-632e-c5537a7ffd15.jpg
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day2/img0.jpg -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/56e735a5-53c4-a2a2-428d-8b4fc8933a9d.jpg
+        Localizing doctest_files/test_data/QR100_A/Day2/img0.jpg -> doctest_files/test_dataset/images/56e735a5-53c4-a2a2-428d-8b4fc8933a9d.jpg
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day2/img1.jpg -> /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/633f24d1-fe31-a6fe-4f05-ebb012efa99e.jpg
+        Localizing doctest_files/test_data/QR100_A/Day2/img1.jpg -> doctest_files/test_dataset/images/633f24d1-fe31-a6fe-4f05-ebb012efa99e.jpg
             ...image copied
         checking image loadable
         [check_image_loadable] validating images [1/4]
@@ -737,35 +768,21 @@ def add_images(
         [check_image_bit_depth] checking image bit depth [3/4]
         [check_image_bit_depth] checking image bit depth [4/4]
         [check_image_bit_depth] updated 0 images
-        [extrapolate_ggr_gps] 4/4 total images missing GPS data
-        [extrapolate_ggr_gps] gathering image data [1/4]
-        [extrapolate_ggr_gps] gathering image data [2/4]
-        [extrapolate_ggr_gps] gathering image data [3/4]
-        [extrapolate_ggr_gps] gathering image data [4/4]
-        [extrapolate_ggr_gps] setting notes
-        [extrapolate_ggr_gps] getting QR code images
-        [extrapolate_ggr_gps] unable to locate QR code: {Car: QR100; Camera: A; Day: 1}
-            ...skipping unixtime synchronization
-        [extrapolate_ggr_gps] unable to locate QR code: {Car: QR100; Camera: A; Day: 2}
-            ...skipping unixtime synchronization
-        [extrapolate_ggr_gps] set GPS data for 0 / 4 images with missing GPS entries
-        [extrapolate_ggr_gps] unable to extrapolate GPS data for 4 images with the following gids:
-            [1, 2, 3, 4]
         [1, 2, 3, 4]
-        >>> print(len([name for name in os.listdir(db_path + "test_dataset/images") 
+        >>> print(len([name for name in os.listdir(db_path + "test_dataset/images")
         ...            if os.path.isfile(os.path.join(db_path + "test_dataset/images", name)) and name[-3:] == "jpg"]))
         4
         >>> shutil.rmtree(db_path + "test_data")
         >>> shutil.rmtree(db_path + "test_dataset")
     """
 
-    print(f'[pipeline] add_images')
-    print(f'[pipeline] len(gpath_list) = {len(gpath_list)}')
+    print(f"[pipeline] add_images")
+    print(f"[pipeline] len(gpath_list) = {len(gpath_list)}")
     if len(gpath_list) == 0:
-        print(f'[pipeline] No images to load: exiting...')
+        print(f"[pipeline] No images to load: exiting...")
         return []
 
-    # Create database directory if it doesn't 
+    # Create database directory if it doesn't
     Path(imgtable.imgdir).mkdir(parents=True, exist_ok=True)
     Path(imgtable.trashdir).mkdir(parents=True, exist_ok=True)
 
@@ -774,15 +791,17 @@ def add_images(
     if compute_params:
         params_list = _compute_image_params(gpath_list, doctest_mode=doctest_mode)
 
-    colnames = IMAGE_COLNAMES + ('original_path', 'location_code')
+    colnames = IMAGE_COLNAMES + ("original_path", "location_code")
     params_list = [
         tuple(params) + (gpath, location_for_names) if params is not None else None
         for params, gpath in zip(params_list, gpath_list)
     ]
 
-    print(f'Adding {len(params_list)} image records to DB')
+    print(f"Adding {len(params_list)} image records to DB")
     all_gid_list = imgtable.add_image_data(colnames, params_list)
-    print(f'\t...added {len(all_gid_list)} image rows to DB ({len(set(all_gid_list))} unique)')
+    print(
+        f"\t...added {len(all_gid_list)} image rows to DB ({len(set(all_gid_list))} unique)"
+    )
 
     # Filter for valid images and de-duplicate
     none_set = {None}
@@ -797,13 +816,17 @@ def add_images(
     # Check loadable
     if ensure_loadable:
         valid_gpath_list = imgtable.get_image_paths(all_valid_gid_list)
-        bad_load_list = check_image_loadable(imgtable, all_valid_gid_list, doctest_mode=doctest_mode)
+        bad_load_list = check_image_loadable(
+            imgtable, all_valid_gid_list, doctest_mode=doctest_mode
+        )
         bad_load_set = set(bad_load_list)
 
         delete_gid_set = set()
         for valid_gid, valid_gpath in zip(all_valid_gid_list, valid_gpath_list):
             if ensure_loadable and valid_gid in bad_load_set:
-                print('Loadable Image Validation: Failed to load {!r}'.format(valid_gpath))
+                print(
+                    "Loadable Image Validation: Failed to load {!r}".format(valid_gpath)
+                )
                 delete_gid_set.add(valid_gid)
 
         delete_gid_list = list(delete_gid_set)
@@ -813,7 +836,9 @@ def add_images(
         all_valid_gid_set = all_gid_set - delete_gid_set - none_set
         all_valid_gid_list = list(all_valid_gid_set)
 
-    print(f'\t...validated {len(all_valid_gid_list)} image rows in DB ({len(set(all_valid_gid_list))} unique)')
+    print(
+        f"\t...validated {len(all_valid_gid_list)} image rows in DB ({len(set(all_valid_gid_list))} unique)"
+    )
 
     if not compute_params:
         # We need to double check that the UUIDs are valid, considering we received the UUIDs
@@ -829,11 +854,15 @@ def add_images(
     # None out any gids that didn't pass the validity check
     assert None not in all_valid_gid_set
     all_gid_list = [aid if aid in all_valid_gid_set else None for aid in all_gid_list]
-    assert len(imgtable.get_image_uris_original(get_valid_gids(imgtable))) == len(all_gid_list)
+    assert len(imgtable.get_image_uris_original(get_valid_gids(imgtable))) == len(
+        all_gid_list
+    )
     if len(all_gid_list) == 0:
         return all_gid_list
 
     # Ensure all images that were added are 8-bit images
-    check_image_bit_depth(imgtable, gid_list=list(set(all_gid_list)), doctest_mode=doctest_mode)
+    check_image_bit_depth(
+        imgtable, gid_list=list(set(all_gid_list)), doctest_mode=doctest_mode
+    )
 
     return all_gid_list
