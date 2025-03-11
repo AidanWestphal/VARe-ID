@@ -218,31 +218,24 @@ if __name__ == "__main__":
         lambda x: os.path.join(args.image_dir, x)
     )
 
-    # # Create a single 'bbox' column from the four bbox columns
-    # filtered_csv["bbox"] = list(
-    #     zip(
-    #         filtered_csv["bbox x"],
-    #         filtered_csv["bbox y"],
-    #         filtered_csv["bbox w"],
-    #         filtered_csv["bbox h"],
-    #     )
-    # )
-
-    import ast
-
-    # First convert string bbox to list
-    filtered_csv["bbox_xyxy"] = filtered_csv["bbox pred"].apply(ast.literal_eval)
+    # Create a single 'bbox' column from the four bbox columns
+    filtered_csv["bbox_xywh"] = list(
+        zip(
+            filtered_csv["bbox x"],
+            filtered_csv["bbox y"],
+            filtered_csv["bbox w"],
+            filtered_csv["bbox h"],
+        )
+    )
 
     # Convert xyxy to xywh
-    def xyxy_to_xywh(bbox):
-        x1, y1, x2, y2 = bbox
-        w = x2 - x1
-        h = y2 - y1
-        x = x1
-        y = y1
-        return [x, y, w, h]
+    def xywh_to_xyxy(bbox):
+        x1, y1, w, h = bbox
+        x2 = x1 + w
+        y2 = y1 + h
+        return [x1, y1, x2, y2]
 
-    filtered_csv["bbox_xywh"] = filtered_csv["bbox_xyxy"].apply(xyxy_to_xywh)
+    filtered_csv["bbox_xyxy"] = filtered_csv["bbox_xywh"].apply(xywh_to_xyxy)
 
     #
     # # Split the original dataframe into two based on the filtering criteria
