@@ -1,5 +1,4 @@
 import argparse
-import ast
 import json
 import os
 import shutil
@@ -35,12 +34,12 @@ def load_annotations_from_csv(csv_file_path):
     return df
 
 
-def clone_yolo_from_github(directory, repo_url):
+def clone_yolo_from_github(yolo_dir, repo_url):
     if not os.path.exists(yolo_dir) or not os.listdir(yolo_dir):
-        print(f"Cloning repository {repo_url} into {directory}...")
-        subprocess.run(["git", "clone", repo_url, directory])
+        print(f"Cloning repository {repo_url} into {yolo_dir}...")
+        subprocess.run(["git", "clone", repo_url, yolo_dir])
     else:
-        print(f"Directory {directory} exists and is not empty.")
+        print(f"Directory {yolo_dir} exists and is not empty.")
 
 
 def download_model(yolo_model, yolo_url, model_dir):
@@ -66,39 +65,33 @@ def yolo_predictions(result_gen, num_images):
     with tqdm(result_gen, total=num_images, desc="Writing annotations...") as pbar:
         for result in pbar:
             image_filename = os.path.basename(result.path)
-            image_uuid, _ = os.path.splitext(image_filename)
-
-            bboxes = result.boxes
+            image_uuid = os.path.splitext(image_filename)[0]
 
             # Check if any detection in the image is a person (class 0)
-            if any(box.cls.item() == 0 for box in bboxes):
+            if any(box.cls.item() == 0 for box in result.boxes):
                 # Skip this entire image
                 continue
 
             # Process the image only if no person was detected
-            for box in bboxes:
-                class_label = box.cls.item()
-                annot_uuid = str(uuid.uuid4())
-                coordinates = box.xyxy
-                conf_scores = box.conf.item()
+            for box in result.boxes:
+                x1 = box.xyxy[0][0].item()
+                y1 = box.xyxy[0][1].item()
+                x2 = box.xyxy[0][2].item()
+                y2 = box.xyxy[0][3].item()
 
-                x1 = coordinates[0][0].item()
-                y1 = coordinates[0][1].item()
-                x2 = coordinates[0][2].item()
-                y2 = coordinates[0][3].item()
-
-                annotation = {
-                    "uuid": annot_uuid,
-                    "image uuid": image_uuid,
-                    "bbox x": x1,
-                    "bbox y": y1,
-                    "bbox w": x2 - x1,
-                    "bbox h": y2 - y1,
-                    "bbox pred score": conf_scores,
-                    "category id": int(class_label),
-                    "image fname": image_filename,
-                }
-                annotations.append(annotation)
+                annotations.append(
+                    {
+                        "annot uuid": str(uuid.uuid4()),
+                        "image uuid": image_uuid,
+                        "image fname": image_filename,
+                        "bbox x": x1,
+                        "bbox y": y1,
+                        "bbox w": x2 - x1,
+                        "bbox h": y2 - y1,
+                        "bbox pred score": box.conf.item(),
+                        "category id": int(box.cls.item()),
+                    }
+                )
 
     annotations_dict = {"annotations": annotations}
     print(", done.")
@@ -107,7 +100,7 @@ def yolo_predictions(result_gen, num_images):
 
 
 def save_annotations_to_json(annotations_dict, file_path):
-    with open(file_path, "w") as json_file:
+    with open(file_path, "w", encoding="utf-8") as json_file:
         json.dump(annotations_dict, json_file, indent=4)
 
 
@@ -117,7 +110,7 @@ def save_annotations_to_csv(annotations_dict, file_path):
     df.to_csv(file_path, index=False)
 
 
-def calculate_iou(box1, box2):
+def calculate_iou(box1: list, box2: list):
     x1_min, y1_min, x1_max, y1_max = box1
     x2_min, y2_min, x2_max, y2_max = box2
 
@@ -151,9 +144,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
         image_uuid = row["image uuid"]
         image_fname = row["image fname"]
 
-        # TODO: RELABEL image uuid TO image fname
-
-        image_df = original_df[original_df["image uuid"] == image_fname]
+        image_df = original_df[original_df["image uuid"] == row["image uuid"]]
 
         print(f"Filtering annotations: ({index + 1}/{len(pred_df)})", end="")
         if index < len(pred_df) - 1:
@@ -193,7 +184,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
 
     filtered_annotations = [
         {
-            "uuid": annotation["uuid"],
+            "annot uuid": annotation["annot uuid"],
             "image uuid": annotation["image uuid"],
             "bbox pred score": annotation["bbox pred score"],
             "category id": annotation["category id"],
@@ -222,41 +213,35 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
     return filtered_annotations_dict
 
 
-if __name__ == "__main__":
+def main(args):
+    """
+    Doctest Command:
+        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE algo/detector.py
 
+    Example:
+        >>> from argparse import Namespace
+        >>> args = Namespace(image_dir="test_imgs", annot_dir="temp/annots",
+        ...                  exp_dir="temp/models", model_version="yolov10l",
+        ...                  annots_csv_filename="annots", annots_filtered_csv_filename="filtered_annots",
+        ...                  original_csv_path="path/to/csv")
+        >>> main(args) # doctest: +ELLIPSIS
+            Cloning repository https://github.com/....git into temp/models/Yolo_v10...
+            Successfully Downloaded yolov10l to temp/models/Yolo_v10/weights/yolov10l.pt
+            Running detection... done.
+            , done.
+            Saving annotations to JSON: temp/annots/annots.json
+            Saving annotations to CSV: temp/annots/annots.csv
+            Loading ground truth annotations...
+            No ground truth annotations detected. Skipped filtering.
+            Saving non-filtered annotations to JSON: temp/annots/filtered_annots.json
+            Saving annotations to CSV: temp/annots/filtered_annots.csv
+    """
     # Loading Configuration File ...
     config = load_config("algo/detector.yaml")
 
     # Setting up Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    parser = argparse.ArgumentParser(
-        description="Detect bounding boxes for database of animal images"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
-    )
-    parser.add_argument(
-        "annot_dir", type=str, help="The directory to export annotations to"
-    )
-    parser.add_argument(
-        "exp_dir", type=str, help="The directory to export models and predictions to"
-    )
-    parser.add_argument(
-        "original_csv_path", type=str, help="The full path to the ground truth csv"
-    )
-    parser.add_argument("model_version", type=str, help="The yolo model version to use")
-    parser.add_argument(
-        "annots_csv_filename",
-        type=str,
-        help="The name of the output annotations csv file",
-    )
-    parser.add_argument(
-        "annots_filtered_csv_filename",
-        type=str,
-        help="The name of the output filtered annotations csv file",
-    )
 
-    args = parser.parse_args()
     annotations_csv_fullpath = args.original_csv_path
     exp_dir = Path(args.exp_dir)
     images = Path(args.image_dir)
@@ -325,4 +310,36 @@ if __name__ == "__main__":
         print("Saving annotations to CSV:", non_filtered_annot_csv_path)
         save_annotations_to_csv(predictions, non_filtered_annot_csv_path)
 
-    raise Exception("DETECTOR DONE")
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Detect bounding boxes for database of animal images"
+    )
+    parser.add_argument(
+        "image_dir", type=str, help="The directory where localized images are found"
+    )
+    parser.add_argument(
+        "annot_dir", type=str, help="The directory to export annotations to"
+    )
+    parser.add_argument(
+        "exp_dir", type=str, help="The directory to export models and predictions to"
+    )
+    parser.add_argument(
+        "original_csv_path", type=str, help="The full path to the ground truth csv"
+    )
+    parser.add_argument("model_version", type=str, help="The yolo model version to use")
+    parser.add_argument(
+        "annots_csv_filename",
+        type=str,
+        help="The name of the output annotations csv file",
+    )
+    parser.add_argument(
+        "annots_filtered_csv_filename",
+        type=str,
+        help="The name of the output filtered annotations csv file",
+    )
+
+    args = parser.parse_args()
+
+    main(args)
