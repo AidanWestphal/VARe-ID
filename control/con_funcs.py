@@ -1,6 +1,7 @@
 """
 developer convenience functions
 """
+
 import os.path
 
 from control.image_funcs import add_images
@@ -11,17 +12,17 @@ from db.table import ImageTable
 # Import images recursively from path into database
 def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
     """Import images recursively from path into image table.
-    
+
     Parameters:
         dir_in (str): directory to import from
         dir_out (str): directory to store localized images and output files
         file_out (str): name of output file to save image metadata
         recursive (bool): whether or not to search for images recursively in dir_in
         doctest_mode (bool): if true, replaces carriage returns with newlines
-    
+
     Returns:
         gid_list (list): list of gids of images that were imported
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/con_funcs.py
 
@@ -31,7 +32,7 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
         >>> import shutil
         >>> from numpy.random import RandomState
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_files/"
         >>> os.makedirs(db_path + "test_data/QR100_A/Day1")
         >>> os.makedirs(db_path + "test_data/QR100_A/Day2")
         >>> os.makedirs(db_path + "test_dataset")
@@ -49,7 +50,7 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
         ...     a = prng.rand(30, 30, 3) * 255
         ...     img = Image.fromarray(a.astype('uint8')).convert('RGB')
         ...     img.save(db_path + ('test_data/QR100_A/Day2/img%000d.jpg' % n))
-        >>> import_folder(db_path + "test_data/", db_path + "test_dataset/", "image_data.json", doctest_mode=True)
+        >>> import_folder(db_path + "test_data/", db_path + "test_dataset/", "image_data.json", doctest_mode=True) # doctest: +ELLIPSIS
         [pipeline] add_images
         [pipeline] len(gpath_list) = 4
         [parse_imageinfo] parsing images [1/4]
@@ -58,17 +59,13 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
         [parse_imageinfo] parsing images [4/4]
         Adding 4 image records to DB
             ...added 4 image rows to DB (4 unique)
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day1/img0.jpg -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/df53d013-889f-e6bf-2636-764a0cd2ce72.jpg
+        Localizing ...doctest_files/test_data/QR100_A/Day1/img0.jpg -> doctest_files/test_dataset/images/df53d013-889f-e6bf-2636-764a0cd2ce72.jpg
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day1/img1.jpg -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/9320f5c0-adf7-2b93-632e-c5537a7ffd15.jpg
+        Localizing ...doctest_files/test_data/QR100_A/Day1/img1.jpg -> doctest_files/test_dataset/images/9320f5c0-adf7-2b93-632e-c5537a7ffd15.jpg
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day2/img0.jpg -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/56e735a5-53c4-a2a2-428d-8b4fc8933a9d.jpg
+        Localizing ...doctest_files/test_data/QR100_A/Day2/img0.jpg -> doctest_files/test_dataset/images/56e735a5-53c4-a2a2-428d-8b4fc8933a9d.jpg
             ...image copied
-        Localizing /mnt/c/Users/Julian/Research/Pipeline/data/test_data/QR100_A/Day2/img1.jpg -> 
-        /mnt/c/Users/Julian/Research/Pipeline/data/test_dataset/images/633f24d1-fe31-a6fe-4f05-ebb012efa99e.jpg
+        Localizing ...doctest_files/test_data/QR100_A/Day2/img1.jpg -> doctest_files/test_dataset/images/633f24d1-fe31-a6fe-4f05-ebb012efa99e.jpg
             ...image copied
         checking image loadable
         [check_image_loadable] validating images [1/4]
@@ -82,24 +79,10 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
         [check_image_bit_depth] checking image bit depth [3/4]
         [check_image_bit_depth] checking image bit depth [4/4]
         [check_image_bit_depth] updated 0 images
-        [extrapolate_ggr_gps] 4/4 total images missing GPS data
-        [extrapolate_ggr_gps] gathering image data [1/4]
-        [extrapolate_ggr_gps] gathering image data [2/4]
-        [extrapolate_ggr_gps] gathering image data [3/4]
-        [extrapolate_ggr_gps] gathering image data [4/4]
-        [extrapolate_ggr_gps] setting notes
-        [extrapolate_ggr_gps] getting QR code images
-        [extrapolate_ggr_gps] unable to locate QR code: {Car: QR100; Camera: A; Day: 1}
-            ...skipping unixtime synchronization
-        [extrapolate_ggr_gps] unable to locate QR code: {Car: QR100; Camera: A; Day: 2}
-            ...skipping unixtime synchronization
-        [extrapolate_ggr_gps] set GPS data for 0 / 4 images with missing GPS entries
-        [extrapolate_ggr_gps] unable to extrapolate GPS data for 4 images with the following gids:
-            [1, 2, 3, 4]
         [table.export_to_json] Exporting table to json...
             ...exported 4 image records
         [1, 2, 3, 4]
-        >>> print(len([name for name in os.listdir(db_path + "test_dataset/images") 
+        >>> print(len([name for name in os.listdir(db_path + "test_dataset/images")
         ...            if os.path.isfile(os.path.join(db_path + "test_dataset/images", name)) and name[-3:] == "jpg"]))
         4
         >>> os.path.exists(db_path + "test_dataset/image_data.json")
@@ -107,8 +90,8 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
         >>> shutil.rmtree(db_path + "test_data")
         >>> shutil.rmtree(db_path + "test_dataset")
     """
-    
-    path_out = os.path.join(dir_out, file_out.replace('/', ''))
+
+    path_out = os.path.join(dir_out, file_out.replace("/", ""))
     direct = Directory(dir_in, recursive=recursive, images=True)
     imgtable = ImageTable(dir_out, ["None"])
     files = direct.files()
@@ -121,7 +104,7 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
         uri_set = set(imgtable.get_image_uris_original(gid_list))
         file_set = set(direct.files())
         files = list(file_set - uri_set)
-    
+
     # Add images to database
     gid_list = add_images(imgtable, files, doctest_mode=doctest_mode)
     if gid_list:

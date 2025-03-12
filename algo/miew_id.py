@@ -48,19 +48,15 @@ class MiewIDDataset(Dataset):
             return img, target
         else:
             return img
-        
+
 
 def get_img(path):
-    im_bgr = cv2.imread(path)
-    im_rgb = im_bgr[:, :, ::-1]
-    return im_rgb
+    return cv2.imread(path)[:, :, ::-1]
 
 
 def rotate_box(x1, y1, x2, y2, theta):
     xm = (x1 + x2) // 2
     ym = (y1 + y2) // 2
-    h = int(y2 - y1)
-    w = int(x2 - x1)
     R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
     A = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1], [x1, y1]])
     C = np.array([[xm, ym]])
@@ -111,14 +107,14 @@ def get_embeddings(loader, model, device):
     all_embeddings = []
 
     with torch.no_grad():
-        with tqdm(loader,total=len(loader),desc="Running model...") as pbar:
+        with tqdm(loader, total=len(loader), desc="Running model...") as pbar:
             for imgs in pbar:
                 imgs = imgs.to(device).float()
                 img_embeds = model(imgs)
                 all_embeddings.append(img_embeds.detach().cpu())
     all_embeddings = torch.cat(all_embeddings, dim=0).numpy()
 
-    return all_embeddings    
+    return all_embeddings
 
 
 if __name__ == "__main__":
@@ -137,7 +133,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "model_url",
         type=str,
-        help="The url to the hugging face model for miewid embeddings"
+        help="The url to the hugging face model for miewid embeddings",
     )
     parser.add_argument(
         "out_path", type=str, help="The full path to the output json file"
@@ -160,7 +156,8 @@ if __name__ == "__main__":
                 p=1.0,
             ),
             ToTensorV2(p=1.0),
-        ])
+        ]
+    )
 
     df["path"] = df["image uuid"].apply(
         lambda x: os.path.join(args.image_dir, x + ".jpg")
@@ -181,12 +178,11 @@ if __name__ == "__main__":
     embeddings = get_embeddings(dl, model, device)
 
     print("Building the new annotations...")
-    df['miewid'] = embeddings.tolist()
-    annots = df.to_dict('records')
+    df["miewid"] = embeddings.tolist()
+    annots = df.to_dict("records")
 
     print(f"Saving in json format to {args.out_path}...")
     with open(args.out_path, "w") as f:
-        f.write(json.dumps(annots,indent=4))
+        f.write(json.dumps(annots, indent=4))
 
     print("Done!")
-    
