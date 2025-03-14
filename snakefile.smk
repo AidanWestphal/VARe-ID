@@ -38,12 +38,13 @@ cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
 # for miew id embedding generator
 mid_dir = config["mid_dir"]
 mid_model_url = config["mid_model_url"]
-mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
+mid_out_json_path = os.path.join(mid_dir, config["mid_out_json_file"])
+mid_out_pkl_path = os.path.join(mid_dir, config["mid_out_pkl_file"])
 
 rule all: 
     input:
-        si_out_path,
-        mid_out_path
+        mid_out_json_path,
+        mid_out_pkl_path
 
 # rule import_data:
 #     input:
@@ -105,6 +106,7 @@ rule miew_id:
         file=cac_out_path,
         script="algo/miew_id.py"
     output:
-        mid_out_path
+        json=mid_out_json_path, 
+        pkl=mid_out_pkl_path
     shell: 
-        "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
+        "python {input.script} {image_dir} {input.file} {mid_model_url} {output.json} {output.pkl}"

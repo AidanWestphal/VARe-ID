@@ -24,4 +24,5 @@ cac_out_file: "final_output_with_softmax_and_census.csv"
 
 mid_dir: "test_dataset/miew_id/"
 mid_model_url: "conservationxlabs/miewid-msv3"
-mid_out_file: "final_output_wth_miewid.csv"
+mid_out_json_file: "miewid_output.json"
+mid_out_pkl_file: "miewid_output.pickle"

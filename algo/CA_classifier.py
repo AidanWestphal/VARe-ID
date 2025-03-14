@@ -220,8 +220,9 @@ def main():
     
 
     # Drop specified columns
-    columns_to_drop = ['path', 'softmax_output_0', 'softmax_output_1', 'log_AR']
+    columns_to_drop = ['path', 'softmax_output_0', 'log_AR']
     final_df = final_df.drop(columns=[col for col in columns_to_drop if col in final_df.columns])
+    final_df = final_df.rename(columns={'softmax_output_1': 'CA_score'})
     print(f'The length of final concatenated CSV is: {len(final_df)}\n')
 
     # Save the updated DataFrame to a new CSV file
