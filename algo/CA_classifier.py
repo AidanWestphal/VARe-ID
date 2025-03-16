@@ -41,6 +41,10 @@ class CustomImageDataset(Dataset):
         # Crop the image according to bbox
         image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
 
+        # Flip the image if left viewpoint
+        if "left" in self.img_data.iloc[idx]['predicted_viewpoint']:
+            image = F.hflip(image)
+
         if self.transform:
             image = self.transform(image)
 
@@ -84,6 +88,10 @@ def preprocess_viewpoint(viewpoint):
         return 'frontright'
     elif viewpoint == 'back, right':
         return 'backright'
+    elif viewpoint == 'front, left':
+        return 'frontleft'
+    elif viewpoint == 'back, left':
+        return 'backleft'
     return viewpoint
 
 

@@ -5,4 +5,4 @@ max_log_AR: 1.4348566194081924
 batch_size: 32
 species: 'zebra_grevys'
 NMS_threshold: 0.1
-viewpoints: ['right', 'frontright', 'backright']
+viewpoints: ['right', 'frontright', 'backright', 'left', 'frontleft', 'backleft']
