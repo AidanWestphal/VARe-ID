@@ -46,16 +46,12 @@ class MiewIDDataset(Dataset):
         
 
 def get_img(path):
-    im_bgr = cv2.imread(path)
-    im_rgb = im_bgr[:, :, ::-1]
-    return im_rgb
+    return cv2.imread(path)[:, :, ::-1]
 
 
 def rotate_box(x1, y1, x2, y2, theta):
     xm = (x1 + x2) // 2
     ym = (y1 + y2) // 2
-    h = int(y2 - y1)
-    w = int(x2 - x1)
     R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
     A = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1], [x1, y1]])
     C = np.array([[xm, ym]])
@@ -163,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "in_csv_path",
         type=str,
-        help="The full path to the ca classifier output csv to use as input",
+        help="The full path to the ca classifier output csv to use as input"
     )
     parser.add_argument(
         "model_url",
@@ -194,7 +190,8 @@ if __name__ == "__main__":
                 p=1.0,
             ),
             ToTensorV2(p=1.0),
-        ])
+        ]
+    )
 
     df["path"] = df["image uuid"].apply(
         lambda x: os.path.join(args.image_dir, x + ".jpg")
@@ -225,4 +222,3 @@ if __name__ == "__main__":
         pickle.dump(embeddings,f)
 
     print("Done!")
-    

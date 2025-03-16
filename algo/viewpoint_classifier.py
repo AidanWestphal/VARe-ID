@@ -1,11 +1,9 @@
 import argparse
-import ast
 import os
 import shutil
 import warnings
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import timm
@@ -13,10 +11,8 @@ import torch
 import yaml
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
-from sklearn.metrics import classification_report, confusion_matrix
 from torch.cuda.amp import GradScaler
 from torch.utils.data import Dataset
-from tqdm import tqdm
 
 # Load configuration
 with open("algo/viewpoint_classifier.yaml", "r") as file:
@@ -125,16 +121,12 @@ def predict_labels_new(test_loader, model, device):
 
 
 def get_img(path):
-    im_bgr = cv2.imread(path)
-    im_rgb = im_bgr[:, :, ::-1]
-    return im_rgb
+    return cv2.imread(path)[:, :, ::-1]
 
 
 def rotate_box(x1, y1, x2, y2, theta):
     xm = (x1 + x2) // 2
     ym = (y1 + y2) // 2
-    h = int(y2 - y1)
-    w = int(x2 - x1)
     R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
     A = np.array([[x1, y1], [x1, y2], [x2, y2], [x2, y1], [x1, y1]])
     C = np.array([[xm, ym]])
@@ -152,18 +144,6 @@ def crop_rect(img, rect):
     img_crop = cv2.getRectSubPix(img_rot, size, center)
     return img_crop, img_rot
 
-#
-# def get_chip(row):
-#     # box = ast.literal_eval(row['bbox'])
-#     box = row["bbox"]
-#     theta = 0.0
-#     img = get_img(row["path"]).copy()
-#     x1, y1, w, h = box
-#     x2 = x1 + w
-#     y2 = y1 + h
-#     xm = (x1 + x2) // 2
-#     ym = (y1 + y2) // 2
-#     return crop_rect(img, ((xm, ym), (x2 - x1, y2 - y1), theta))[0]
 
 def get_chip(row):
     box = row["bbox_xywh"]  # Changed from bbox to bbox_xywh
@@ -177,26 +157,32 @@ def get_chip(row):
     return crop_rect(img, ((xm, ym), (x2 - x1, y2 - y1), theta))[0]
 
 
-if __name__ == "__main__":
-    print("Loading data...")
-    parser = argparse.ArgumentParser(
-        description="Run viewpoint classifier for database of animal images"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
-    )
-    parser.add_argument(
-        "in_csv_path",
-        type=str,
-        help="The full path to the viewpoint classifier output csv to use as input",
-    )
-    parser.add_argument(
-        "model_checkpoint_path", type=str, help="The full path to the model checkpoint"
-    )
-    parser.add_argument(
-        "out_csv_path", type=str, help="The full path to the output csv file"
-    )
-    args = parser.parse_args()
+def main(args):
+    """
+    Doctest Command:
+        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE algo/viewpoint_classifier.py
+
+    Example:
+        >>> from argparse import Namespace
+        >>> args = Namespace(
+        ...     image_dir="test_imgs",
+        ...     in_csv_path="temp/species_classifier/species_classifier_output.csv",
+        ...     model_checkpoint_path="test_dataset/viewpoint_trained_model.pth",
+        ...     out_csv_path="temp/viewpoint/viewpoint_output.csv"
+        ... )
+        >>> main(args) # doctest: +ELLIPSIS
+        Index(['annot uuid', 'image uuid', 'image fname', 'bbox x', 'bbox y', 'bbox w',
+            'bbox h', 'bbox pred score', 'category id', 'species_prediction',
+            'species_pred_score', 'species_pred_simple'],
+            dtype='object')
+        Preparing data for the model...
+        Setting up the model...
+        Running the model...
+        Processing the model predictions...
+        Removing Previous Instance of Experiment...
+        Saving the results...
+        Done!
+    """
 
     original_csv = pd.read_csv(args.in_csv_path)
 
@@ -204,20 +190,15 @@ if __name__ == "__main__":
     # Remove rows that are not the correct species
     # is this needed? this would require ground truth
     filtered_csv = original_csv[
-        # original_csv["species_true_simple"].isin(config["filtered_classes"])
         original_csv["species_pred_simple"].isin(config["filtered_classes"])
     ]
-    # Append image_dir to the 'image fname' column
-    # filtered_csv["path"] = filtered_csv["image uuid"+"jpg"].apply(
-    #     lambda x: os.path.join(args.image_dir, x)
-    # )
 
-    filtered_csv["path"] = filtered_csv["image uuid"].apply(
-        lambda x: os.path.join(args.image_dir, x + ".jpg")
+    filtered_csv["path"] = filtered_csv["image fname"].apply(
+        lambda x: os.path.join(args.image_dir, x)
     )
-    
+
     # Create a single 'bbox' column from the four bbox columns
-    filtered_csv['bbox_xywh'] = list(
+    filtered_csv["bbox_xywh"] = list(
         zip(
             filtered_csv["bbox x"],
             filtered_csv["bbox y"],
@@ -225,16 +206,15 @@ if __name__ == "__main__":
             filtered_csv["bbox h"],
         )
     )
-        
+
     # Convert xyxy to xywh
     def xywh_to_xyxy(bbox):
         x1, y1, w, h = bbox
         x2 = x1 + w
         y2 = y1 + h
-        return [x1,y1,x2,y2]
+        return [x1, y1, x2, y2]
 
-
-    filtered_csv['bbox_xyxy'] = filtered_csv['bbox_xywh'].apply(xywh_to_xyxy)
+    filtered_csv["bbox_xyxy"] = filtered_csv["bbox_xywh"].apply(xywh_to_xyxy)
 
     #
     # # Split the original dataframe into two based on the filtering criteria
@@ -251,17 +231,16 @@ if __name__ == "__main__":
 
     # Split based on bbox_xywh and species criteria
     filtered_test = filtered_csv[
-        filtered_csv['bbox_xywh'].notna() &
-        (filtered_csv["species_prediction"] == config["species"])
-        ].reset_index(drop=True)
+        filtered_csv["bbox_xywh"].notna()
+        & (filtered_csv["species_prediction"] == config["species"])
+    ].reset_index(drop=True)
 
     other_test = filtered_csv[
-        filtered_csv['bbox_xywh'].isna() |
-        (filtered_csv["species_prediction"] != config["species"])
-        ].reset_index(drop=True)
+        filtered_csv["bbox_xywh"].isna()
+        | (filtered_csv["species_prediction"] != config["species"])
+    ].reset_index(drop=True)
 
     other_test["predicted_viewpoint"] = np.nan
-
 
     # print(f'Filtered dataset is: \n {filtered_test}')
     # print(f'\n Other dataset is: \n {other_test}')
@@ -329,3 +308,26 @@ if __name__ == "__main__":
     final_output.to_csv(args.out_csv_path, index=False)
 
     print("Done!")
+
+
+if __name__ == "__main__":
+    print("Loading data...")
+    parser = argparse.ArgumentParser(
+        description="Run viewpoint classifier for database of animal images"
+    )
+    parser.add_argument(
+        "image_dir", type=str, help="The directory where localized images are found"
+    )
+    parser.add_argument(
+        "in_csv_path",
+        type=str,
+        help="The full path to the viewpoint classifier output csv to use as input",
+    )
+    parser.add_argument(
+        "model_checkpoint_path", type=str, help="The full path to the model checkpoint"
+    )
+    parser.add_argument(
+        "out_csv_path", type=str, help="The full path to the output csv file"
+    )
+    args = parser.parse_args()
+    main(args)

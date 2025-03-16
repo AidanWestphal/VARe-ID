@@ -1,29 +1,20 @@
-import os
-import ast
-import sys
-import yaml
-import torch
-import shutil
 import argparse
+import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import warnings
-import subprocess
-import numpy as np
-import pandas as pd
-import seaborn as sns
 from pathlib import Path
-import matplotlib.pyplot as plt
+
+import pandas as pd
+import torch
+import yaml
 from tqdm import tqdm
+from bioclip import CustomLabelsClassifier
 
 warnings.filterwarnings("ignore")
 from PIL import Image
-from sklearn.metrics import (
-    confusion_matrix,
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-)
 
 
 def load_config(config_file_path):
@@ -75,15 +66,15 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
     predicted_labels = []
     predicted_scores = []
 
-    for index, row in tqdm(df.iterrows()):
+    for _, row in tqdm(df.iterrows()):
 
         x0 = row["bbox x"]
         y0 = row["bbox y"]
         w = row["bbox w"]
         h = row["bbox h"]
-        image_filename = row["image uuid"]
+        image_filename = row["image fname"]
 
-        image_filepath = os.path.join(image_dir, f"{image_filename}.jpg")
+        image_filepath = os.path.join(image_dir, f"{image_filename}")
         original_image = Image.open(image_filepath)
         cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
@@ -138,32 +129,41 @@ def postprerocess_dataframe(df):
     return df
 
 
-if __name__ == "__main__":
+def main(args):
+    """
+    Doctest Command:
+        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE algo/species_identifier.py
+
+    Example:
+        >>> from argparse import Namespace
+        >>> args = Namespace(
+        ...     image_dir="test_imgs",
+        ...     in_csv_path="temp/annots/filtered_annots.csv",
+        ...     si_dir="temp/bioclip",
+        ...     out_csv_path="temp/species_classifier/species_classifier_output.csv"
+        ... )
+        >>> main(args) # doctest: +ELLIPSIS
+            Removing Previous Instance of Experiment
+            Creating Experiment Directory ...
+            Cloning & Installing pyBioCLIP ...
+            Cloning repository https://... into temp/bioclip/BioCLIP/...
+            Repository cloned successfully...
+            Installing package from temp/bioclip/BioCLIP/...
+            Package installed successfully...
+            pyBioCLIP Installation Completed ....
+            Running pyBioCLIP ...
+            pyBioCLIP Completed ...
+            Post-Processing ...
+            Post-Processing Completed ...
+            Saving ALL Predictions as CSV ...
+            Completed Successfully!
+    """
 
     # Loading Configuration File ...
     config = load_config("algo/species_identifier_drive.yaml")
 
     # Setting up Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    parser = argparse.ArgumentParser(
-        description="Detect bounding boxes for database of animal images"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
-    )
-    parser.add_argument(
-        "in_csv_path",
-        type=str,
-        help="The full path to the viewpoint classifier output csv to use as input",
-    )
-    parser.add_argument(
-        "si_dir", type=str, help="The directory to install bioCLIP within"
-    )
-    parser.add_argument(
-        "out_csv_path", type=str, help="The full path to the output csv file"
-    )
-    args = parser.parse_args()
 
     images = Path(args.image_dir)
 
@@ -180,7 +180,6 @@ if __name__ == "__main__":
     print("Cloning & Installing pyBioCLIP ...")
     clone_pyBioCLIP_from_github(bioCLIP_dir, pyBioCLIP_url)
     install_pyBioCLIP_from_directory(bioCLIP_dir)
-    from bioclip import CustomLabelsClassifier
 
     print("pyBioCLIP Installation Completed ....")
 
@@ -203,3 +202,26 @@ if __name__ == "__main__":
     df.to_csv(args.out_csv_path, index=False)
 
     print("Completed Successfully!")
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description="Detect bounding boxes for database of animal images"
+    )
+    parser.add_argument(
+        "image_dir", type=str, help="The directory where localized images are found"
+    )
+    parser.add_argument(
+        "in_csv_path",
+        type=str,
+        help="The full path to the viewpoint classifier output csv to use as input",
+    )
+    parser.add_argument(
+        "si_dir", type=str, help="The directory to install bioCLIP within"
+    )
+    parser.add_argument(
+        "out_csv_path", type=str, help="The full path to the output csv file"
+    )
+    args = parser.parse_args()
+    main(args)

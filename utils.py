@@ -6,19 +6,25 @@ import numpy as np
 from os.path import exists, expanduser, join, normpath, realpath
 from PIL import Image, ExifTags
 
-from constants import ORIENTATION_DICT, ORIENTATION_000, ORIENTATION_090, ORIENTATION_180, ORIENTATION_270
+from constants import (
+    ORIENTATION_DICT,
+    ORIENTATION_000,
+    ORIENTATION_090,
+    ORIENTATION_180,
+    ORIENTATION_270,
+)
 
 
 def parse_exif(pil_img):
     """
     Compiles image exif data into dictionary with string keys.
-    
+
     Parameters:
         pil_img (open PIL image): image to extract exif data from
-    
+
     Returns:
         exif_dict (dict): dictionary containing exif data with exif tag names as keys
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE utils.py
 
@@ -28,7 +34,7 @@ def parse_exif(pil_img):
         >>> import exif
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_data/"
         >>> gpath = db_path + 'test_dataset/images/img0.JPG'
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> a = numpy.random.rand(30,40,3) * 255
@@ -49,7 +55,7 @@ def parse_exif(pil_img):
         ...     bytes = img_file.write(img.get_file())
         >>> pil_img = Image.open(gpath, 'r')
         >>> parse_exif(pil_img)
-        {'DateTime': '2024:06:28 17:58:16', 'Orientation': 1, 'GPSLatitudeRef': 'S', 
+        {'DateTime': '2024:06:28 17:58:16', 'Orientation': 1, 'GPSLatitudeRef': 'S',
          'GPSLatitude': (1.0, 17.0, 30.786), 'GPSLongitudeRef': 'E', 'GPSLongitude': (36.0, 53.0, 53.4762)}
         >>> shutil.rmtree(db_path + "test_dataset")
     """
@@ -66,23 +72,26 @@ def parse_exif(pil_img):
             ifd_data = img_exif.get_ifd(tag_code).items()
 
             for nested_key, nested_value in ifd_data:
-                nested_tag_name = ExifTags.GPSTAGS.get(nested_key, None) or ExifTags.TAGS.get(nested_key, 
-                                                                                              None) or nested_key
+                nested_tag_name = (
+                    ExifTags.GPSTAGS.get(nested_key, None)
+                    or ExifTags.TAGS.get(nested_key, None)
+                    or nested_key
+                )
                 exif_dict[nested_tag_name] = nested_value
         else:
             exif_dict[ExifTags.TAGS.get(tag_code)] = value
-    
+
     return exif_dict
 
 
 def fix_orientation(pil_img, orient):
     """
     Ensures image is oriented right side up.
-    
+
     Parameters:
         pil_img (open PIL image): image to fix
         orient (int): orientation of image
-    
+
     Returns:
         pil_img (open PIL image): the updated image
 
@@ -95,8 +104,10 @@ def fix_orientation(pil_img, orient):
         >>> import exif
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_data/"
         >>> gpath = db_path + 'test_dataset/images/img0.JPG'
+        >>> if os.path.exists(db_path + "test_dataset/images"):
+        ...     shutil.rmtree(db_path + "test_dataset/images")
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> a = numpy.random.rand(30,40,3) * 255
         >>> img = Image.fromarray(a.astype('uint8')).convert('RGB')
@@ -125,15 +136,15 @@ def fix_orientation(pil_img, orient):
         return pil_img.rotate(270, expand=1)
     else:
         return pil_img
-    
+
 
 def fix_pil_img(pil_img):
     """
     Normalizes image color and orientation.
-    
+
     Parameters:
         pil_img (open PIL image): image to be fixed
-    
+
     Returns:
         imgBGR (ndarray): fixed image
 
@@ -146,7 +157,7 @@ def fix_pil_img(pil_img):
         >>> import exif
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_data/"
         >>> gpath = db_path + 'test_dataset/images/img0.JPG'
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> a = numpy.random.rand(30,40,3) * 255
@@ -171,7 +182,7 @@ def fix_pil_img(pil_img):
 
     if orient in ORIENTATION_DICT:
         pil_img_fixed = fix_orientation(pil_img, orient)
-    np_img = np.array(pil_img_fixed.convert('RGB'))
+    np_img = np.array(pil_img_fixed.convert("RGB"))
     imgBGR = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
 
     if not isinstance(orient, bool) and orient in ORIENTATION_DICT:
@@ -180,7 +191,7 @@ def fix_pil_img(pil_img):
 
 
 def duplicates_exist(items):
-    """ returns if list has duplicates """
+    """returns if list has duplicates"""
     return len(items) - len(set(items)) != 0
 
 
@@ -205,7 +216,7 @@ def imread(img_fpath):
         >>> import exif
         >>> import shutil
         >>> from PIL import Image
-        >>> db_path = "/mnt/c/Users/Julian/Research/Pipeline/data/"
+        >>> db_path = "doctest_data/"
         >>> gpath = db_path + 'test_dataset/images/img0.JPG'
         >>> os.makedirs(db_path + "test_dataset/images")
         >>> a = numpy.random.rand(30,40,3) * 255
@@ -229,18 +240,18 @@ def imread(img_fpath):
         imgBGR = None
     if imgBGR is None:
         if not exists(img_fpath):
-            raise IOError('cannot read img_fpath=%s does not exist.' % img_fpath)
+            raise IOError("cannot read img_fpath=%s does not exist." % img_fpath)
         else:
             if not os.access(img_fpath, os.R_OK):
                 raise PermissionError(
-                    'cannot read img_fpath={} access denied.'.format(img_fpath)
+                    "cannot read img_fpath={} access denied.".format(img_fpath)
                 )
-            
+
             msg = (
-                'Cannot read img_fpath=%s, '
-                'seems corrupted or memory error.' % img_fpath
+                "Cannot read img_fpath=%s, "
+                "seems corrupted or memory error." % img_fpath
             )
-            print('[utils.imread] ' + msg)
+            print("[utils.imread] " + msg)
             raise IOError(msg)
     return imgBGR
 
@@ -273,7 +284,7 @@ def isiterable(obj):
         return not isinstance(obj, six.string_types)
     except Exception:
         return False
-    
+
 
 def list_compress(item_list, flag_list, inverse=False):
     """
@@ -298,15 +309,20 @@ def list_compress(item_list, flag_list, inverse=False):
         [2, 4]
     """
 
-    assert len(item_list) == len(flag_list), (
-        'lists should correspond. len(item_list)=%r len(flag_list)=%r' %
-        (len(item_list), len(flag_list)))
-    
+    assert len(item_list) == len(
+        flag_list
+    ), "lists should correspond. len(item_list)=%r len(flag_list)=%r" % (
+        len(item_list),
+        len(flag_list),
+    )
+
     filtered_items = []
     for item_idx in range(len(item_list)):
-        if (not inverse and flag_list[item_idx]) or (inverse and not flag_list[item_idx]):
+        if (not inverse and flag_list[item_idx]) or (
+            inverse and not flag_list[item_idx]
+        ):
             filtered_items.append(item_list[item_idx])
-    
+
     return filtered_items
 
 
@@ -314,13 +330,13 @@ def list_unique(item_list):
     """
     Returns item list without any duplicates.
     Maintains item order.
-    
+
     Parameters:
         item_list (list): list of items to screen
-    
+
     Returns:
         (list): filtered item list
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE utils.py
 
@@ -331,29 +347,32 @@ def list_unique(item_list):
 
     flag_list = []
     for item_idx in range(len(item_list)):
-        (flag_list.append(False) if item_list[item_idx] 
-         in item_list[:item_idx] else flag_list.append(True))
-    
+        (
+            flag_list.append(False)
+            if item_list[item_idx] in item_list[:item_idx]
+            else flag_list.append(True)
+        )
+
     return list_compress(item_list, flag_list)
 
 
 def copy_file_list(src_list, dst_list, err_ok=False):
     """
     Copies series of files and preserves metadata.
-    
+
     Parameters:
         src_list (list): list of file paths to copy
         dst_list (list): list of file paths to copy into
         err_ok (bool): if true, returns false for any failed copies instead of producing an error
-    
+
     Returns:
         success_list (list): list of flags (true for successful copies, false for failed copies)
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE utils.py
 
     Example:
-        >>> path = '/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/'
+        >>> path = ''
         >>> src_list = [path + 'src_dir/img1.jpg', path + 'src_dir/img2.jpg']
         >>> dst_list = [path + 'dst_dir/img1.jpg', path + 'dst_dir/img2.jpg']
         >>> os.mkdir(path + 'src_dir/')
@@ -363,23 +382,22 @@ def copy_file_list(src_list, dst_list, err_ok=False):
         >>> img = Image.new('RGB',(480,640),'rgb(0,0,0)')
         >>> img.save(src_list[1])
         >>> copy_file_list(src_list, dst_list)
-        ['/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/dst_dir/img1.jpg', '/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/dst_dir/img2.jpg']
+        ['dst_dir/img1.jpg', 'dst_dir/img2.jpg']
         >>> shutil.rmtree(path + 'src_dir/')
         >>> shutil.rmtree(path + 'dst_dir/')
     """
 
     success_list = []
-    for (src, dst) in zip(src_list, dst_list):
+    for src, dst in zip(src_list, dst_list):
         try:
             path = shutil.copy2(src, dst)
+            success_list.append(path)
         except:
             if err_ok:
                 success_list.append(None)
             else:
                 raise
 
-        success_list.append(path)
-    
     return success_list
 
 
@@ -394,15 +412,15 @@ def ensuredir(path_, mode=0o1777):
 
     Returns:
         path_ (str): path of the ensured directory
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE utils.py
 
     Example:
-        >>> path = '/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/test_dir/'
+        >>> path = 'test_dir/'
         >>> ensuredir(path)
-        [ensuredir] mkdir('/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/test_dir/')
-        '/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/test_dir/'
+        [ensuredir] mkdir('test_dir/')
+        'test_dir/'
         >>> os.path.exists(path)
         True
         >>> os.rmdir(path)
@@ -412,7 +430,7 @@ def ensuredir(path_, mode=0o1777):
         path_ = join(*path_)
 
     if not os.path.exists(path_):
-        print('[ensuredir] mkdir(%r)' % path_)
+        print("[ensuredir] mkdir(%r)" % path_)
         os.makedirs(normpath(path_), mode=mode)
 
     return path_
@@ -421,14 +439,14 @@ def ensuredir(path_, mode=0o1777):
 def remove_file(fpath, ignore_errors=True):
     """
     Removes a file.
-    
+
     Parameters:
         fpath (str): file path to remove
         ignore_errors (bool): if true, ignores errors
-    
+
     Returns:
         (bool): whether or not removal was a success
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE utils.py
 
@@ -436,21 +454,21 @@ def remove_file(fpath, ignore_errors=True):
         >>> with open('test_file.txt', 'w') as file:
         ...     file.write('test')
         4
-        >>> remove_file(os.path.abspath('test_file.txt'))
-        [utils.remove_file] Finished deleting path='/mnt/c/Users/Julian/Research/Pipeline/GGR-Zebra-ReID/test_file.txt'
+        >>> remove_file(os.path.abspath('test_file.txt')) # doctest: +ELLIPSIS
+        [utils.remove_file] Finished deleting path='...test_file.txt'
         True
     """
 
     try:
         os.remove(fpath)
     except OSError:
-        print('[utils.remove_file] Could not delete %s' % fpath)
+        print("[utils.remove_file] Could not delete %s" % fpath)
         if not ignore_errors:
             raise
 
         return False
-    
-    print('[utils.remove_file] Finished deleting path=%r' % fpath)
+
+    print("[utils.remove_file] Finished deleting path=%r" % fpath)
     return True
 
 
@@ -460,7 +478,7 @@ def unixpath(path):
 
     Parameters:
         path (str): path to correct
-    
+
     Returns:
         path (str): corrected path
 
@@ -471,8 +489,8 @@ def unixpath(path):
         >>> unixpath('/mnt/c/Users\\Julian\\Images\\img.jpg')
         '/mnt/c/Users/Julian/Images/img.jpg'
     """
-    
-    return normpath(realpath(expanduser(path))).replace('\\', '/')
+
+    return normpath(realpath(expanduser(path))).replace("\\", "/")
 
 
 def ensure_unix_gpaths(gpath_list):
@@ -485,7 +503,7 @@ def ensure_unix_gpaths(gpath_list):
 
     Returns:
         gpath_list (list): list of updated image paths
-    
+
     Doctest Command:
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE utils.py
 
@@ -503,10 +521,10 @@ def ensure_unix_gpaths(gpath_list):
         else:
             try:
                 msg = (
-                    'gpath_list must be in unix format (no backslashes).'
-                    'Failed on %d-th gpath=%r'
+                    "gpath_list must be in unix format (no backslashes)."
+                    "Failed on %d-th gpath=%r"
                 )
-                assert gpath.find('\\') == -1, msg % (count, gpath)
+                assert gpath.find("\\") == -1, msg % (count, gpath)
             except (AttributeError, AssertionError):
                 gpath = unixpath(gpath)
         gpath_list_.append(gpath)
