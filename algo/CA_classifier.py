@@ -12,6 +12,7 @@ from PIL import Image
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+from torchvision.transforms import functional as F
 from torchvision.models import resnet50
 from torchvision.ops import nms
 

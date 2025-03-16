@@ -24,12 +24,12 @@ class MiewIDDataset(Dataset):
         self.transforms = transforms
 
         # Build a custom mapping for UUIDS s.t. we have unique integer labels
-        uuid_set = set(self.df["uuid"].values.tolist())
+        uuid_set = set(self.df["annot uuid"].values.tolist())
 
         self.uuid_to_id = { uuid: i for i, uuid in enumerate(uuid_set) }
         self.id_to_uuid = { i: uuid for i, uuid in enumerate(uuid_set) }
 
-        self.labels = [*map(self.uuid_to_id.get, self.df["uuid"].values.tolist())]
+        self.labels = [*map(self.uuid_to_id.get, self.df["annot uuid"].values.tolist())]
         self.labels = torch.tensor(self.labels, dtype=torch.float32)
 
     def __len__(self):
@@ -127,7 +127,7 @@ def format_for_lca(annots):
         
         formatted_annots.append(
             {
-            "uuid": a["uuid"],
+            "uuid": a["annot uuid"],
             "image_uuid": a["image uuid"],
             "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
             "viewport": a["predicted_viewpoint"],
