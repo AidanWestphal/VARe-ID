@@ -1,11 +1,11 @@
-data_dir_in: "GGR2020_subset/"
+data_dir_in: "images/"
 db_dir: "test_dataset/"
 image_dirname: "images"
 annot_dirname: "annots"
 import_out_file: "image_data.json"
 
 dt_dir: "test_dataset/detector/"
-ground_truth_csv: "test_dataset/GZCD_Cleaned.csv"
+ground_truth_csv: "test_dataset/annotations.csv"
 model_version: "yolov10l"
 annots_filename: "pred_annots_"
 annots_filtered_filename: "filtered_pred_annots_"
@@ -15,11 +15,11 @@ predictions_dir: "test_dataset/species_identifier/predictions/"
 si_out_file_end: "_bioCLIP_predictions.csv"
 
 vc_dir: "test_dataset/viewpoint_classifier/"
-vc_model_checkpoint: "test_dataset/viewpoint_trained_model.pth"
+vc_model_checkpoint: "test_dataset/your_viewpoint_classifer.pth"
 vc_out_file: "output_with_viewpoint.csv"
 
 cac_dir: "test_dataset/ca_classifier/"
-cac_model_checkpoint: "test_dataset/best_july_8_cuda_extended_aug_sample_annot_classifier.pth"
+cac_model_checkpoint: "test_dataset/your_ca_classifier.pth"
 cac_out_file: "final_output_with_softmax_and_census.csv"
 
 mid_dir: "test_dataset/miew_id/"
