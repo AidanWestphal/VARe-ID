@@ -108,3 +108,4 @@ rule miew_id:
         mid_out_path
     shell: 
         "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
+        
