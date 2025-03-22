@@ -5,12 +5,13 @@ developer convenience functions
 import os.path
 
 from control.image_funcs import add_images
+from control.video_funcs import add_videos
 from db.directory import Directory
 from db.table import ImageTable
 
 
 # Import images recursively from path into database
-def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
+def import_image_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
     """Import images recursively from path into image table.
 
     Parameters:
@@ -110,3 +111,32 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
     if gid_list:
         imgtable.export_to_json(path_out)
     return gid_list
+
+
+# Import videos recursively from path into database
+def import_video_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
+    """Import videos recursively from path into image table.
+
+    Parameters:
+        dir_in (str): directory to import from
+        dir_out (str): directory to store localized videos and output files
+        file_out (str): name of output file to save video metadata
+        recursive (bool): whether or not to search for videos recursively in dir_in
+        doctest_mode (bool): if true, replaces carriage returns with newlines
+
+    Returns:
+        gid_list (list): list of gids of images that were imported
+
+    Doctest Command:
+        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/con_funcs.py
+    """
+
+    direct = Directory(dir_in, recursive=recursive, include_file_extensions=["mp4", "avi"])
+    files = direct.files()
+
+    # TODO: EXPORT VIDEO METADATA FROM A video_data.json FILE & LOAD VIDEOS DIRECTLY IF THIS ALREADY EXISTS
+
+    # Construct abs path for dir out
+    
+    # Add videos to database
+    add_videos(dir_out, files, doctest_mode=doctest_mode)

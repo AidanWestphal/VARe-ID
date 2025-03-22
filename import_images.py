@@ -1,6 +1,6 @@
 import argparse
 
-from control.con_funcs import import_folder
+from control.con_funcs import import_image_folder
 
 
 if __name__ == "__main__":
@@ -18,4 +18,4 @@ if __name__ == "__main__":
     dir_out = args.out_path[:sep_idx]
     out_file = args.out_path[sep_idx:]
     # Import images to database
-    image_table = import_folder(args.dir_in, dir_out, out_file)
+    image_table = import_image_folder(args.dir_in, dir_out, out_file)
