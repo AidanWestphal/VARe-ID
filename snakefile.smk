@@ -23,18 +23,26 @@ dt_dir = config["dt_dir"]
 annot_dir = db_dir + annot_dirname + "/"
 ground_truth_csv = config["ground_truth_csv"]
 model_version = config["model_version"]
-annots_filename = config["annots_filename"] + config["model_version"]
-annots_filtered_filename = config["annots_filtered_filename"] + config["model_version"]
+
+vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"]
+img_annots_filename = "img_" + config["annots_filename"] + config["model_version"]
+vid_annots_filtered_filename = "vid_" +  config["annots_filtered_filename"] + config["model_version"]
+img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"]
 
 # SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
-vid_annots_filtered_path = os.path.join(annot_dir, "vid_" + annots_filtered_filename + ".csv")
-img_annots_filtered_path = os.path.join(annot_dir, "img_" + annots_filtered_filename + ".csv")
-
+vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename + ".csv")
+img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename + ".csv")
 
 # for species identifier
 si_dir = config["si_dir"]
 predictions_dir = config["predictions_dir"]
-si_out_path = os.path.join(predictions_dir, annots_filtered_filename + config["si_out_file_end"])
+
+if data_is_video:
+    exp_annots_filtered_path = vid_annots_filtered_path
+    si_out_path = os.path.join(predictions_dir, vid_annots_filtered_filename + config["si_out_file_end"])
+else:
+    exp_annots_filtered_path = img_annots_filtered_path
+    si_out_path = os.path.join(predictions_dir, img_annots_filtered_filename + config["si_out_file_end"])
 
 # for viewpoint classifier
 vc_dir = config["vc_dir"]
@@ -67,15 +75,6 @@ rule all:
     input:
         get_targets()
 
-# rule import_data:
-#     input:
-#         dir=config["data_dir_in"],
-#         script="import_data.py"
-#     output:
-#         import_out_path
-#     shell:
-#         "python {input.script} {input.dir} {img_data_path} {output}"
-
 rule import_images:
     input:
         dir=config["data_dir_in"],
@@ -91,7 +90,7 @@ rule detector_images:
     output:
         img_annots_filtered_path
     shell:
-        "python {input.script} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {annots_filename} {annots_filtered_filename}"
+        "python {input.script} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {img_annots_filename} {img_annots_filtered_filename}"
 
 rule import_videos:
     input:
@@ -109,18 +108,11 @@ rule detector_videos:
     output:
         vid_annots_filtered_path
     shell:
-        "python {input.script} {input.dir} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {annots_filename} {annots_filtered_filename}"
-
-# FUNCTION TO JOIN INPUT AND DETECTION PATHS
-def determine_path(wildards):
-        if data_is_video:
-            return vid_annots_filtered_path
-        else:
-            return img_annots_filtered_path
+        "python {input.script} {input.dir} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {vid_annots_filename} {vid_annots_filtered_filename}"
 
 rule species_identifier:
     input:
-        file=determine_path,
+        file=exp_annots_filtered_path,
         script="algo/species_identifier.py"
     output:
         si_out_path
