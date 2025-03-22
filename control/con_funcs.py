@@ -131,6 +131,7 @@ def import_video_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/con_funcs.py
     """
 
+    path_out = os.path.join(dir_out, file_out.replace("/", ""))
     direct = Directory(dir_in, recursive=recursive, include_file_extensions=["mp4", "avi"])
     files = direct.files()
 
@@ -140,3 +141,7 @@ def import_video_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
     
     # Add videos to database
     add_videos(dir_out, files, doctest_mode=doctest_mode)
+
+    # Dummy json file for video info so pipeline runs
+    f = open(path_out, "x")
+    f.close()
