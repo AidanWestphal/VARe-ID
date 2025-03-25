@@ -2,6 +2,7 @@
 developer convenience functions
 """
 
+import json
 import os.path
 
 from control.image_funcs import add_images
@@ -140,8 +141,7 @@ def import_video_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
     # Construct abs path for dir out
     
     # Add videos to database
-    add_videos(dir_out, files, doctest_mode=doctest_mode)
-
-    # Dummy json file for video info so pipeline runs
-    f = open(path_out, "x")
-    f.close()
+    video_data = add_videos(dir_out, files)
+    if video_data:
+        with open(path_out, "w", encoding="utf-8") as json_file:
+            json.dump(video_data, json_file, indent=4)

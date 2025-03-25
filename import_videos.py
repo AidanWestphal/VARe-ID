@@ -6,6 +6,7 @@ from control.con_funcs import import_video_folder
 if __name__ == "__main__":
     # Parse command line arguments
 
+
     parser = argparse.ArgumentParser(description='Import directory of GGR videos')
     parser.add_argument('dir_in', type=str, help='The directory to import')
     parser.add_argument('out_path', type=str, help='The full path to the .json file to store video data in')

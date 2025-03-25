@@ -1,4 +1,4 @@
-data_dir_in: "video_input"
+data_dir_in: "GGR_video_test"
 data_video: True
 db_dir: "test_dataset/"
 image_dirname: "images"

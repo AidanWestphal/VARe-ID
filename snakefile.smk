@@ -103,12 +103,12 @@ rule import_videos:
 
 rule detector_videos:
     input:
-        dir=config["data_dir_in"],
+        file=video_out_path,
         script="algo/video_detector.py"
     output:
         vid_annots_filtered_path
     shell:
-        "python {input.script} {input.dir} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {vid_annots_filename} {vid_annots_filtered_filename}"
+        "python {input.script} {input.file} {annot_dir} {dt_dir} {model_version} {vid_annots_filename} {vid_annots_filtered_filename}"
 
 rule species_identifier:
     input:
