@@ -6,7 +6,7 @@ import json
 import os.path
 
 from control.image_funcs import add_images
-from control.video_funcs import add_videos
+from control.video_funcs import add_videos, link_srts
 from db.directory import Directory
 from db.table import ImageTable
 
@@ -115,7 +115,7 @@ def import_image_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
 
 
 # Import videos recursively from path into database
-def import_video_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
+def import_video_folder(dir_in, dir_out, file_out, fps=8, max_frames=2000, recursive=True, doctest_mode=False):
     """Import videos recursively from path into image table.
 
     Parameters:
@@ -136,12 +136,12 @@ def import_video_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
     direct = Directory(dir_in, recursive=recursive, include_file_extensions=["mp4", "avi"])
     files = direct.files()
 
-    # TODO: EXPORT VIDEO METADATA FROM A video_data.json FILE & LOAD VIDEOS DIRECTLY IF THIS ALREADY EXISTS
-
-    # Construct abs path for dir out
+    srt_directory = Directory(dir_in, recursive=recursive, include_file_extensions=["srt"])
+    srts = srt_directory.files()
     
-    # Add videos to database
-    video_data = add_videos(dir_out, files)
+    video_data = add_videos(dir_out, files, fps, max_frames)
+    link_srts(video_data, srts)
+
     if video_data:
         with open(path_out, "w", encoding="utf-8") as json_file:
             json.dump(video_data, json_file, indent=4)

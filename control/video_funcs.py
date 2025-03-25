@@ -80,11 +80,43 @@ def process_video_by_frame(cap, file_name, img_dir, frame_rate=8, max_frames=200
     return params_list
 
 
+def link_srts(video_data, srts):
+    """
+    Links SRT files to their corresponding videos in a video data JSON file.
+
+    We assume the SRT is located in the same directory as the video and named the same 
+    way as the video (with the exception of the file extension).
+
+    This function directly modifies the provided video_data dictionary.
+
+    Parameters:
+        video_data (dict): The JSON formatted video data. This data field is MODIFIED.
+        srts (Path): The path object containing all SRT files.
+
+    Returns:
+        video_data (dict): The modified JSON formatted video data.
+    """
+
+    print(f"[pipeline] link_srts")
+    for srt in srts:
+        ext = srt.rfind(".")
+        srt_path = srt[:ext]
+        # Find matching videos
+        for index, video in enumerate(video_data["videos"]):
+            v_ext = video["video path"].rfind(".")
+            vid_path = video["video path"][:v_ext]            
+            # Match the SRT file iff the video shares the same name and is in the same directory
+            if vid_path == srt_path:
+                video_data["videos"][index]["srt path"] = srt
+                # Files in same dir can't have duplicate names, assume we can break here
+                break
+
+
 def add_videos(
     dir_out,
     gpath_list,
     frame_rate=8,
-    max_frames=300,
+    max_frames=2000,
     ensure_loadable=True
 ):
     """
@@ -105,9 +137,6 @@ def add_videos(
 
     Returns:
         gid_list (list of rowids): gids are image rowids
-
-    Doctest Command:
-        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/image_funcs.py
     """
 
     print(f"[pipeline] add_videos")
@@ -150,6 +179,8 @@ def add_videos(
                         "video id": i,
                         "video fname": fname,
                         "video path": g,
+                        "fps": v.get(cv2.CAP_PROP_FPS),
+                        "srt path": None,
                         "frame data": vid_params,
                     })
                     v.release()

@@ -1,4 +1,6 @@
+import csv
 import json
+import re
 import shutil
 import subprocess
 import uuid
@@ -61,71 +63,6 @@ def select_model(yolo_model, config, model_dir):
     return model
 
 
-# def detect_frame_sequence(frames, model, threshold):
-#     # Capture the video and get name
-#     sep = video_path.rfind("/")
-#     vid_name = video_path[sep:].replace("/","")
-#     cap = cv2.VideoCapture(video_path)
-
-#     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-#     num_digits = len(str(length))
-
-#     fcount = 0
-#     annotations = []
-#     with tqdm(desc=f"Detecting frames from {vid_name}...",total=length) as pbar:
-#         while True:
-#             fcount += 1
-#             # Capture frame-by-frame
-#             ret, frame = cap.read()
-#             if not ret:
-#                 break
-              
-#             pbar.update(1)
-
-#             # Save frame and get uuid info, fill with leading zeros s.t. frames appear in sorted order
-#             f_name = vid_name + "_" + str(fcount).zfill(num_digits) + ".jpg"
-#             f_path = os.path.join(image_dir,f_name)
-#             cv2.imwrite(f_path,frame)
-#             f_info = preproc.parse_imageinfo(f_path)
-
-#             # Run YOLO detection and tracking
-#             results = model.track(frame, conf=threshold, verbose=False, persist=True)
-
-#             # Extract detections and tracking information
-#             for result in results:
-#                 # Check if any detection in the image is a person (class 0)
-#                 if any(box.cls.item() == 0 for box in result.boxes):
-#                     # Skip this entire image
-#                     continue
-
-#                 for box in result.boxes:
-#                     # Process the image only if no person was detected
-#                     x1 = box.xyxy[0][0].item()
-#                     y1 = box.xyxy[0][1].item()
-#                     x2 = box.xyxy[0][2].item()
-#                     y2 = box.xyxy[0][3].item()
-
-#                     annotations.append(
-#                         {
-#                             "annot uuid": str(uuid.uuid4()),
-#                             "image uuid": f_info[0],
-#                             "image fname": f_name,
-#                             "video fname": vid_name,
-#                             "frame number": fcount,
-#                             "bbox x": x1,
-#                             "bbox y": y1,
-#                             "bbox w": x2 - x1,
-#                             "bbox h": y2 - y1,
-#                             "bbox pred score": box.conf.item(),
-#                             "category id": int(box.cls.item()),
-#                             "tracking id": int(box.id.cpu())
-#                         }
-#                     )
-
-#     print(f"Finished detecting frames from {vid_name}.")
-#     return annotations
-
-
 def detect_videos(video_data, model, threshold):
     videos = video_data["videos"]
     annotations = []
@@ -161,7 +98,7 @@ def detect_videos(video_data, model, threshold):
                             "annot uuid": str(uuid.uuid4()),
                             "image uuid": frame["uuid"],
                             "image fname": frame["original_name"],
-                            "video fname": vid["video fname"],
+                            "video path": vid["video path"],
                             "frame number": fcount,
                             "bbox x": x1,
                             "bbox y": y1,
@@ -174,8 +111,81 @@ def detect_videos(video_data, model, threshold):
                     )
 
         print(f"Finished detecting frames from {vid_name}.")
-    print(annotations)
     return annotations
+
+
+def parse_srt(srt_path):
+    """
+    Parse an SRT file and return a dict mapping:
+        srt_dict[SrtCnt] = "timestamp string"
+    For example, lines in the SRT might look like:
+
+        SrtCnt : 1, DiffTime : 33ms
+        2023-01-19 10:56:36,107,334
+
+    We'll look for `SrtCnt : X` and store the next line
+    (assuming it’s the date/time) as srt_dict[X].
+    """
+    srt_dict = {}
+    with open(srt_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # Look for something like "SrtCnt : 123"
+        match = re.search(r"SrtCnt\s*:\s*(\d+)", line)
+        if match:
+            srt_cnt = int(match.group(1))  # This is 1-based
+            # The very next line should have the date/time
+            if i + 1 < len(lines):
+                possible_time = lines[i + 1].strip()
+                # If it looks like a datetime, store it
+                if re.search(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3},\d+", possible_time):
+                    srt_dict[srt_cnt] = possible_time
+            i += 2
+        else:
+            i += 1
+    return srt_dict
+
+
+def add_timestamps(video_data, annots, desired_fps):
+    """
+    Reads input_csv with columns like: frame_name, bounding_box, etc.
+    We assume frame_name is something like WD_0087_10.jpg,
+    where "10" is the "extracted frame index".
+
+    The original frame index = extracted_idx * frame_interval.
+    SRT is 1-based, so we use original_idx + 1 to look up the timestamp
+    from srt_dict.
+
+    Writes a new CSV with an extra 'timestamp' column appended.
+    """
+
+    srt_table = {}
+    fps_table = {}
+
+    for index, annot in enumerate(annots):
+        video_path = annot["video path"]
+
+        # If the associated srt was not cached, find and cache it
+        if video_path not in srt_table.keys():
+            # Find the matching video in video_data by the video's path. It's guaranteed that there is only one match
+            data = [video for video in video_data["videos"] if video["video path"] == video_path][0]
+            srt_table[video_path] = parse_srt(data["srt path"])
+            fps_table[video_path] = data["fps"]  
+
+        # Reference the srt file and assign the timestamp
+        srt = srt_table[video_path]
+        frame_interval = round(fps_table[video_path] / desired_fps)
+        # Undo 1-indexed frames, scale by frame interval, and redo 1-index
+        original_frame_number = (annot["frame number"] - 1)*frame_interval + 1
+        timestamp = srt[original_frame_number]
+        
+        # Assign the timestamp to the annotation
+        annots[index]["timestamp"] = timestamp
+            
              
 def main(args):
     config = load_config("algo/detector.yaml")
@@ -211,6 +221,9 @@ def main(args):
     # Detect and track objects over all videos
     print(f"Running detection on all videos...")
     annotations = detect_videos(video_data, detector, threshold)
+
+    print(f"Writing timestamp data from SRT files...")
+    add_timestamps(video_data,annotations,config["video_fps"])
 
     print(f"Saving annotations to {filtered_annot_csv_path}...")
     save_annotations_to_csv({"annotations": annotations},filtered_annot_csv_path)

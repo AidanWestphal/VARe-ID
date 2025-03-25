@@ -12,3 +12,6 @@ yolov10l_url : "https://github.com/jameslahm/yolov10/releases/download/v1.0/yolo
 model_dir : weights
 
 confidence_threshold : 0.75
+
+video_fps: 8
+video_max_frames: 100
