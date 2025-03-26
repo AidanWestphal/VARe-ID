@@ -2,28 +2,47 @@ import os
 
 configfile: "config.yaml"
 
+data_is_video = config["data_video"]
+
 db_dir = config["db_dir"]
 image_dirname = config["image_dirname"]
+video_dirname = config["video_dirname"]
 annot_dirname = config["annot_dirname"]
 
 # for data import
-img_data_path = db_dir + config["import_out_file"]
+img_data_path = db_dir + config["image_out_file"]
 image_dir = db_dir + image_dirname + "/"
-import_out_path = os.path.join(db_dir, config["import_out_file"])
+image_out_path = os.path.join(db_dir, config["image_out_file"])
+
+video_data_path = db_dir + config["video_out_file"]
+video_dir = db_dir + video_dirname + "/"
+video_out_path = os.path.join(db_dir, config["video_out_file"])
 
 # for detector
 dt_dir = config["dt_dir"]
 annot_dir = db_dir + annot_dirname + "/"
 ground_truth_csv = config["ground_truth_csv"]
 model_version = config["model_version"]
-annots_filename = config["annots_filename"] + config["model_version"]
-annots_filtered_filename = config["annots_filtered_filename"] + config["model_version"]
-annots_filtered_path = os.path.join(annot_dir, annots_filtered_filename + ".csv")
+
+vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"]
+img_annots_filename = "img_" + config["annots_filename"] + config["model_version"]
+vid_annots_filtered_filename = "vid_" +  config["annots_filtered_filename"] + config["model_version"]
+img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"]
+
+# SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
+vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename + ".csv")
+img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename + ".csv")
 
 # for species identifier
 si_dir = config["si_dir"]
 predictions_dir = config["predictions_dir"]
-si_out_path = os.path.join(predictions_dir, annots_filtered_filename + config["si_out_file_end"])
+
+if data_is_video:
+    exp_annots_filtered_path = vid_annots_filtered_path
+    si_out_path = os.path.join(predictions_dir, vid_annots_filtered_filename + config["si_out_file_end"])
+else:
+    exp_annots_filtered_path = img_annots_filtered_path
+    si_out_path = os.path.join(predictions_dir, img_annots_filtered_filename + config["si_out_file_end"])
 
 # for viewpoint classifier
 vc_dir = config["vc_dir"]
@@ -41,42 +60,59 @@ mid_model_url = config["mid_model_url"]
 mid_out_json_path = os.path.join(mid_dir, config["mid_out_json_file"])
 mid_out_pkl_path = os.path.join(mid_dir, config["mid_out_pkl_file"])
 
+# TARGET FUNCTION DEFINES WHICH FILES WE WANT TO GENERATE (i.e. DAG follows one path only)
+def get_targets():
+    targets = list()
+    if data_is_video:
+        targets.append([video_out_path, vid_annots_filtered_path])
+    else:
+        targets.append([image_out_path, img_annots_filtered_path])
+
+    targets.append([mid_out_json_path,mid_out_pkl_path])
+    return targets
+
 rule all: 
     input:
-        mid_out_json_path,
-        mid_out_pkl_path
+        get_targets()
 
-# rule import_data:
-#     input:
-#         dir=config["data_dir_in"],
-#         script="import_data.py"
-#     output:
-#         import_out_path
-#     shell:
-#         "python {input.script} {input.dir} {img_data_path} {output}"
-
-rule import_data:
+rule import_images:
     input:
         dir=config["data_dir_in"],
-        script="import_data.py"
+        script="import_images.py"
     output:
-        import_out_path  # Define this variable appropriately
+        image_out_path  
     shell:
         "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {img_data_path} {output}"
 
-
-rule detector:
+rule detector_images:
     input:
-        file=import_out_path,
-        script="algo/detector.py"
+        script="algo/image_detector.py"
     output:
-        annots_filtered_path
+        img_annots_filtered_path
     shell:
-        "python {input.script} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {annots_filename} {annots_filtered_filename}"
+        "python {input.script} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {img_annots_filename} {img_annots_filtered_filename}"
+
+rule import_videos:
+    input:
+        dir=config["data_dir_in"],
+        script="import_videos.py"
+    output:
+        video_out_path
+    shell:
+        "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {video_data_path} {output}"
+
+rule detector_videos:
+    input:
+        file=video_out_path,
+        script="algo/video_detector.py"
+    output:
+        vid_annots_filtered_path
+    shell:
+        "python {input.script} {input.file} {annot_dir} {dt_dir} {model_version} {vid_annots_filename} {vid_annots_filtered_filename}"
 
 rule species_identifier:
     input:
-        file=annots_filtered_path,
+        file=exp_annots_filtered_path,
         script="algo/species_identifier.py"
     output:
         si_out_path

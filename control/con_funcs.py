@@ -2,15 +2,17 @@
 developer convenience functions
 """
 
+import json
 import os.path
 
 from control.image_funcs import add_images
+from control.video_funcs import add_videos, link_srts
 from db.directory import Directory
 from db.table import ImageTable
 
 
 # Import images recursively from path into database
-def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
+def import_image_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
     """Import images recursively from path into image table.
 
     Parameters:
@@ -110,3 +112,36 @@ def import_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False)
     if gid_list:
         imgtable.export_to_json(path_out)
     return gid_list
+
+
+# Import videos recursively from path into database
+def import_video_folder(dir_in, dir_out, file_out, fps=8, max_frames=2000, recursive=True, doctest_mode=False):
+    """Import videos recursively from path into image table.
+
+    Parameters:
+        dir_in (str): directory to import from
+        dir_out (str): directory to store localized videos and output files
+        file_out (str): name of output file to save video metadata
+        recursive (bool): whether or not to search for videos recursively in dir_in
+        doctest_mode (bool): if true, replaces carriage returns with newlines
+
+    Returns:
+        gid_list (list): list of gids of images that were imported
+
+    Doctest Command:
+        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/con_funcs.py
+    """
+
+    path_out = os.path.join(dir_out, file_out.replace("/", ""))
+    direct = Directory(dir_in, recursive=recursive, include_file_extensions=["mp4", "avi"])
+    files = direct.files()
+
+    srt_directory = Directory(dir_in, recursive=recursive, include_file_extensions=["srt"])
+    srts = srt_directory.files()
+    
+    video_data = add_videos(dir_out, files, fps, max_frames)
+    link_srts(video_data, srts)
+
+    if video_data:
+        with open(path_out, "w", encoding="utf-8") as json_file:
+            json.dump(video_data, json_file, indent=4)

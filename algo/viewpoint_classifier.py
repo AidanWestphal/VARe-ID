@@ -120,10 +120,6 @@ def predict_labels_new(test_loader, model, device):
     return all_preds, all_discrete_labels
 
 
-def get_img(path):
-    return cv2.imread(path)[:, :, ::-1]
-
-
 def rotate_box(x1, y1, x2, y2, theta):
     xm = (x1 + x2) // 2
     ym = (y1 + y2) // 2
@@ -148,7 +144,7 @@ def crop_rect(img, rect):
 def get_chip(row):
     box = row["bbox_xywh"]  # Changed from bbox to bbox_xywh
     theta = 0.0
-    img = get_img(row["path"]).copy()
+    img = cv2.imread(row["path"])[:, :, ::-1]
     x1, y1, w, h = box
     x2 = x1 + w
     y2 = y1 + h

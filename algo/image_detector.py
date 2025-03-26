@@ -62,6 +62,8 @@ def select_model(yolo_model, config, model_dir):
 def yolo_predictions(result_gen, num_images):
 
     annotations = []
+    tracking_id = 1
+
     with tqdm(result_gen, total=num_images, desc="Writing annotations...") as pbar:
         for result in pbar:
             image_filename = os.path.basename(result.path)
@@ -90,8 +92,11 @@ def yolo_predictions(result_gen, num_images):
                         "bbox h": y2 - y1,
                         "bbox pred score": box.conf.item(),
                         "category id": int(box.cls.item()),
+                        "tracking id": tracking_id,
                     }
                 )
+                # For images, assign unique tracking ids to every image
+                tracking_id += 1
 
     annotations_dict = {"annotations": annotations}
     print(", done.")

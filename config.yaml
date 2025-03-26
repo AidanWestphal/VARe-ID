@@ -1,8 +1,11 @@
-data_dir_in: "GGR2020_subset/"
+data_dir_in: "GGR_video_test"
+data_video: True
 db_dir: "test_dataset/"
 image_dirname: "images"
+video_dirname: "videos"
 annot_dirname: "annots"
-import_out_file: "image_data.json"
+image_out_file: "image_data.json"
+video_out_file: "video_data.json"
 
 dt_dir: "test_dataset/detector/"
 ground_truth_csv: "test_dataset/GZCD_Cleaned.csv"
