@@ -1,5 +1,6 @@
 import argparse
 import os
+import pickle
 import cv2
 import numpy as np
 import pandas as pd
@@ -17,21 +18,19 @@ from transformers import AutoModel
 
 
 class MiewIDDataset(Dataset):
-    def __init__(self, df, transforms=None, output_label=False):
+    def __init__(self, df, transforms=None):
         super().__init__()
         self.df = df.reset_index(drop=True).copy()
         self.transforms = transforms
 
-        self.output_label = output_label
+        # Build a custom mapping for UUIDS s.t. we have unique integer labels
+        uuid_set = set(self.df["annot uuid"].values.tolist())
 
-        if self.output_label:
-            # Aggregate the label columns into a single multi-hot encoded vector
-            self.labels = self.df[
-                self.label_cols
-            ].values  # This creates a NumPy array of shape [num_samples, num_labels]
-            self.labels = torch.tensor(
-                self.labels, dtype=torch.float32
-            )  # Convert to a tensor for PyTorch compatibility
+        self.uuid_to_id = {uuid: i for i, uuid in enumerate(uuid_set)}
+        self.id_to_uuid = {i: uuid for i, uuid in enumerate(uuid_set)}
+
+        self.labels = [*map(self.uuid_to_id.get, self.df["annot uuid"].values.tolist())]
+        self.labels = torch.tensor(self.labels, dtype=torch.float32)
 
     def __len__(self):
         return len(self.df)
@@ -41,13 +40,8 @@ class MiewIDDataset(Dataset):
         # print(f'Shape of the input image: {img.shape}')    # Print the shape of the image
         if self.transforms:
             img = self.transforms(image=img)["image"]  # Apply transformations
-            # print(f'Shape of the transformed image: {img.shape}')
-        if self.output_label:
-            # Load label data
-            target = self.labels[index]
-            return img, target
-        else:
-            return img
+            label = self.id_to_uuid[self.labels[index].item()]
+            return img, label
 
 
 def get_img(path):
@@ -105,16 +99,55 @@ def get_embeddings(loader, model, device):
     model.eval()
 
     all_embeddings = []
+    all_uuids = []
 
     with torch.no_grad():
         with tqdm(loader, total=len(loader), desc="Running model...") as pbar:
-            for imgs in pbar:
+            for imgs, uuids in pbar:
                 imgs = imgs.to(device).float()
                 img_embeds = model(imgs)
                 all_embeddings.append(img_embeds.detach().cpu())
+                all_uuids.append(uuids)
     all_embeddings = torch.cat(all_embeddings, dim=0).numpy()
+    all_uuids = [i for sub in all_uuids for i in sub]
 
-    return all_embeddings
+    return (all_embeddings, all_uuids)
+
+
+def format_for_lca(annots):
+    # Aggregate mapping category id to species name
+    categories = {}
+    # Aggregate mapping image UUID to fname
+    images = {}
+    # List of properly formatted annotations
+    formatted_annots = []
+    for a in tqdm(annots, desc="Reformatting annotations..."):
+        categories[a["species_pred_simple"]] = a["species_prediction"]
+        images[a["image uuid"]] = a["image fname"]
+
+        formatted_annots.append(
+            {
+                "uuid": a["annot uuid"],
+                "image_uuid": a["image uuid"],
+                "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
+                "viewport": a["predicted_viewpoint"],
+                "tracking_id": 0,  # TODO: PLACEHOLDER
+                "confidence": a["bbox pred score"],
+                "detection_class": a["category id"],
+                "species": a["species_prediction"],
+                "CA_score": a["CA_score"],
+                "category_id": a["species_pred_simple"],
+            }
+        )
+    # Reformat into a combined json data dictionary
+    json_data = {
+        "categories": [{"id": id, "species": spec} for id, spec in categories.items()],
+        "images": [
+            {"file_name": fname, "uuid": uuid} for uuid, fname in images.items()
+        ],
+        "annotations": formatted_annots,
+    }
+    return json_data
 
 
 if __name__ == "__main__":
@@ -136,7 +169,10 @@ if __name__ == "__main__":
         help="The url to the hugging face model for miewid embeddings",
     )
     parser.add_argument(
-        "out_path", type=str, help="The full path to the output json file"
+        "out_json", type=str, help="The full path to the output json file"
+    )
+    parser.add_argument(
+        "out_pickle", type=str, help="The full path to the output pickle file"
     )
     args = parser.parse_args()
 
@@ -178,11 +214,13 @@ if __name__ == "__main__":
     embeddings = get_embeddings(dl, model, device)
 
     print("Building the new annotations...")
-    df["miewid"] = embeddings.tolist()
     annots = df.to_dict("records")
+    json_data = format_for_lca(annots)
 
-    print(f"Saving in json format to {args.out_path}...")
-    with open(args.out_path, "w") as f:
-        f.write(json.dumps(annots, indent=4))
+    print(f"Saving output files {args.out_json} and {args.out_pickle}...")
+    with open(args.out_json, "w") as f:
+        f.write(json.dumps(json_data, indent=4))
+    with open(args.out_pickle, "wb") as f:
+        pickle.dump(embeddings, f)
 
     print("Done!")

@@ -33,26 +33,23 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = config["cac_dir"]
 cac_model_checkpoint = config["cac_model_checkpoint"]
-cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
+cac_out_path = os.path.join(cac_dir, config["cac_out_filename"])
+
+# for frame sampling
+fs_dir = config["fs_dir"]
+fs_out_stage1_path = os.path.join(fs_dir, config["fs_out_stage1_json_file"])
+fs_out_final_path = os.path.join(fs_dir, config["fs_out_final_json_file"])
 
 # for miew id embedding generator
 mid_dir = config["mid_dir"]
 mid_model_url = config["mid_model_url"]
-mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
+mid_out_json_path = os.path.join(mid_dir, config["mid_out_json_file"])
+mid_out_pkl_path = os.path.join(mid_dir, config["mid_out_pkl_file"])
 
 rule all: 
     input:
-        si_out_path,
-        mid_out_path
-
-# rule import_data:
-#     input:
-#         dir=config["data_dir_in"],
-#         script="import_data.py"
-#     output:
-#         import_out_path
-#     shell:
-#         "python {input.script} {input.dir} {img_data_path} {output}"
+        mid_out_json_path,
+        mid_out_pkl_path
 
 rule import_data:
     input:
@@ -61,6 +58,7 @@ rule import_data:
     output:
         import_out_path  # Define this variable appropriately
     shell:
+        # "python {input.script} {input.dir} {img_data_path} {output}"
         "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {img_data_path} {output}"
 
 
@@ -96,16 +94,26 @@ rule ca_classifier:
         file=vc_out_path,
         script="algo/CA_classifier.py"
     output:
-        cac_out_path
+        cac_out_path + ".csv"
     shell:
         "python {input.script} {image_dir} {input.file} {cac_model_checkpoint} {output}"
 
-rule miew_id:
+rule frame_sampling:
     input:
-        file=cac_out_path,
-        script="algo/miew_id.py"
+        file=cac_out_path + ".json",
+        script="algo/frame_sampling.py"
     output:
-        mid_out_path
+        json_stage1=fs_out_stage1_path,
+        json_final=fs_out_final_path
     shell: 
-        "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
-        
+        "python {input.script} {image_dir} {input.file} {output.json_stage1} {output.json_final}"
+
+# rule miew_id:
+#     input:
+#         file=cac_out_path,
+#         script="algo/miew_id.py"
+#     output:
+#         json=mid_out_json_path, 
+#         pkl=mid_out_pkl_path
+#     shell: 
+#         "python {input.script} {image_dir} {input.file} {mid_model_url} {output.json} {output.pkl}"
