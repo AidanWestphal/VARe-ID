@@ -77,7 +77,10 @@ def detect_videos(video_data, model, threshold):
             # Open image
             img = cv2.imread(frame["uri"])
             # Run YOLO detection and tracking
-            results = model.track(img, conf=threshold, verbose=False, persist=True)
+            if fcount == 1:
+                results = model.track(img, conf=threshold, verbose=False, persist=False)
+            else:
+                results = model.track(img, conf=threshold, verbose=False, persist=True)
 
             # Extract detections and tracking information
             for result in results:
@@ -185,7 +188,46 @@ def add_timestamps(video_data, annots, desired_fps):
         
         # Assign the timestamp to the annotation
         annots[index]["timestamp"] = timestamp
-            
+
+
+def postprocess_tracking_ids(annots):
+    """
+    Ensures that tracking ids for separate videos do not overlap in the same range of numbers 
+    by remapping tracking ids to unused integer values.
+    """
+
+    # Defines which video paths use which tracking id. tracking id -> video path
+    used_keys = {}
+    # Defines mappings to follow. (video path, tracking id) -> new tracking id
+    mappings = {}
+    # The smallest unused tracking id
+    next_unused_id = 1
+
+    for index, annot in enumerate(annots):
+        tid = annot["tracking id"]
+        path = annot["video path"]
+
+        # Check if the key is used by a different image
+        if tid in used_keys.keys() and used_keys[tid] != path:
+            # If it is, check if a mapping exists yet
+            mapping_key = (path, tid)
+            if mapping_key in mappings.keys():
+                tid = mappings[mapping_key]
+            # If it doesn't create the mapping
+            else:
+                mappings[mapping_key] = next_unused_id
+                tid = next_unused_id
+
+        # Mark the new key if needed
+        if tid not in used_keys.keys():
+            used_keys[tid] = path
+            # Find the next unused id not in used_keys
+            while next_unused_id in used_keys.keys():
+                next_unused_id += 1
+
+        # Assign the tid
+        annots[index]["tracking id"] = tid
+
              
 def main(args):
     config = load_config("algo/detector.yaml")
@@ -221,6 +263,9 @@ def main(args):
     # Detect and track objects over all videos
     print(f"Running detection on all videos...")
     annotations = detect_videos(video_data, detector, threshold)
+
+    print(f"Postprocessing tracking ids to avoid collisions...")
+    postprocess_tracking_ids(annotations)
 
     print(f"Writing timestamp data from SRT files...")
     add_timestamps(video_data,annotations,config["video_fps"])

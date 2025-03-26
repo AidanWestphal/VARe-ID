@@ -43,11 +43,6 @@ class MiewIDDataset(Dataset):
             label = self.id_to_uuid[self.labels[index].item()]
             return img, label
 
-        
-
-def get_img(path):
-    return cv2.imread(path)[:, :, ::-1]
-
 
 def rotate_box(x1, y1, x2, y2, theta):
     xm = (x1 + x2) // 2
@@ -76,7 +71,7 @@ def get_chip(row):
     w = row["bbox w"]
     h = row["bbox h"]
     theta = 0.0
-    img = get_img(row["path"]).copy()
+    img = cv2.imread(row["path"])[:, :, ::-1]
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2
@@ -131,7 +126,7 @@ def format_for_lca(annots):
             "image_uuid": a["image uuid"],
             "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
             "viewport": a["predicted_viewpoint"],
-            "tracking_id": 0, # TODO: PLACEHOLDER
+            "tracking_id": a["tracking id"],
             "confidence": a["bbox pred score"],
             "detection_class": a["category id"],
             "species": a["species_prediction"],
@@ -191,10 +186,6 @@ if __name__ == "__main__":
             ),
             ToTensorV2(p=1.0),
         ]
-    )
-
-    df["path"] = df["image uuid"].apply(
-        lambda x: os.path.join(args.image_dir, x + ".jpg")
     )
 
     print("Building dataset and loader...")

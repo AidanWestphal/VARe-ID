@@ -84,14 +84,18 @@ def load_data(csv_path, image_dir, transform, batch_size):
 
 
 def preprocess_viewpoint(viewpoint):
-    if viewpoint == 'front, right':
+    if 'front' in viewpoint and 'right' in viewpoint:
         return 'frontright'
-    elif viewpoint == 'back, right':
+    elif 'back' in viewpoint and 'right' in viewpoint:
         return 'backright'
-    elif viewpoint == 'front, left':
+    elif 'front' in viewpoint and 'left' in viewpoint:
         return 'frontleft'
-    elif viewpoint == 'back, left':
+    elif 'back' in viewpoint and 'left' in viewpoint:
         return 'backleft'
+    elif 'right' in viewpoint:
+        return 'right'
+    elif 'left' in viewpoint:
+        return 'left'
     return viewpoint
 
 
@@ -291,7 +295,7 @@ def main(args):
     )
 
     # Drop specified columns
-    columns_to_drop = ['path', 'softmax_output_0', 'log_AR']
+    columns_to_drop = ['softmax_output_0', 'log_AR']
     final_df = final_df.drop(columns=[col for col in columns_to_drop if col in final_df.columns])
     final_df = final_df.rename(columns={'softmax_output_1': 'CA_score'})
     print(f'The length of final concatenated CSV is: {len(final_df)}\n')
