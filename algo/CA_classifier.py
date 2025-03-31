@@ -87,13 +87,25 @@ def load_data(csv_path, image_dir, transform, batch_size):
 
 def preprocess_viewpoint(viewpoint):
     if "front" in viewpoint and "right" in viewpoint:
-        return "frontright"
+        if "up" in viewpoint:
+            return "upfrontright"
+        else:
+            return "frontright"
     elif "back" in viewpoint and "right" in viewpoint:
-        return "backright"
+        if "up" in viewpoint:
+            return "upbackright"
+        else:
+            return "backright"
     elif "front" in viewpoint and "left" in viewpoint:
-        return "frontleft"
+        if "up" in viewpoint:
+            return "upfrontleft"
+        else:
+            return "frontleft"
     elif "back" in viewpoint and "left" in viewpoint:
-        return "backleft"
+        if "up" in viewpoint:
+            return "upbackleft"
+        else:
+            return "backleft"
     elif "right" in viewpoint:
         return "right"
     elif "left" in viewpoint:
@@ -158,49 +170,18 @@ def apply_nms(df, iou_threshold):
     return df.iloc[keep]
 
 
-def save_to_json(annots, path):
+def format_and_save(df, path):
+    # file_name	tracking_id	confidence	detection_class	species	bbox	viewpoint	individual_id	CA_score	annotations_census
+    df = df.rename(columns={"image uuid": "image_uuid", "annot uuid": "uuid", "image fname": "file_name", "tracking id": "tracking_id", "bbox pred score": "confidence", "category id": "detection_class", "species_prediction": "species", "species_pred_simple": "category_id", "predicted_viewpoint": "viewpoint", "bbox_xywh": "bbox", "frame number": "frame_number"})
+    df["individual_id"] = 0
 
-    # Aggregate mapping category id to species name
-    categories = {}
-    # Aggregate mapping image UUID to fname
-    images = {}
-    # List of properly formatted annotations
-    formatted_annots = []
-    annots = annots.to_dict("records")
-    for a in tqdm(annots, desc="Reformatting annotations..."):
-        # print(a)
-        categories[a["species_pred_simple"]] = a["species_prediction"]
-        images[a["image uuid"]] = a["image fname"]
+    columns_kept = ["image_uuid", "uuid", "file_name", "tracking_id", "confidence", "detection_class", "species", "bbox", "viewpoint", "individual_id", "CA_score", "annotations_census", "category_id", "frame_number"]
 
-        formatted_annots.append(
-            {
-                "uuid": a["annot uuid"],
-                "image uuid": a["image uuid"],
-                "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
-                "predicted_viewpoint": a["predicted_viewpoint"],
-                "tracking_id": 0,  # TODO: PLACEHOLDER
-                "confidence": a["bbox pred score"],
-                "detection_class": a["category id"],
-                "species_prediction": a["species_prediction"],
-                "species pred simple": a["species_pred_simple"],
-                "CA_score": a["CA_score"],
-                "category_id": a["species_pred_simple"],
-                "image fname": a["image fname"],
-                "bbox pred score": a["bbox pred score"],
-            }
-        )
-    # Reformat into a combined json data dictionary
-    json_data = {
-        "categories": [{"id": id, "species": spec} for id, spec in categories.items()],
-        "images": [
-            {"file_name": fname, "uuid": uuid} for uuid, fname in images.items()
-        ],
-        "annotations": formatted_annots,
-    }
-    # Save with pretty formatting
-    with open(path, "w") as file:
-        json.dump(json_data, file, indent=4)
-    return json_data
+    df = df.drop(columns=df.columns.difference(columns_kept))
+
+    # Save to csv
+    with open(path, "w") as f:
+        df.to_csv(f, index=False)
 
 
 def main(args):
@@ -357,8 +338,7 @@ def main(args):
 
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
-    final_df.to_csv(args.out_csv_path, index=False)
-    save_to_json(final_df, args.out_csv_path.replace(".csv", ".json"))
+    format_and_save(final_df,args.out_csv_path)
 
     print(
         f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"

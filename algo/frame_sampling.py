@@ -29,26 +29,11 @@ def group_annotations_by_tracking_id_and_subsequences(data):
     subsequences of consecutive frames.
     """
     annotations = data["annotations"]
-    images = {image["uuid"]: image for image in data["images"]}
     tracking_id_annotations = defaultdict(list)
 
     for annotation in annotations:
-        image_uuid = annotation["image uuid"]
-        if image_uuid in images:
-            file_name = images[image_uuid]["file_name"]
-            # Extract frame number from file name (assumes format ending with _<frame>.ext)
-            frame_number_str = file_name.split("_")[-1].split(".")[0]
-            try:
-                frame_number = int(frame_number_str)
-            except ValueError:
-                print(frame_number_str)
-                print(
-                    f"Warning: Could not extract frame number from file name {file_name}"
-                )
-                continue
-            annotation["frame_number"] = frame_number
-            tracking_id = annotation["tracking_id"]
-            tracking_id_annotations[tracking_id].append(annotation)
+        tracking_id = annotation["tracking_id"]
+        tracking_id_annotations[tracking_id].append(annotation)
 
     tracking_id_subsequences = {}
     for tracking_id, anns in tracking_id_annotations.items():
@@ -93,7 +78,7 @@ def frame_sampling_algorithm_combined(
     # Separate annotations by viewpoint
     annotations_by_viewpoint = defaultdict(list)
     for annotation in data_copy["annotations"]:
-        viewpoint = annotation.get("predicted_viewpoint", "unknown")
+        viewpoint = annotation.get("viewpoint", "unknown")
         annotations_by_viewpoint[viewpoint].append(annotation)
 
     filtered_annotations = []
@@ -164,7 +149,7 @@ def group_annotations_by_tracking_id_and_viewpoint(data):
     """
     annotations_by_viewpoint = {"left": defaultdict(list), "right": defaultdict(list)}
     for annotation in data["annotations"]:
-        viewpoint = annotation.get("predicted_viewpoint")
+        viewpoint = annotation.get("viewpoint")
         if viewpoint not in annotations_by_viewpoint:
             print(f"Unknown viewpoint '{viewpoint}' encountered. Skipping annotation.")
             continue

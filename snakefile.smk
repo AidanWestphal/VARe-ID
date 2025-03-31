@@ -52,7 +52,8 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = config["cac_dir"]
 cac_model_checkpoint = config["cac_model_checkpoint"]
-cac_out_path = os.path.join(cac_dir, config["cac_out_filename"])
+cac_out_path = os.path.join(cac_dir, config["cac_out_filename"]) + ".csv"
+eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filename"]) + ".json"
 
 # for frame sampling
 fs_dir = config["fs_dir"]
@@ -62,8 +63,7 @@ fs_out_final_path = os.path.join(fs_dir, config["fs_out_final_json_file"])
 # for miew id embedding generator
 mid_dir = config["mid_dir"]
 mid_model_url = config["mid_model_url"]
-mid_out_json_path = os.path.join(mid_dir, config["mid_out_json_file"])
-mid_out_pkl_path = os.path.join(mid_dir, config["mid_out_pkl_file"])
+mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
 
 # TARGET FUNCTION DEFINES WHICH FILES WE WANT TO GENERATE (i.e. DAG follows one path only)
 def get_targets():
@@ -73,7 +73,7 @@ def get_targets():
     else:
         targets.append([image_out_path, img_annots_filtered_path])
 
-    targets.append([mid_out_json_path,mid_out_pkl_path])
+    targets.append([mid_out_path])
     return targets
 
 rule all: 
@@ -139,13 +139,22 @@ rule ca_classifier:
         file=vc_out_path,
         script="algo/CA_classifier.py"
     output:
-        cac_out_path + ".json"
+        cac_out_path
     shell:
         "python {input.script} {image_dir} {input.file} {cac_model_checkpoint} {output}"
 
+rule eda_preprocess:
+    input:
+        file=cac_out_path,
+        script="algo/EDA_preprocess_csv2json.py"
+    output:
+        eda_preprocess_path
+    shell:
+        "python {input.script} {input.file} {output}"
+
 rule frame_sampling:
     input:
-        file=cac_out_path + ".json",
+        file=eda_preprocess_path,
         script="algo/frame_sampling.py"
     output:
         json_stage1=fs_out_stage1_path,
@@ -158,7 +167,6 @@ rule miew_id:
         file=fs_out_final_path,
         script="algo/miew_id.py"
     output:
-        json=mid_out_json_path, 
-        pkl=mid_out_pkl_path
+        mid_out_path
     shell: 
-        "python {input.script} {image_dir} {input.file} {mid_model_url} {output.json} {output.pkl}"
+        "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
