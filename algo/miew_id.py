@@ -24,9 +24,10 @@ def load_json(file_path):
 
 
 class MiewIDDataset(Dataset):
-    def __init__(self, df, transforms=None):
+    def __init__(self, df, images, transforms=None):
         super().__init__()
         self.df = df.reset_index(drop=True).copy()
+        self.images = images
         self.transforms = transforms
 
         # Build a custom mapping for UUIDS s.t. we have unique integer labels
@@ -42,7 +43,7 @@ class MiewIDDataset(Dataset):
         return len(self.df)
 
     def __getitem__(self, index):
-        img = get_chip(self.df.loc[index])
+        img = get_chip(self.df.loc[index], self.images)
         # print(f'Shape of the input image: {img.shape}')    # Print the shape of the image
         if self.transforms:
             img = self.transforms(image=img)["image"]  # Apply transformations
@@ -71,13 +72,15 @@ def crop_rect(img, rect):
     return img_crop, img_rot
 
 
-def get_chip(row):
+def get_chip(row, images):
     x1 = row["bbox"][0]
     y1 = row["bbox"][1]
     w = row["bbox"][2]
     h = row["bbox"][3]
     theta = 0.0
-    img = cv2.imread(os.path.join(args.image_dir, row["image fname"]))[:, :, ::-1]
+    img_uuid = row["image_uuid"]
+    image_path = [x["file_name"] for x in images if x["uuid"] == img_uuid][0]
+    img = cv2.imread(os.path.join(args.image_dir, image_path))[:, :, ::-1]
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2
@@ -116,42 +119,6 @@ def get_embeddings(loader, model, device):
     return (all_embeddings, all_uuids)
 
 
-def format_for_lca(annots):
-    # Aggregate mapping category id to species name
-    categories = {}
-    # Aggregate mapping image UUID to fname
-    images = {}
-    # List of properly formatted annotations
-    formatted_annots = []
-    for a in tqdm(annots, desc="Reformatting annotations..."):
-        categories[a["category_id"]] = a["species_prediction"]
-        images[a["image uuid"]] = a["image fname"]
-
-        formatted_annots.append(
-            {
-                "uuid": a["uuid"],
-                "image uuid": a["image uuid"],
-                "bbox": a["bbox"],
-                "viewpoint": a["predicted_viewpoint"],
-                "tracking_id": a["tracking_id"],
-                "confidence": a["bbox pred score"],
-                "detection_class": a["category_id"],
-                "species": a["species_prediction"],
-                "CA_score": a["CA_score"],
-                "category_id": a["species pred simple"],
-            }
-        )
-    # Reformat into a combined json data dictionary
-    json_data = {
-        "categories": [{"id": id, "species": spec} for id, spec in categories.items()],
-        "images": [
-            {"file_name": fname, "uuid": uuid} for uuid, fname in images.items()
-        ],
-        "annotations": formatted_annots,
-    }
-    return json_data
-
-
 if __name__ == "__main__":
     print("Loading data...")
     parser = argparse.ArgumentParser(
@@ -171,15 +138,13 @@ if __name__ == "__main__":
         help="The url to the hugging face model for miewid embeddings",
     )
     parser.add_argument(
-        "out_json", type=str, help="The full path to the output json file"
-    )
-    parser.add_argument(
-        "out_pickle", type=str, help="The full path to the output pickle file"
+        "out_file", type=str, help="The full path to the output pickle file"
     )
     args = parser.parse_args()
 
     data = load_json(args.in_csv_path)
     df = pd.DataFrame(data["annotations"])
+    images = data["images"]
     config = load_config("algo/miew_id.yaml")
 
     print(f"Downloading model {args.model_url}...")
@@ -199,7 +164,7 @@ if __name__ == "__main__":
     )
 
     print("Building dataset and loader...")
-    ds = MiewIDDataset(df, preprocess)
+    ds = MiewIDDataset(df, images, preprocess)
 
     dl = torch.utils.data.DataLoader(
         ds,
@@ -212,14 +177,8 @@ if __name__ == "__main__":
     device = torch.device(config["device"])
     embeddings = get_embeddings(dl, model, device)
 
-    print("Building the new annotations...")
-    annots = df.to_dict("records")
-    json_data = format_for_lca(annots)
-
-    print(f"Saving output files {args.out_json} and {args.out_pickle}...")
-    with open(args.out_json, "w") as f:
-        f.write(json.dumps(json_data, indent=4))
-    with open(args.out_pickle, "wb") as f:
+    print(f"Saving embeddings file {args.out_file}...")
+    with open(args.out_file, "wb") as f:
         pickle.dump(embeddings, f)
 
     print("Done!")
