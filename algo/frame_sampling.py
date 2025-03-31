@@ -33,7 +33,7 @@ def group_annotations_by_tracking_id_and_subsequences(data):
     tracking_id_annotations = defaultdict(list)
 
     for annotation in annotations:
-        image_uuid = annotation["image_uuid"]
+        image_uuid = annotation["image uuid"]
         if image_uuid in images:
             file_name = images[image_uuid]["file_name"]
             # Extract frame number from file name (assumes format ending with _<frame>.ext)
@@ -93,7 +93,7 @@ def frame_sampling_algorithm_combined(
     # Separate annotations by viewpoint
     annotations_by_viewpoint = defaultdict(list)
     for annotation in data_copy["annotations"]:
-        viewpoint = annotation.get("viewpoint", "unknown")
+        viewpoint = annotation.get("predicted_viewpoint", "unknown")
         annotations_by_viewpoint[viewpoint].append(annotation)
 
     filtered_annotations = []
@@ -164,7 +164,7 @@ def group_annotations_by_tracking_id_and_viewpoint(data):
     """
     annotations_by_viewpoint = {"left": defaultdict(list), "right": defaultdict(list)}
     for annotation in data["annotations"]:
-        viewpoint = annotation.get("viewpoint")
+        viewpoint = annotation.get("predicted_viewpoint")
         if viewpoint not in annotations_by_viewpoint:
             print(f"Unknown viewpoint '{viewpoint}' encountered. Skipping annotation.")
             continue

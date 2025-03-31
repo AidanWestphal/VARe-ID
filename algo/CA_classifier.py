@@ -86,14 +86,18 @@ def load_data(csv_path, image_dir, transform, batch_size):
 
 
 def preprocess_viewpoint(viewpoint):
-    if viewpoint == "front, right":
+    if "front" in viewpoint and "right" in viewpoint:
         return "frontright"
-    elif viewpoint == "back, right":
+    elif "back" in viewpoint and "right" in viewpoint:
         return "backright"
-    elif viewpoint == "front, left":
+    elif "front" in viewpoint and "left" in viewpoint:
         return "frontleft"
-    elif viewpoint == "back, left":
+    elif "back" in viewpoint and "left" in viewpoint:
         return "backleft"
+    elif "right" in viewpoint:
+        return "right"
+    elif "left" in viewpoint:
+        return "left"
     return viewpoint
 
 
@@ -171,15 +175,18 @@ def save_to_json(annots, path):
         formatted_annots.append(
             {
                 "uuid": a["annot uuid"],
-                "image_uuid": a["image uuid"],
+                "image uuid": a["image uuid"],
                 "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
-                "viewport": a["predicted_viewpoint"],
+                "predicted_viewpoint": a["predicted_viewpoint"],
                 "tracking_id": 0,  # TODO: PLACEHOLDER
                 "confidence": a["bbox pred score"],
                 "detection_class": a["category id"],
-                "species": a["species_prediction"],
+                "species_prediction": a["species_prediction"],
+                "species pred simple": a["species_pred_simple"],
                 "CA_score": a["CA_score"],
                 "category_id": a["species_pred_simple"],
+                "image fname": a["image fname"],
+                "bbox pred score": a["bbox pred score"],
             }
         )
     # Reformat into a combined json data dictionary
@@ -335,7 +342,7 @@ def main(args):
     )
 
     # Drop specified columns
-    columns_to_drop = ["path", "softmax_output_0", "log_AR"]
+    columns_to_drop = ["softmax_output_0", "log_AR"]
     final_df = final_df.drop(
         columns=[col for col in columns_to_drop if col in final_df.columns]
     )

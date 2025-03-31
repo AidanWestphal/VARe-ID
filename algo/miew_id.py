@@ -1,10 +1,10 @@
 import argparse
-import os
 import pickle
 import cv2
 import numpy as np
 import pandas as pd
 import json
+import os
 
 import torch
 import yaml
@@ -17,6 +17,12 @@ from torch.utils.data import Dataset
 from transformers import AutoModel
 
 
+def load_json(file_path):
+    """Load JSON data from the given file."""
+    with open(file_path, "r") as file:
+        return json.load(file)
+
+
 class MiewIDDataset(Dataset):
     def __init__(self, df, transforms=None):
         super().__init__()
@@ -24,12 +30,12 @@ class MiewIDDataset(Dataset):
         self.transforms = transforms
 
         # Build a custom mapping for UUIDS s.t. we have unique integer labels
-        uuid_set = set(self.df["annot uuid"].values.tolist())
+        uuid_set = set(self.df["uuid"].values.tolist())
 
         self.uuid_to_id = {uuid: i for i, uuid in enumerate(uuid_set)}
         self.id_to_uuid = {i: uuid for i, uuid in enumerate(uuid_set)}
 
-        self.labels = [*map(self.uuid_to_id.get, self.df["annot uuid"].values.tolist())]
+        self.labels = [*map(self.uuid_to_id.get, self.df["uuid"].values.tolist())]
         self.labels = torch.tensor(self.labels, dtype=torch.float32)
 
     def __len__(self):
@@ -42,10 +48,6 @@ class MiewIDDataset(Dataset):
             img = self.transforms(image=img)["image"]  # Apply transformations
             label = self.id_to_uuid[self.labels[index].item()]
             return img, label
-
-
-def get_img(path):
-    return cv2.imread(path)[:, :, ::-1]
 
 
 def rotate_box(x1, y1, x2, y2, theta):
@@ -70,12 +72,12 @@ def crop_rect(img, rect):
 
 
 def get_chip(row):
-    x1 = row["bbox x"]
-    y1 = row["bbox y"]
-    w = row["bbox w"]
-    h = row["bbox h"]
+    x1 = row["bbox"][0]
+    y1 = row["bbox"][1]
+    w = row["bbox"][2]
+    h = row["bbox"][3]
     theta = 0.0
-    img = get_img(row["path"]).copy()
+    img = cv2.imread(os.path.join(args.image_dir, row["image fname"]))[:, :, ::-1]
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2
@@ -122,21 +124,21 @@ def format_for_lca(annots):
     # List of properly formatted annotations
     formatted_annots = []
     for a in tqdm(annots, desc="Reformatting annotations..."):
-        categories[a["species_pred_simple"]] = a["species_prediction"]
+        categories[a["category_id"]] = a["species_prediction"]
         images[a["image uuid"]] = a["image fname"]
 
         formatted_annots.append(
             {
-                "uuid": a["annot uuid"],
-                "image_uuid": a["image uuid"],
-                "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
-                "viewport": a["predicted_viewpoint"],
-                "tracking_id": 0,  # TODO: PLACEHOLDER
+                "uuid": a["uuid"],
+                "image uuid": a["image uuid"],
+                "bbox": a["bbox"],
+                "viewpoint": a["predicted_viewpoint"],
+                "tracking_id": a["tracking_id"],
                 "confidence": a["bbox pred score"],
-                "detection_class": a["category id"],
+                "detection_class": a["category_id"],
                 "species": a["species_prediction"],
                 "CA_score": a["CA_score"],
-                "category_id": a["species_pred_simple"],
+                "category_id": a["species pred simple"],
             }
         )
     # Reformat into a combined json data dictionary
@@ -176,7 +178,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    df = pd.read_csv(args.in_csv_path)
+    data = load_json(args.in_csv_path)
+    df = pd.DataFrame(data["annotations"])
     config = load_config("algo/miew_id.yaml")
 
     print(f"Downloading model {args.model_url}...")
@@ -193,10 +196,6 @@ if __name__ == "__main__":
             ),
             ToTensorV2(p=1.0),
         ]
-    )
-
-    df["path"] = df["image uuid"].apply(
-        lambda x: os.path.join(args.image_dir, x + ".jpg")
     )
 
     print("Building dataset and loader...")
