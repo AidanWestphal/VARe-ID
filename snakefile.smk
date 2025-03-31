@@ -26,7 +26,7 @@ model_version = config["model_version"]
 
 vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"]
 img_annots_filename = "img_" + config["annots_filename"] + config["model_version"]
-vid_annots_filtered_filename = "vid_" +  config["annots_filtered_filename"] + config["model_version"]
+vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + config["model_version"]
 img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"]
 
 # SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
@@ -52,7 +52,12 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = config["cac_dir"]
 cac_model_checkpoint = config["cac_model_checkpoint"]
-cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
+cac_out_path = os.path.join(cac_dir, config["cac_out_filename"])
+
+# for frame sampling
+fs_dir = config["fs_dir"]
+fs_out_stage1_path = os.path.join(fs_dir, config["fs_out_stage1_json_file"])
+fs_out_final_path = os.path.join(fs_dir, config["fs_out_final_json_file"])
 
 # for miew id embedding generator
 mid_dir = config["mid_dir"]
@@ -82,6 +87,7 @@ rule import_images:
     output:
         image_out_path  
     shell:
+        # "python {input.script} {input.dir} {img_data_path} {output}"
         "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {img_data_path} {output}"
 
 rule detector_images:
@@ -133,13 +139,23 @@ rule ca_classifier:
         file=vc_out_path,
         script="algo/CA_classifier.py"
     output:
-        cac_out_path
+        cac_out_path + ".json"
     shell:
         "python {input.script} {image_dir} {input.file} {cac_model_checkpoint} {output}"
 
+rule frame_sampling:
+    input:
+        file=cac_out_path + ".json",
+        script="algo/frame_sampling.py"
+    output:
+        json_stage1=fs_out_stage1_path,
+        json_final=fs_out_final_path
+    shell: 
+        "python {input.script} {image_dir} {input.file} {output.json_stage1} {output.json_final}"
+
 rule miew_id:
     input:
-        file=cac_out_path,
+        file=fs_out_final_path,
         script="algo/miew_id.py"
     output:
         json=mid_out_json_path, 

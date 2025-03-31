@@ -15,6 +15,8 @@ from torchvision import transforms
 from torchvision.transforms import functional as F
 from torchvision.models import resnet50
 from torchvision.ops import nms
+from tqdm import tqdm
+import json
 
 
 class CustomImageDataset(Dataset):
@@ -40,7 +42,7 @@ class CustomImageDataset(Dataset):
         image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
 
         # Flip the image if left viewpoint
-        if "left" in self.img_data.iloc[idx]['predicted_viewpoint']:
+        if "left" in self.img_data.iloc[idx]["predicted_viewpoint"]:
             image = F.hflip(image)
 
         if self.transform:
@@ -84,18 +86,18 @@ def load_data(csv_path, image_dir, transform, batch_size):
 
 
 def preprocess_viewpoint(viewpoint):
-    if 'front' in viewpoint and 'right' in viewpoint:
-        return 'frontright'
-    elif 'back' in viewpoint and 'right' in viewpoint:
-        return 'backright'
-    elif 'front' in viewpoint and 'left' in viewpoint:
-        return 'frontleft'
-    elif 'back' in viewpoint and 'left' in viewpoint:
-        return 'backleft'
-    elif 'right' in viewpoint:
-        return 'right'
-    elif 'left' in viewpoint:
-        return 'left'
+    if "front" in viewpoint and "right" in viewpoint:
+        return "frontright"
+    elif "back" in viewpoint and "right" in viewpoint:
+        return "backright"
+    elif "front" in viewpoint and "left" in viewpoint:
+        return "frontleft"
+    elif "back" in viewpoint and "left" in viewpoint:
+        return "backleft"
+    elif "right" in viewpoint:
+        return "right"
+    elif "left" in viewpoint:
+        return "left"
     return viewpoint
 
 
@@ -154,6 +156,51 @@ def apply_nms(df, iou_threshold):
     scores = torch.as_tensor(scores).float()
     keep = nms(boxes, scores, iou_threshold)
     return df.iloc[keep]
+
+
+def save_to_json(annots, path):
+
+    # Aggregate mapping category id to species name
+    categories = {}
+    # Aggregate mapping image UUID to fname
+    images = {}
+    # List of properly formatted annotations
+    formatted_annots = []
+    annots = annots.to_dict("records")
+    for a in tqdm(annots, desc="Reformatting annotations..."):
+        # print(a)
+        categories[a["species_pred_simple"]] = a["species_prediction"]
+        images[a["image uuid"]] = a["image fname"]
+
+        formatted_annots.append(
+            {
+                "uuid": a["annot uuid"],
+                "image uuid": a["image uuid"],
+                "bbox": [a["bbox x"], a["bbox y"], a["bbox w"], a["bbox h"]],
+                "predicted_viewpoint": a["predicted_viewpoint"],
+                "tracking_id": 0,  # TODO: PLACEHOLDER
+                "confidence": a["bbox pred score"],
+                "detection_class": a["category id"],
+                "species_prediction": a["species_prediction"],
+                "species pred simple": a["species_pred_simple"],
+                "CA_score": a["CA_score"],
+                "category_id": a["species_pred_simple"],
+                "image fname": a["image fname"],
+                "bbox pred score": a["bbox pred score"],
+            }
+        )
+    # Reformat into a combined json data dictionary
+    json_data = {
+        "categories": [{"id": id, "species": spec} for id, spec in categories.items()],
+        "images": [
+            {"file_name": fname, "uuid": uuid} for uuid, fname in images.items()
+        ],
+        "annotations": formatted_annots,
+    }
+    # Save with pretty formatting
+    with open(path, "w") as file:
+        json.dump(json_data, file, indent=4)
+    return json_data
 
 
 def main(args):
@@ -295,10 +342,12 @@ def main(args):
     )
 
     # Drop specified columns
-    columns_to_drop = ['softmax_output_0', 'log_AR']
-    final_df = final_df.drop(columns=[col for col in columns_to_drop if col in final_df.columns])
-    final_df = final_df.rename(columns={'softmax_output_1': 'CA_score'})
-    print(f'The length of final concatenated CSV is: {len(final_df)}\n')
+    columns_to_drop = ["softmax_output_0", "log_AR"]
+    final_df = final_df.drop(
+        columns=[col for col in columns_to_drop if col in final_df.columns]
+    )
+    final_df = final_df.rename(columns={"softmax_output_1": "CA_score"})
+    print(f"The length of final concatenated CSV is: {len(final_df)}\n")
 
     # Save the updated DataFrame to a new CSV file
     cac_dir = os.path.dirname(args.out_csv_path)
@@ -309,6 +358,7 @@ def main(args):
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
     final_df.to_csv(args.out_csv_path, index=False)
+    save_to_json(final_df, args.out_csv_path.replace(".csv", ".json"))
 
     print(
         f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"
