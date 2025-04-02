@@ -70,6 +70,11 @@ lca_dir = config["lca_dir"]
 lca_db_dir = os.path.join(lca_dir, config["lca_db_dir"]) 
 lca_logs_path = os.path.join(lca_dir, config["lca_log_file"])
 lca_verifier_path = os.path.join(lca_dir, config["lca_verifier_probs"])
+lca_exp_name = config["lca_exp_name"]
+if config["lca_separate_viewpoints"]:
+    lca_sep_viewpoint = "--separate_viewpoints"
+else:
+    lca_sep_viewpoint = ""
 
 # TARGET FUNCTION DEFINES WHICH FILES WE WANT TO GENERATE (i.e. DAG follows one path only)
 def get_targets():
@@ -186,4 +191,4 @@ rule lca:
         db=lca_db_dir,
         logs=lca_logs_path
     shell: 
-        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifier_path} {output.db} {output.logs}"
+        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifier_path} {output.db} {output.logs} {lca_exp_name} {lca_sep_viewpoint}"

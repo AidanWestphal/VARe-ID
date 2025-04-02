@@ -2,7 +2,6 @@
 
 github_lca_url: https://github.com/WildMeOrg/lca/
 config_save_path: "lca/configs/config_drone.yaml"
-run_path: "lca/run_drone.sh"
 
 # THE FOLLOWING ARE THE CONFIG VALUES IMPORTANT FOR LCA ITSELF
 

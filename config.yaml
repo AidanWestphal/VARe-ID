@@ -37,3 +37,5 @@ lca_dir: "test_dataset/lca/"
 lca_db_dir: "db/"
 lca_log_file: "lca_logs.log"
 lca_verifier_probs: "verifier_probs.json"
+lca_exp_name: "Zebra_Test"
+lca_separate_viewpoints: True

@@ -85,16 +85,10 @@ if __name__ == "__main__":
         yaml.dump(config, f)
 
     # RUN LCA
-    # run_loc = os.path.join(lca_github_loc, config["run_path"])
-    # subprocess.run([sys.executable, run_loc])
-
-    # TEMPORARY SOLUTION: Directly call script from here
     subprocess.run(["python3", f"{lca_github_loc}/lca/run_drone.py", "--config", config_loc])
 
     output_dir = args.db_dir
     anno_file = args.annots 
-
-
 
     if args.separate_viewpoints:
         for viewpoint in config['data']['viewpoint_list']:
