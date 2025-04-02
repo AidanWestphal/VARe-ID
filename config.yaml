@@ -32,3 +32,10 @@ fs_out_final_json_file: "final_fs_output.json"
 mid_dir: "test_dataset/miew_id/"
 mid_model_url: "conservationxlabs/miewid-msv3"
 mid_out_file: "miewid_output.pickle"
+
+lca_dir: "test_dataset/lca/"
+lca_db_dir: "db/"
+lca_log_file: "lca_logs.log"
+lca_verifier_probs: "verifier_probs.json"
+lca_exp_name: "Zebra_Test"
+lca_separate_viewpoints: True

@@ -65,6 +65,17 @@ mid_dir = config["mid_dir"]
 mid_model_url = config["mid_model_url"]
 mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
 
+# for lca clustering algorithm
+lca_dir = config["lca_dir"]
+lca_db_dir = os.path.join(lca_dir, config["lca_db_dir"]) 
+lca_logs_path = os.path.join(lca_dir, config["lca_log_file"])
+lca_verifier_path = os.path.join(lca_dir, config["lca_verifier_probs"])
+lca_exp_name = config["lca_exp_name"]
+if config["lca_separate_viewpoints"]:
+    lca_sep_viewpoint = "--separate_viewpoints"
+else:
+    lca_sep_viewpoint = ""
+
 # TARGET FUNCTION DEFINES WHICH FILES WE WANT TO GENERATE (i.e. DAG follows one path only)
 def get_targets():
     targets = list()
@@ -73,7 +84,7 @@ def get_targets():
     else:
         targets.append([image_out_path, img_annots_filtered_path])
 
-    targets.append([mid_out_path])
+    targets.append([lca_db_dir])
     return targets
 
 rule all: 
@@ -170,3 +181,14 @@ rule miew_id:
         mid_out_path
     shell: 
         "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
+
+rule lca:
+    input:
+        annots=fs_out_final_path,
+        embeddings=mid_out_path,
+        script="algo/lca.py"
+    output:
+        db=lca_db_dir,
+        logs=lca_logs_path
+    shell: 
+        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifier_path} {output.db} {output.logs} {lca_exp_name} {lca_sep_viewpoint}"
