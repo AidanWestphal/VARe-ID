@@ -10,6 +10,8 @@ import torch
 import yaml
 from tqdm import tqdm
 
+import torch.nn.functional as F
+
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset
@@ -119,6 +121,81 @@ def get_embeddings(loader, model, device):
     return (all_embeddings, all_uuids)
 
 
+def precision_at_k(names, distmat, names_db=None, ranks=list(range(1, 21)), return_matches=False):
+    """Computes precision at k given a distance matrix. 
+    Assumes the distance matrix is square and does one-vs-all evaluation"""
+    # assert distmat.shape[0] == distmat.shape[1], "Distance matrix must be square"
+
+    if names_db is None:
+        names_db = names
+
+    output = torch.Tensor(distmat[:, :]) * -1
+    y = torch.Tensor(names[:]).squeeze(0)
+    ids_tensor = torch.Tensor(names_db)
+
+    max_k = max(ranks)
+
+    topk_idx = output.topk(max_k)[1][:, :] ### 
+    topk_names = ids_tensor[topk_idx]
+
+    match_mat = topk_names == y[:, None].expand(topk_names.shape)
+
+    scores = []
+    for k in ranks:
+        match_mat_k = match_mat[:, :k]
+        rank_mat = match_mat_k.any(axis=1)
+
+        score = rank_mat.sum() / len(rank_mat)
+        scores.append(score)
+
+    if return_matches:
+        return scores, match_mat, topk_idx, topk_names
+    else:
+        return scores
+    
+
+def cosine_distance(input1, input2):
+    """Computes cosine distance.
+
+    Args:
+        input1 (torch.Tensor): 2-D feature matrix.
+        input2 (torch.Tensor): 2-D feature matrix.
+
+    Returns:
+        torch.Tensor: distance matrix.
+    """
+    input1_normed = F.normalize(input1, p=2, dim=1)
+    input2_normed = F.normalize(input2, p=2, dim=1)
+    distmat = 1 - torch.mm(input1_normed, input2_normed.t())
+    return distmat
+
+
+def eval_metrics(embeddings, df, config):
+    # STEP 1: Get distmat and labels (map annot uuid to individual id)
+    distmat = cosine_distance(torch.Tensor(embeddings[0]), torch.Tensor(embeddings[0]))
+    print(distmat.shape)
+    names_uuids = pd.DataFrame({"uuid": embeddings[1]})
+    names_df = pd.merge(df, names_uuids, on=["uuid"])
+    names = torch.Tensor(("IID: " + names_df["individual id"] +  " Viewpoint: " + names_df["viewpoint"]).values)
+    print(names)
+
+    # STEP 2: Read rest of params
+    k = config["k"]
+    ranks = [k]
+    log_file = config["log_path"]
+
+    # STEP 3: Evaluate
+    scores = precision_at_k(names,distmat,ranks=ranks)
+    avg_dist = distmat.mean(scores,dim=1)
+    print(scores)
+    print(avg_dist)
+
+    # STEP 4: SAVE
+    with open(config["eval_file"], "w") as f:
+        for score, dist, label in zip(scores, avg_dist, names):
+            f.write(f"{label}: Average Precision: {score} Average Distance: {dist}\n")
+
+
 if __name__ == "__main__":
     print("Loading data...")
     parser = argparse.ArgumentParser(
@@ -176,6 +253,10 @@ if __name__ == "__main__":
 
     device = torch.device(config["device"])
     embeddings = get_embeddings(dl, model, device)
+
+    if "eval_file" in config.keys():
+        print("Evaluating Top-K miewid precision...")
+        eval_metrics(embeddings,df,config)
 
     print(f"Saving embeddings file {args.out_file}...")
     with open(args.out_file, "wb") as f:

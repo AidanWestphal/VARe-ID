@@ -1,3 +1,4 @@
+import uuid
 import matplotlib.pyplot as plt
 import warnings
 import argparse
@@ -92,12 +93,29 @@ if __name__ == "__main__":
 
     df['bbox'] = df['bbox'].apply(convert_bbox)
 
+    # IF UUIDS AREN'T ALREADY PROVIDED (GT FILES), ADD THEM
+    if 'image uuid' not in df.columns or 'uuid' not in df.columns:
+        image_uuid_map = {file_name: str(uuid.uuid4()) for file_name in df['file_name'].unique()}
+        # Add the UUIDs to the DataFrame
+        df['image_uuid'] = df['file_name'].map(image_uuid_map)
+        df['uuid'] = [str(uuid.uuid4()) for _ in range(len(df))]
+
     df['individual_id'] = df['individual_id_x']
 
     df = assign_viewpoints(df, excluded_viewpoints=['upback', 'upfront'])
 
     counts = df.groupby('viewpoint').size()
     print(counts)
+
+    # IF CATEGORY ID NOT PROVIDED (GT)
+    if 'category_id' not in df.columns:
+        df['category_id'] = 0
+
+    # IF FRAME NUMBER NOT PROVIDED (GT)
+    if 'frame_number' not in df.columns:
+        df["frame_number"] = -1
+        for index, row in df.iterrows():
+            df.at[index, "frame_number"] = int(row["file_name"].split("_")[-1].split(".")[0])
 
     df_annotations_fields = ['uuid', 'image_uuid', 'individual_id', 'bbox', 'viewpoint', 'tracking_id', 'confidence','detection_class','species', 'CA_score', 'category_id', 'frame_number']
     df_annotations = df[df_annotations_fields]
