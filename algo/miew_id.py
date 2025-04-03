@@ -121,7 +121,7 @@ def get_embeddings(loader, model, device):
     return (all_embeddings, all_uuids)
 
 
-def precision_at_k(names, distmat, names_db=None, ranks=list(range(1, 21)), return_matches=False):
+def topk_precision(names, distmat, k, names_db=None, return_matches=False):
     """Computes precision at k given a distance matrix. 
     Assumes the distance matrix is square and does one-vs-all evaluation"""
     # assert distmat.shape[0] == distmat.shape[1], "Distance matrix must be square"
@@ -133,20 +133,18 @@ def precision_at_k(names, distmat, names_db=None, ranks=list(range(1, 21)), retu
     y = torch.Tensor(names[:]).squeeze(0)
     ids_tensor = torch.Tensor(names_db)
 
-    max_k = max(ranks)
+    ranks = list(range(1,k+1))
+    max_k = k
 
     topk_idx = output.topk(max_k)[1][:, :] ### 
     topk_names = ids_tensor[topk_idx]
 
     match_mat = topk_names == y[:, None].expand(topk_names.shape)
-
     scores = []
     for k in ranks:
         match_mat_k = match_mat[:, :k]
-        rank_mat = match_mat_k.any(axis=1)
-
-        score = rank_mat.sum() / len(rank_mat)
-        scores.append(score)
+        score = match_mat_k.float().mean(axis=1)
+        scores.append(score.tolist())
 
     if return_matches:
         return scores, match_mat, topk_idx, topk_names
@@ -170,30 +168,68 @@ def cosine_distance(input1, input2):
     return distmat
 
 
+def avg_distance(distmat, labels):
+    """Calculates the average distance between a selection of points (by labels).
+    
+    Args:
+        distmat: 2-D distance matrix.
+        labels: List of column/row numbers to consider.
+
+    Returns:
+        float: average distance
+    """
+    # Splice matrix by column/row values
+    splice = distmat[labels, :]
+    splice = splice[:, labels]
+    # Edge case: only one entity, distance is 0
+    if splice.shape[0] <= 1:
+        return 0
+    # Calculate average value of upper triangular section, ignoring main diagonal (don't count edges to self)
+    important = torch.triu(splice, diagonal=1)
+    indices = torch.triu_indices(splice.shape[0],splice.shape[1],1)
+    num_pts = indices.shape[1]
+    sum = torch.sum(important)
+
+    return sum/num_pts
+
 def eval_metrics(embeddings, df, config):
     # STEP 1: Get distmat and labels (map annot uuid to individual id)
     distmat = cosine_distance(torch.Tensor(embeddings[0]), torch.Tensor(embeddings[0]))
-    print(distmat.shape)
     names_uuids = pd.DataFrame({"uuid": embeddings[1]})
     names_df = pd.merge(df, names_uuids, on=["uuid"])
-    names = torch.Tensor(("IID: " + names_df["individual id"] +  " Viewpoint: " + names_df["viewpoint"]).values)
-    print(names)
+    names_list = ["IID: " + str(d["individual_id"]) +  " Viewpoint: " + d["viewpoint"] for _, d in names_df.iterrows()]
+    names = torch.zeros(len(names_list)) - 1
+    # ASSIGN INTEGERS FOR ABOVE NAME LIST
+    for i in range(len(names_list)):
+        # If this is a new label, assign it the current index
+        if names[i] == -1:
+            names[i] = i
+            # Assign all following matches to this index
+            for j in range(i + 1, len(names_list)):
+                if names_list[i] == names_list[j]:
+                    names[j] = i
 
     # STEP 2: Read rest of params
     k = config["k"]
-    ranks = [k]
-    log_file = config["log_path"]
+    log_file = config["eval_file"]
 
-    # STEP 3: Evaluate
-    scores = precision_at_k(names,distmat,ranks=ranks)
-    avg_dist = distmat.mean(scores,dim=1)
-    print(scores)
-    print(avg_dist)
+    # STEP 3: Evaluate functions for all pairs
+    scores = torch.Tensor(topk_precision(names,distmat,k))
+    scores = scores[-1]
+    avg_prec = {}
+    avg_dist = {}
+    for i in names:
+        i = int(i.item())
+        # If this hasn't been assigned yet...
+        if i not in avg_prec.keys():
+            indices = torch.where(names == i)[0]
+            avg_dist[i] = avg_distance(distmat,indices)
+            avg_prec[i] = torch.mean(scores[indices])
 
     # STEP 4: SAVE
-    with open(config["eval_file"], "w") as f:
-        for score, dist, label in zip(scores, avg_dist, names):
-            f.write(f"{label}: Average Precision: {score} Average Distance: {dist}\n")
+    with open(log_file, "w") as f:
+        for i in avg_prec.keys():
+            f.write(f"{names_list[i]}: Average Precision: {avg_prec[i]} Average Distance: {avg_dist[i]}\n")
 
 
 if __name__ == "__main__":
