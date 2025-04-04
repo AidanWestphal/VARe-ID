@@ -76,6 +76,13 @@ if config["lca_separate_viewpoints"]:
 else:
     lca_sep_viewpoint = ""
 
+# for lca post processing
+post_dir = config["post_dir"]
+post_right = lca_db_dir + config["post_lca_left_end"]
+post_left = lca_db_dir + config["post_lca_right_end"]
+post_right_out = os.path.join(post_dir, config["post_lca_right_out"])
+post_left_out = os.path.join(post_dir, config["post_lca_left_out"])
+
 # TARGET FUNCTION DEFINES WHICH FILES WE WANT TO GENERATE (i.e. DAG follows one path only)
 def get_targets():
     targets = list()
@@ -84,7 +91,7 @@ def get_targets():
     else:
         targets.append([image_out_path, img_annots_filtered_path])
 
-    targets.append([lca_db_dir])
+    targets.append([post_right_out,post_left_out])
     return targets
 
 rule all: 
@@ -192,3 +199,14 @@ rule lca:
         logs=lca_logs_path
     shell: 
         "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifier_path} {output.db} {output.logs} {lca_exp_name} {lca_sep_viewpoint}"
+
+rule post:
+    input:
+        db=lca_db_dir, # This establishes a dependency on LCA (LCA doesn't direclty ask for the right/left outputs so we need this)
+        merged=cac_out_path,
+        script="algo/LCA_postprocessing_evaluation.py"
+    output:
+        right=post_right_out,
+        left=post_left_out
+    shell:
+        "python {input.script} new {image_dir} {mid_out_path} {input.merged} {post_left} {post_right} {output.left} {output.right}"

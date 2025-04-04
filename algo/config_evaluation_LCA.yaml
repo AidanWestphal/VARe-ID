@@ -1,0 +1,27 @@
+interactive: false   # Set to true to force ipywidgets (if working reliably), or false to use console input
+
+# NOTE: ALL FILES BELOW ARE HANDLED BY INPUT SCRIPTS. DON'T WORRY ABOUT MODIFYING THIS FILE
+csv:
+  merged_detections: ""
+  metadata: ""
+  merged_bbox: ""
+
+json:
+  left:
+    input: ""
+    output: ""
+  right:
+    input: ""
+    output: ""
+
+image:
+  directory: ""
+
+
+embedding:
+  file: ""
+  distance_metric: "cosine"
+  mode: "single"              # "dual" for lower/upper thresholds, "single" for one threshold
+  threshold_lower: 0.10     # Used in "dual" mode as starting lower, in "single" mode as the only threshold
+  threshold_upper: 0.90     # Used only in "dual" mode as starting upper
+  threshold_step: 0.1      # Step size for threshold adjustments in "dual" mode

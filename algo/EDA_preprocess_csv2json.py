@@ -117,7 +117,7 @@ if __name__ == "__main__":
         for index, row in df.iterrows():
             df.at[index, "frame_number"] = int(row["file_name"].split("_")[-1].split(".")[0])
 
-    df_annotations_fields = ['uuid', 'image_uuid', 'individual_id', 'bbox', 'viewpoint', 'tracking_id', 'confidence','detection_class','species', 'CA_score', 'category_id', 'frame_number']
+    df_annotations_fields = ['uuid', 'image_uuid', 'individual_id', 'bbox', 'viewpoint', 'tracking_id', 'confidence','detection_class','species', 'CA_score', 'category_id', 'frame_number', 'timestamp']
     df_annotations = df[df_annotations_fields]
 
     df_images_fields = ['image_uuid', 'file_name']

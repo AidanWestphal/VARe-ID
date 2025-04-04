@@ -25,6 +25,8 @@ cac_dir: "test_dataset/ca_classifier/"
 cac_model_checkpoint: "test_dataset/best_july_8_cuda_extended_aug_sample_annot_classifier.pth"
 cac_out_filename: "final_output_with_softmax_and_census"
 
+# in_temp: "test_dataset/ca_classifier/ca_filtered_merged_tracking_ids_dji_0143_0144_no_unwanted_viewpoints_pre_miewid.csv"
+
 fs_dir: "test_dataset/frame_sampling/"
 fs_out_stage1_json_file: "stage1_fs_output.json"
 fs_out_final_json_file: "final_fs_output.json"
@@ -37,5 +39,11 @@ lca_dir: "test_dataset/lca/"
 lca_db_dir: "db/"
 lca_log_file: "lca_logs.log"
 lca_verifier_probs: "verifier_probs.json"
-lca_exp_name: "Zebra_Test"
+lca_exp_name: "zebra_drone"
 lca_separate_viewpoints: True
+
+post_dir: "output/"
+post_lca_left_end: "_LCA_left.json"
+post_lca_left_out: "anntations_left_LCA.json"
+post_lca_right_end: "_LCA_right.json"
+post_lca_right_out: "anntations_right_LCA.json"
