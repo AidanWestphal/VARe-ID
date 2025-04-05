@@ -5,4 +5,4 @@ img_size: 440
 k: 5
 
 # COMMENT OUT IF NOT GT EVAL
-eval_file: "test_dataset/miew_id/eval_metrics.txt"
+# eval_file: "test_dataset/miew_id/eval_metrics.txt"

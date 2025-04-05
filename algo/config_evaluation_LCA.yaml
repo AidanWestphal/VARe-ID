@@ -21,7 +21,7 @@ image:
 embedding:
   file: ""
   distance_metric: "cosine"
-  mode: "single"              # "dual" for lower/upper thresholds, "single" for one threshold
+  mode: "dual"              # "dual" for lower/upper thresholds, "single" for one threshold
   threshold_lower: 0.10     # Used in "dual" mode as starting lower, in "single" mode as the only threshold
   threshold_upper: 0.90     # Used only in "dual" mode as starting upper
   threshold_step: 0.1      # Step size for threshold adjustments in "dual" mode

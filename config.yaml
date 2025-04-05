@@ -38,11 +38,11 @@ mid_out_file: "miewid_output.pickle"
 lca_dir: "test_dataset/lca/"
 lca_db_dir: "db/"
 lca_log_file: "lca_logs.log"
-lca_verifier_probs: "verifier_probs.json"
+lca_verifiers_probs: "test_dataset/verifiers_probs.json"
 lca_exp_name: "zebra_drone"
 lca_separate_viewpoints: True
 
-post_dir: "output/"
+post_dir: "test_dataset/output/"
 post_lca_left_end: "_LCA_left.json"
 post_lca_left_out: "anntations_left_LCA.json"
 post_lca_right_end: "_LCA_right.json"

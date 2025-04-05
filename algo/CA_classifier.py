@@ -293,9 +293,9 @@ def main(args):
         print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
     else:
         print("Warning: No objects passed NMS filtering")
-    nms_filtered = pd.DataFrame(
-        columns=ar_filtered.columns
-    )  # Create empty DataFrame with same columns
+        nms_filtered = pd.DataFrame(
+            columns=ar_filtered.columns
+        )  # Create empty DataFrame with same columns
     if nms_filtered_out:
         nms_filtered_out = pd.concat(nms_filtered_out).reset_index(drop=True)
     else:
