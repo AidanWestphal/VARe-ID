@@ -81,8 +81,7 @@ python extrapolate_ggr_gps.py test_dataset/image_data.json test_dataset/image_da
 ## Tools
 [YOLO](https://github.com/THU-MIG/yolov10.git)
 [BioCLIP](https://github.com/Imageomics/pybioclip)
-## Data Description
-fill in 
+
 ## Future Tasks
 - Implement threading for image parameter computation and validity checking if image import is too slow.
 - Set up pipeline within IDEA cluster and perform larger tests.
