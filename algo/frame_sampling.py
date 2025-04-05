@@ -2,7 +2,8 @@ import json
 from collections import defaultdict
 from copy import deepcopy
 import yaml
-import argparse
+import random
+import argparse  # Added for command line arguments
 
 
 def load_json(file_path):
@@ -23,17 +24,35 @@ def load_config(config_path):
         return yaml.safe_load(file)
 
 
+random.seed(123456789)  # for reproducibility
+
+
 def group_annotations_by_tracking_id_and_subsequences(data):
     """
     Groups annotations by tracking ID and splits them into maximal
     subsequences of consecutive frames.
     """
     annotations = data["annotations"]
+    images = {image["uuid"]: image for image in data["images"]}
     tracking_id_annotations = defaultdict(list)
 
     for annotation in annotations:
-        tracking_id = annotation["tracking_id"]
-        tracking_id_annotations[tracking_id].append(annotation)
+        image_uuid = annotation["image_uuid"]
+        if image_uuid in images:
+            file_name = images[image_uuid]["file_name"]
+            # Extract frame number from file name (assumes format ending with _<frame>.ext)
+            frame_number_str = file_name.split("_")[-1].split(".")[0]
+            try:
+                frame_number = int(frame_number_str)
+            except ValueError:
+                print(frame_number_str)
+                print(
+                    f"Warning: Could not extract frame number from file name {file_name}"
+                )
+                continue
+            annotation["frame_number"] = frame_number
+            tracking_id = annotation["tracking_id"]
+            tracking_id_annotations[tracking_id].append(annotation)
 
     tracking_id_subsequences = {}
     for tracking_id, anns in tracking_id_annotations.items():
@@ -64,7 +83,11 @@ def group_annotations_by_tracking_id_and_subsequences(data):
 
 
 def frame_sampling_algorithm_combined(
-    data, t_seconds, frame_interval, threshold_percentage
+    data,
+    t_seconds,
+    frame_interval,
+    ca_available,
+    viewpoint_available,
 ):
     """
     Stage 1: Applies frame sampling on the data.
@@ -77,13 +100,16 @@ def frame_sampling_algorithm_combined(
 
     # Separate annotations by viewpoint
     annotations_by_viewpoint = defaultdict(list)
+
     for annotation in data_copy["annotations"]:
-        viewpoint = annotation.get("viewpoint", "unknown")
+        viewpoint = (
+            annotation.get("viewpoint", "unknown") if viewpoint_available else "unknown"
+        )
         annotations_by_viewpoint[viewpoint].append(annotation)
 
     filtered_annotations = []
     # Convert time gap (seconds) to frames
-    t_frames = t_seconds * frame_interval
+    # t_frames = t_seconds * frame_intervals
 
     for viewpoint, annotations in annotations_by_viewpoint.items():
         print(f"\nProcessing Viewpoint '{viewpoint}':")
@@ -95,45 +121,24 @@ def frame_sampling_algorithm_combined(
             print(f"\n  Processing Tracking ID {tracking_id}:")
             for idx, subseq in enumerate(subsequences):
                 print(f"    Subsequence {idx+1} with {len(subseq)} annotations")
-                max_ca_annotation = max(subseq, key=lambda x: x["CA_score"])
-                max_ca_score = max_ca_annotation["CA_score"]
-                threshold = max_ca_score * threshold_percentage
-                print(f"      Max CA score: {max_ca_score}")
-                print(
-                    f"      Threshold ({threshold_percentage*100:.0f}% of max): {threshold}"
-                )
 
-                # Always select the annotation with the maximum CA score
-                selected_subseq_annotations = [max_ca_annotation]
-                selected_frames = [max_ca_annotation["frame_number"]]
-                print(
-                    f"      Selected annotation at frame {max_ca_annotation['frame_number']} (Max CA)"
-                )
+                if ca_available:
+                    max_ca_annotation = max(subseq, key=lambda x: x["CA_score"])
+                    max_ca_score = max_ca_annotation["CA_score"]
+                    print(f"      Max CA score: {max_ca_score}")
 
-                subseq_sorted = sorted(subseq, key=lambda x: x["frame_number"])
-                # Look for local maxima within the subsequence
-                for i in range(1, len(subseq_sorted) - 1):
-                    ann_prev = subseq_sorted[i - 1]
-                    ann_current = subseq_sorted[i]
-                    ann_next = subseq_sorted[i + 1]
+                    # Always select the annotation with the maximum CA score
+                    selected_subseq_annotations = [max_ca_annotation]
+                    print(
+                        f"      Selected annotation at frame {max_ca_annotation['frame_number']} (Max CA)"
+                    )
 
-                    if (
-                        ann_current["CA_score"] >= ann_prev["CA_score"]
-                        and ann_current["CA_score"] >= ann_next["CA_score"]
-                        and ann_current["CA_score"] >= threshold
-                    ):
-
-                        # Ensure a minimum time gap between selected annotations
-                        far_enough = all(
-                            abs(ann_current["frame_number"] - f) >= t_frames
-                            for f in selected_frames
-                        )
-                        if far_enough:
-                            selected_subseq_annotations.append(ann_current)
-                            selected_frames.append(ann_current["frame_number"])
-                            print(
-                                f"      Selected annotation at frame {ann_current['frame_number']} (Local Max)"
-                            )
+                else:
+                    selected_annotation = random.choice(subseq)
+                    selected_subseq_annotations = [selected_annotation]
+                    print(
+                        f"      Randomly selected annotation at frame {selected_annotation['frame_number']}"
+                    )
 
                 filtered_annotations.extend(selected_subseq_annotations)
 
@@ -143,22 +148,33 @@ def frame_sampling_algorithm_combined(
     return data_copy
 
 
-def group_annotations_by_tracking_id_and_viewpoint(data):
+def group_annotations_by_tracking_id_and_viewpoint(data, viewpoint_available):
     """
     Groups annotations by tracking ID for the expected viewpoints ('left' and 'right').
     """
-    annotations_by_viewpoint = {"left": defaultdict(list), "right": defaultdict(list)}
-    for annotation in data["annotations"]:
-        viewpoint = annotation.get("viewpoint")
-        if viewpoint not in annotations_by_viewpoint:
-            print(f"Unknown viewpoint '{viewpoint}' encountered. Skipping annotation.")
-            continue
-        tracking_id = annotation.get("tracking_id", "N/A")
-        annotations_by_viewpoint[viewpoint][tracking_id].append(annotation)
+    if viewpoint_available:
+        annotations_by_viewpoint = {
+            "left": defaultdict(list),
+            "right": defaultdict(list),
+        }
+        for annotation in data["annotations"]:
+            viewpoint = annotation.get("viewpoint")
+            if viewpoint not in annotations_by_viewpoint:
+                print(
+                    f"Unknown viewpoint '{viewpoint}' encountered. Skipping annotation."
+                )
+                continue
+            tracking_id = annotation.get("tracking_id", "N/A")
+            annotations_by_viewpoint[viewpoint][tracking_id].append(annotation)
+    else:
+        annotations_by_viewpoint = {"unknown": defaultdict(list)}
+        for annotation in data["annotations"]:
+            tracking_id = annotation.get("tracking_id", "N/A")
+            annotations_by_viewpoint["unknown"][tracking_id].append(annotation)
     return annotations_by_viewpoint
 
 
-def filter_annotations(annotations_by_viewpoint, threshold_percentage):
+def filter_annotations(annotations_by_viewpoint, threshold_percentage, ca_available):
     """
     Stage 2: For each tracking ID (per viewpoint), filters annotations to keep only those
     that have a CA score above a threshold (percentage of the highest CA score).
@@ -166,19 +182,30 @@ def filter_annotations(annotations_by_viewpoint, threshold_percentage):
     """
     for viewpoint, annotations_by_tracking_id in annotations_by_viewpoint.items():
         for tracking_id, annotations in annotations_by_tracking_id.items():
-            highest_ca_score = max(
-                annotation.get("CA_score", 0) for annotation in annotations
-            )
-            threshold = threshold_percentage * highest_ca_score
-            filtered_annotations = [
-                annotation
-                for annotation in annotations
-                if annotation.get("CA_score", 0) >= threshold
-            ]
+
+            if ca_available:
+                highest_ca_score = max(
+                    annotation.get("CA_score", 0) for annotation in annotations
+                )
+                threshold = threshold_percentage * highest_ca_score
+                filtered_annotations = [
+                    annotation
+                    for annotation in annotations
+                    if annotation.get("CA_score", 0) >= threshold
+                ]
+
+                print(f"\nViewpoint '{viewpoint}', Tracking ID '{tracking_id}':")
+                print(f"  Highest CA score: {highest_ca_score}")
+                print(f"  Threshold ({threshold_percentage*100:.0f}%): {threshold}")
+            else:
+                num_to_keep = max(1, int(len(annotations) * threshold_percentage))
+                filtered_annotations = random.sample(annotations, num_to_keep)
+                print(f"\nViewpoint '{viewpoint}', Tracking ID '{tracking_id}':")
+                print(
+                    f"  Random selection - keeping {threshold_percentage*100:.0f}% of annotations"
+                )
+
             annotations_by_tracking_id[tracking_id] = filtered_annotations
-            print(f"\nViewpoint '{viewpoint}', Tracking ID '{tracking_id}':")
-            print(f"  Highest CA score: {highest_ca_score}")
-            print(f"  Threshold ({threshold_percentage*100:.0f}%): {threshold}")
             print(
                 f"  Annotations before filtering: {len(annotations)}, after filtering: {len(filtered_annotations)}"
             )
@@ -197,12 +224,98 @@ def reconstruct_annotations(data, annotations_by_viewpoint):
     return data
 
 
+def ensure_time_separation(data, t_seconds, frame_interval, ca_available):
+    """
+    Stage 3: Ensures that for each tracking ID, annotations are at least t_seconds apart.
+    If annotations are closer than this threshold, keeps only the one with highest CA score.
+    """
+    annotations = data["annotations"]
+
+    # Group annotations by tracking ID and viewpoint if available
+    tracking_id_viewpoint_annotations = defaultdict(list)
+    for annotation in annotations:
+        tracking_id = annotation.get("tracking_id", "unknown")
+        viewpoint = annotation.get("viewpoint", "unknown")
+        key = (tracking_id, viewpoint)  # Use a tuple as the key
+        tracking_id_viewpoint_annotations[key].append(annotation)
+
+    # Calculate frame threshold (how many frames correspond to t_seconds)
+    frame_threshold = max(1, int(t_seconds * frame_interval))
+    print(f"\n=== Starting Stage 3: Ensuring Time Separation ===")
+    print(
+        f"Ensuring annotations are at least {t_seconds} seconds apart ({frame_threshold} frames)"
+    )
+
+    final_annotations = []
+
+    for key, anns in tracking_id_viewpoint_annotations.items():
+        tracking_id, viewpoint = key
+        print(f"\nProcessing Tracking ID '{tracking_id}', Viewpoint '{viewpoint}':")
+        print(f"  Initial annotations: {len(anns)}")
+
+        # Sort annotations by frame number
+        anns_sorted = sorted(anns, key=lambda x: x.get("frame_number", 0))
+
+        # Process sorted annotations to ensure time separation
+        kept_annotations = []
+        i = 0
+
+        while i < len(anns_sorted):
+            current_ann = anns_sorted[i]
+            current_frame = current_ann.get("frame_number", 0)
+
+            # Find all annotations that are too close to the current one
+            close_annotations = [current_ann]
+            j = i + 1
+            while j < len(anns_sorted):
+                next_ann = anns_sorted[j]
+                next_frame = next_ann.get("frame_number", 0)
+
+                if next_frame - current_frame < frame_threshold:
+                    # This annotation is too close
+                    close_annotations.append(next_ann)
+                    j += 1
+                else:
+                    # Found an annotation that's far enough
+                    break
+
+            # From the close annotations, select the one with highest CA score
+            if ca_available and len(close_annotations) > 1:
+                best_ann = max(close_annotations, key=lambda x: x.get("CA_score", 0))
+                ca_score = best_ann.get("CA_score", 0)
+                print(
+                    f"  From frames {close_annotations[0]['frame_number']} to {close_annotations[-1]['frame_number']}, "
+                    f"selected frame {best_ann['frame_number']} with CA score {ca_score}"
+                )
+            else:
+                # If CA scores not available, just take the first annotation
+                best_ann = close_annotations[0]
+                if len(close_annotations) > 1:
+                    print(
+                        f"  From frames {close_annotations[0]['frame_number']} to {close_annotations[-1]['frame_number']}, "
+                        f"selected first frame {best_ann['frame_number']}"
+                    )
+                else:
+                    print(f"  Kept lone annotation at frame {best_ann['frame_number']}")
+
+            kept_annotations.append(best_ann)
+
+            # Move to the next block of annotations
+            i = j
+
+        print(f"  Final annotations after time separation: {len(kept_annotations)}")
+        final_annotations.extend(kept_annotations)
+
+    print(
+        f"\nTotal annotations after ensuring time separation: {len(final_annotations)}"
+    )
+    data["annotations"] = final_annotations
+    return data
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Run frame sampling algorithm on ca classifier output"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
     )
     parser.add_argument(
         "in_json_path",
@@ -219,22 +332,36 @@ def main():
     )
     args = parser.parse_args()
 
+    # Set defaults based on original behavior
+    parser.set_defaults(viewpoint=False, ca_score=False)
+
+    args = parser.parse_args()
+
+    # Load configuration from YAML file
+    config = load_config("algo/frame_sampling.yaml")
     input_file = args.in_json_path
     stage1_output = args.json_stage1
     final_output = args.json_final
 
-    # Load configuration from YAML file
-    config = load_config("algo/frame_sampling.yaml")
-
     t_seconds = config["thresholds"]["t_seconds"]
     frame_interval = config["thresholds"]["frame_interval"]
-    threshold_percentage_stage1 = config["thresholds"]["threshold_percentage_stage1"]
     threshold_percentage_stage2 = config["thresholds"]["threshold_percentage_stage2"]
+
+    # Override config values with command line arguments
+    viewpoint_available = config["settings"]["use_viewpoint"]
+    ca_available = config["settings"]["use_ca_score"]
+
+    print(f"Using viewpoint processing: {viewpoint_available}")
+    print(f"Using CA score processing: {ca_available}")
 
     print("=== Starting Stage 1: Frame Sampling Algorithm ===")
     data = load_json(input_file)
     processed_data = frame_sampling_algorithm_combined(
-        data, t_seconds, frame_interval, threshold_percentage_stage1
+        data,
+        t_seconds,
+        frame_interval,
+        ca_available,
+        viewpoint_available,
     )
     save_json(processed_data, stage1_output)
     print(f"Stage 1 output saved to {stage1_output}")
@@ -245,17 +372,26 @@ def main():
     print(f"Number of annotations at start of Stage 2: {initial_stage2_count}")
 
     annotations_by_viewpoint = group_annotations_by_tracking_id_and_viewpoint(
-        data_stage1
+        data_stage1, viewpoint_available
     )
     filtered_annotations_by_viewpoint = filter_annotations(
-        annotations_by_viewpoint, threshold_percentage_stage2
+        annotations_by_viewpoint,
+        threshold_percentage_stage2,
+        ca_available,
     )
     final_data = reconstruct_annotations(data_stage1, filtered_annotations_by_viewpoint)
 
     final_count = len(final_data["annotations"])
     print(f"\nFinal number of annotations after Stage 2 filtering: {final_count}")
 
-    save_json(final_data, final_output)
+    # Add Stage 3: Ensure time separation between annotations
+    final_data_with_separation = ensure_time_separation(
+        final_data, t_seconds, frame_interval, ca_available
+    )
+
+    final_count_after_separation = len(final_data_with_separation["annotations"])
+
+    save_json(final_data_with_separation, final_output)
     print(f"Final output saved to {final_output}")
 
 

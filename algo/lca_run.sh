@@ -1,18 +1,19 @@
+# USE: Run LCA separate from the pipeline. RUN FROM GGR
+
 #!/bin/bash
 
 set -e
 
 
-LCA_DIR="GGR/code/"
 IMAGES_DIR=""
-ANNOTATIONS_FILE="GGR/data/annotations_LCA.json"
-EMBEDDINGS_FILE="GGR/data/embeddings_LCA.pickle"
-VERIFIER_PROBS="GGR/data/verifiers_probs.json"
-DB_DIR="GGR/data/output"
+ANNOTATIONS_FILE="test_dataset/annotations_LCA.json"
+EMBEDDINGS_FILE="test_dataset/embeddings_LCA.pickle"
+VERIFIER_PROBS="test_dataset/verifiers_probs.json"
+DB_DIR="test_dataset/lca/db"
 EXP_NAME="zebra_drone"
-LOG_FILE="GGR/data/output/drone_log.log"
+LOG_FILE="test_dataset/lca/drone_log.log"
 
-python3 lca.py \
+python3 algo/lca.py \
     "$LCA_DIR" \
     "$IMAGES_DIR" \
     "$ANNOTATIONS_FILE" \
