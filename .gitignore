@@ -6,4 +6,5 @@ test_dataset/
 scratch/
 # Mac system
 .DS_Store
-
+PLACE_TEST_HERE/
+TEST_DATA/
