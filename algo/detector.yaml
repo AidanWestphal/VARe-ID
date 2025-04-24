@@ -14,4 +14,4 @@ model_dir : weights
 confidence_threshold : 0.75
 
 video_fps: 8
-video_max_frames: 2000
+video_max_frames: 500

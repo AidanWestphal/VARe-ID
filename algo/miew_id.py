@@ -192,7 +192,7 @@ def avg_distance(distmat, labels):
 
     return sum/num_pts
 
-def eval_metrics(embeddings, df, config):
+def eval_metrics(embeddings, df, config, dir):
     # STEP 1: Get distmat and labels (map annot uuid to individual id)
     distmat = cosine_distance(torch.Tensor(embeddings[0]), torch.Tensor(embeddings[0]))
     names_uuids = pd.DataFrame({"uuid": embeddings[1]})
@@ -211,7 +211,7 @@ def eval_metrics(embeddings, df, config):
 
     # STEP 2: Read rest of params
     k = config["k"]
-    log_file = config["eval_file"]
+    log_file = os.path.join(dir,config["eval_file"])
 
     # STEP 3: Evaluate functions for all pairs
     scores = torch.Tensor(topk_precision(names,distmat,k))
@@ -292,7 +292,9 @@ if __name__ == "__main__":
 
     if "eval_file" in config.keys():
         print("Evaluating Top-K miewid precision...")
-        eval_metrics(embeddings,df,config)
+        sep = args.out_file.rfind("/")
+        dir = args.out_file[:sep]
+        eval_metrics(embeddings,df,config,dir)
 
     print(f"Saving embeddings file {args.out_file}...")
     with open(args.out_file, "wb") as f:

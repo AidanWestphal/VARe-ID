@@ -5,7 +5,7 @@ config_save_path: "lca/configs/config_drone.yaml"
 
 # THE FOLLOWING ARE THE CONFIG VALUES IMPORTANT FOR LCA ITSELF
 
-exp_name: exp_name
+# exp_name <-- ADDED IN CODE
 species: "Zebra"
 comment: Experiment comment goes here
 data:
