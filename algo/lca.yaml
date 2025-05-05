@@ -1,0 +1,56 @@
+# THIS SECTION CONTAINS VALUES IMPORTANT FOR lca.py TO RUN
+
+github_lca_url: https://github.com/WildMeOrg/lca/
+config_save_path: "lca/configs/config_drone.yaml"
+
+# THE FOLLOWING ARE THE CONFIG VALUES IMPORTANT FOR LCA ITSELF
+
+# exp_name <-- ADDED IN CODE
+species: "Zebra"
+comment: Experiment comment goes here
+data:
+  # images_dir <-- ADDED IN CODE
+  viewpoint_list: ["left", "right"]
+  name_keys: ["individual_id"]
+  n_filter_min: 1
+  n_filter_max: 10000
+  # annotation_file <-- ADDED IN CODE
+  # embedding_file <-- ADDED IN CODE
+
+lca:
+  verifier_name: "miewid"
+  # db_path  <-- ADDED IN CODE (OUTPUT PATH)
+  # verifier_path <-- ADDED IN CODE (OUTPUT PATH)
+
+  temp_db: False
+  clear_db: False
+  distance_power: 1
+
+  edge_weights: # weight calibration params
+    prob_human_correct: 1.0 # Probability that a human verification is correct, needed for human review simulation
+    augmentation_names: ["miewid", "human"] # Names of augmentations to be used
+    num_pos_needed: 100 # Number of positive samples needed
+    num_neg_needed: 50 # Number of negative samples needed
+    scorer: "kde"
+
+  iterations: #lca params
+    min_delta_converge_multiplier: 0.95 #3.65
+    min_delta_stability_ratio: 4 #    12
+    num_per_augmentation: 2 #      3
+    tries_before_edge_done: 10 #   6
+    ga_iterations_before_return: 10 #   12
+    ga_max_num_waiting: 50 #   31
+    max_human_decisions: 5000
+    should_densify: True
+    densify_min_number_human: 10
+    densify_min_edges: 10 # 16
+    densify_frac: 0.5 # 0.124
+
+  logging:
+    # update_log_file: True
+    log_level: INFO
+    # log_file <-- ADDED IN CODE (OUTPUT PATH)         # File where logs will be saved
+    # >> Setting log_file: null also doesn't work as its overwritten in LCA itself <<
+  drawing:
+    draw_iterations: False
+    drawing_prefix: drawing_lca
