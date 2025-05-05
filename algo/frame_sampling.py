@@ -84,8 +84,9 @@ def group_annotations_by_tracking_id_and_subsequences(data):
 
 def frame_sampling_algorithm_combined(
     data,
-    t_seconds,
-    frame_interval,
+    # t_seconds,
+    # frame_interval,
+    frames_per_subsequence,
     ca_available,
     viewpoint_available,
 ):
@@ -123,22 +124,25 @@ def frame_sampling_algorithm_combined(
                 print(f"    Subsequence {idx+1} with {len(subseq)} annotations")
 
                 if ca_available:
-                    max_ca_annotation = max(subseq, key=lambda x: x["CA_score"])
-                    max_ca_score = max_ca_annotation["CA_score"]
-                    print(f"      Max CA score: {max_ca_score}")
-
-                    # Always select the annotation with the maximum CA score
-                    selected_subseq_annotations = [max_ca_annotation]
-                    print(
-                        f"      Selected annotation at frame {max_ca_annotation['frame_number']} (Max CA)"
+                    subseq_sorted_by_ca = sorted(
+                        subseq, key=lambda x: x.get("CA_score", -1), reverse=True
                     )
+                    selected_subseq_annotations = subseq_sorted_by_ca[
+                        :frames_per_subsequence
+                    ]
+                    for ann in selected_subseq_annotations:
+                        print(
+                            f"      Selected annotation at frame {ann['frame_number']} (CA: {ann.get('CA_score', 'N/A')})"
+                        )
 
                 else:
-                    selected_annotation = random.choice(subseq)
-                    selected_subseq_annotations = [selected_annotation]
-                    print(
-                        f"      Randomly selected annotation at frame {selected_annotation['frame_number']}"
+                    selected_subseq_annotations = random.sample(
+                        subseq, min(len(subseq), frames_per_subsequence)
                     )
+                    for ann in selected_subseq_annotations:
+                        print(
+                            f"      Randomly selected annotation at frame {ann['frame_number']}"
+                        )
 
                 filtered_annotations.extend(selected_subseq_annotations)
 
@@ -358,10 +362,11 @@ def main():
     data = load_json(input_file)
     processed_data = frame_sampling_algorithm_combined(
         data,
-        t_seconds,
-        frame_interval,
-        ca_available,
-        viewpoint_available,
+        # t_seconds,
+        # frame_interval,
+        frames_per_subsequence=config["thresholds"]["frames_per_subsequence"],
+        ca_available=False,
+        viewpoint_available=False,
     )
     save_json(processed_data, stage1_output)
     print(f"Stage 1 output saved to {stage1_output}")

@@ -1,5 +1,6 @@
 thresholds:
   t_seconds: 20 # Minimum time gap (in seconds) between selected annotations
+  frames_per_subsequence: 2 # Number of frames per subsequence
   frame_interval: 8 # Number of frames per second (used to convert t_seconds to frame gap)
   threshold_percentage_stage2: 0.1 # Stage 2: Use 90% of the highest CA score per tracking ID as the threshold
 
