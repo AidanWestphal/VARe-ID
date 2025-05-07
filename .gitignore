@@ -10,3 +10,5 @@ TEST_DATA/
 D1/
 D2/
 D3/
+UI/init_db.sh
+UI/run_gui.sh
