@@ -53,12 +53,22 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 cac_dir = os.path.join(exp_name,config["cac_dir"])
 cac_model_checkpoint = os.path.join(model_dirname,config["cac_model_checkpoint"])
 cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".csv")
+
+# for eda preprocessing
 eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")
+if data_is_video:
+    eda_flag = "--video"
+else:
+    eda_flag = ""
 
 # for frame sampling
 fs_dir = os.path.join(exp_name,config["fs_dir"])
 fs_out_stage1_path = os.path.join(fs_dir, config["fs_out_stage1_json_file"])
 fs_out_final_path = os.path.join(fs_dir, config["fs_out_final_json_file"])
+
+# DEFINE THE INPUT FOR FRAME SAMPLING BASED ON INPUT TYPE
+if not data_is_video:
+    fs_out_final_path = eda_preprocess_path
 
 # for miew id embedding generator
 mid_dir = os.path.join(exp_name,config["mid_dir"])
@@ -77,9 +87,10 @@ else:
     lca_sep_viewpoint = ""
 
 # for lca post processing
+fs_file_name = os.path.basename(fs_out_final_path)
 post_dir = os.path.join(exp_name,config["post_dir"])
-sep = config["fs_out_final_json_file"].rfind(".")
-annot_file_no_ext = config["fs_out_final_json_file"][:sep].replace(".","")
+sep = fs_file_name.rfind(".")
+annot_file_no_ext = fs_file_name[:sep].replace(".","")
 post_right = os.path.join(lca_db_dir,annot_file_no_ext + config["post_lca_left_end"])
 post_left = os.path.join(lca_db_dir,annot_file_no_ext + config["post_lca_right_end"])
 post_right_out = os.path.join(post_dir, config["post_lca_right_out"])
@@ -111,11 +122,12 @@ rule import_images:
 
 rule detector_images:
     input:
+        file=image_out_path,
         script="algo/image_detector.py"
     output:
         img_annots_filtered_path
     shell:
-        "python {input.script} {image_dir} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {img_annots_filename} {img_annots_filtered_filename}"
+        "python {input.script} {input.file} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {img_annots_filename} {img_annots_filtered_filename}"
 
 rule import_videos:
     input:
@@ -169,7 +181,7 @@ rule eda_preprocess:
     output:
         eda_preprocess_path
     shell:
-        "python {input.script} {input.file} {output}"
+        "python {input.script} {input.file} {output} {eda_flag}"
 
 rule frame_sampling:
     input:

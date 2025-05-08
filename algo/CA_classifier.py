@@ -86,7 +86,10 @@ def load_data(csv_path, image_dir, transform, batch_size):
 
 
 def preprocess_viewpoint(viewpoint):
-    if "front" in viewpoint and "right" in viewpoint:
+    # IF NOT A STRING (NAN)
+    if not isinstance(viewpoint, str):
+        return ""
+    elif "front" in viewpoint and "right" in viewpoint:
         if "up" in viewpoint:
             return "upfrontright"
         else:
