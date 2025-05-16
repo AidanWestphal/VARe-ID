@@ -6,4 +6,6 @@ test_dataset/
 scratch/
 # Mac system
 .DS_Store
+*.pickle
+*lca_run_*.sh
 
