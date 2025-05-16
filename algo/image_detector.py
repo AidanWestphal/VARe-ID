@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import uuid
 import warnings
+import cv2
 
 import torch
 import ultralytics
@@ -59,16 +60,17 @@ def select_model(yolo_model, config, model_dir):
     return model
 
 
-def yolo_predictions(result_gen, num_images):
+def detect_images(image_data, model, threshold):
 
+    images = image_data["images"]
     annotations = []
     tracking_id = 1
 
-    with tqdm(result_gen, total=num_images, desc="Writing annotations...") as pbar:
-        for result in pbar:
-            image_filename = os.path.basename(result.path)
-            image_uuid = os.path.splitext(image_filename)[0]
+    for image in tqdm(images, desc=f"Detecting images..."):
+        # Detect from the image
+        results = model(image["uri_original"], conf=threshold, verbose=False)
 
+        for result in results:
             # Check if any detection in the image is a person (class 0)
             if any(box.cls.item() == 0 for box in result.boxes):
                 # Skip this entire image
@@ -84,8 +86,8 @@ def yolo_predictions(result_gen, num_images):
                 annotations.append(
                     {
                         "annot uuid": str(uuid.uuid4()),
-                        "image uuid": image_uuid,
-                        "image fname": image_filename,
+                        "image uuid": image["uuid"],
+                        "image fname": image["uri"],
                         "bbox x": x1,
                         "bbox y": y1,
                         "bbox w": x2 - x1,
@@ -93,6 +95,7 @@ def yolo_predictions(result_gen, num_images):
                         "bbox pred score": box.conf.item(),
                         "category id": int(box.cls.item()),
                         "tracking id": tracking_id,
+                        "timestamp": image["time_posix"],
                     }
                 )
                 # For images, assign unique tracking ids to every image
@@ -207,6 +210,7 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
             "bbox h": annotation["bbox pred h"],
             "viewpoint gt": annotation["viewpoint"],
             "image fname": annotation["image fname"],
+            "timestamp": annotation["timestamp"],
         }
         for annotation in filtered_annotations
     ]
@@ -245,13 +249,14 @@ def main(args):
     config = load_config("algo/detector.yaml")
 
     # Setting up Device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     annotations_csv_fullpath = args.original_csv_path
     exp_dir = Path(args.exp_dir)
-    images = Path(args.image_dir)
     annots = Path(args.annot_dir)
-    num_images = len(os.listdir(images))
+
+    with open(args.image_data, 'r') as file:
+        image_data = json.load(file)
 
     os.makedirs(exp_dir, exist_ok=True)
     shutil.rmtree(annots, ignore_errors=True)
@@ -270,10 +275,7 @@ def main(args):
     detector = select_model(yolo_model, config, model_dir)
 
     threshold = config["confidence_threshold"]
-    print("Running detection...", end="")
-    result_gen = detector(images, conf=threshold, stream=True, verbose=False)
-    print(" done.")
-    predictions = yolo_predictions(result_gen, num_images)
+    predictions = detect_images(image_data,detector,threshold)
 
     pred_json_name = args.annots_csv_filename + ".json"
     pred_csv_name = args.annots_csv_filename + ".csv"
@@ -322,7 +324,7 @@ if __name__ == "__main__":
         description="Detect bounding boxes for database of animal images"
     )
     parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
+        "image_data", type=str, help="The image metadata file"
     )
     parser.add_argument(
         "annot_dir", type=str, help="The directory to export annotations to"

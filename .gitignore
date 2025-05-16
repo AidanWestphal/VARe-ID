@@ -6,6 +6,13 @@ test_dataset/
 scratch/
 # Mac system
 .DS_Store
+<<<<<<< HEAD
 *.pickle
 *lca_run_*.sh
+=======
+TEST_DATA/
+>>>>>>> 1231a35f2b62d70c32ae67ac89e6d1f9a58e107b
 
+D1/
+D2/
+D3/

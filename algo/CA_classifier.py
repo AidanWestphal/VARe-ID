@@ -86,7 +86,10 @@ def load_data(csv_path, image_dir, transform, batch_size):
 
 
 def preprocess_viewpoint(viewpoint):
-    if "front" in viewpoint and "right" in viewpoint:
+    # IF NOT A STRING (NAN)
+    if not isinstance(viewpoint, str):
+        return ""
+    elif "front" in viewpoint and "right" in viewpoint:
         if "up" in viewpoint:
             return "upfrontright"
         else:
@@ -175,7 +178,7 @@ def format_and_save(df, path):
     df = df.rename(columns={"image uuid": "image_uuid", "annot uuid": "uuid", "image fname": "file_name", "tracking id": "tracking_id", "bbox pred score": "confidence", "category id": "detection_class", "species_prediction": "species", "species_pred_simple": "category_id", "predicted_viewpoint": "viewpoint", "bbox_xywh": "bbox", "frame number": "frame_number"})
     df["individual_id"] = 0
 
-    columns_kept = ["image_uuid", "uuid", "file_name", "tracking_id", "confidence", "detection_class", "species", "bbox", "viewpoint", "individual_id", "CA_score", "annotations_census", "category_id", "frame_number"]
+    columns_kept = ["image_uuid", "uuid", "file_name", "tracking_id", "confidence", "detection_class", "species", "bbox", "viewpoint", "individual_id", "CA_score", "annotations_census", "category_id", "frame_number", "timestamp"]
 
     df = df.drop(columns=df.columns.difference(columns_kept))
 
@@ -293,9 +296,9 @@ def main(args):
         print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
     else:
         print("Warning: No objects passed NMS filtering")
-    nms_filtered = pd.DataFrame(
-        columns=ar_filtered.columns
-    )  # Create empty DataFrame with same columns
+        nms_filtered = pd.DataFrame(
+            columns=ar_filtered.columns
+        )  # Create empty DataFrame with same columns
     if nms_filtered_out:
         nms_filtered_out = pd.concat(nms_filtered_out).reset_index(drop=True)
     else:

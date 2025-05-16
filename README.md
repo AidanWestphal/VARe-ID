@@ -33,7 +33,9 @@ Add the directory to the input images in the root of the repository.
 ```
 mkdir test_dataset
 ```
-Insert the ca classifier and viewpoint classifier models into the `test_dataset` directory.
+Insert the ca classifier and viewpoint classifier models into the `test_dataset` directory and mark it in `config.yaml`.
+
+Inser the lca verifier probs into the `test_dataset` directory and mark it in `config.yaml`.
 
 Add ground truth annotations to `test_dataset` if you want to filter animal detections.
 
@@ -45,7 +47,8 @@ GGR
 ├── test_dataset
 │   ├── your_viewpoint_classifier.pth
 │   ├── your_ca_classifier.pth
-│   └── annotations.csv
+│   ├── your_verifiers_probs.json
+│   └── intermediate/output folders and files
 ├── images
 │ # repository files
 └── ...
@@ -67,7 +70,7 @@ conda activate smk_pipeline
 ```
 snakemake -s snakefile.smk --cores 1
 ```
-Results will appear in `test_dataset/ca_classifier/final_output_with_softmax_and_census.csv` and `[insert LCA when its done]`
+Final results will appear in `test_dataset/output` and intermediate results will appear in labeled folders in `test_dataset` accordingly.
 
 ## GGR-Specific Functions
 - Additional script `extrapolate_ggr_gps.py` extrapolates from existing GPS data to fill in for missing GPS data for images from other cameras.
@@ -78,8 +81,7 @@ python extrapolate_ggr_gps.py test_dataset/image_data.json test_dataset/image_da
 ## Tools
 [YOLO](https://github.com/THU-MIG/yolov10.git)
 [BioCLIP](https://github.com/Imageomics/pybioclip)
-## Data Description
-fill in 
+
 ## Future Tasks
 - Implement threading for image parameter computation and validity checking if image import is too slow.
 - Set up pipeline within IDEA cluster and perform larger tests.

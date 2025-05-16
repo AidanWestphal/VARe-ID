@@ -1,11 +1,9 @@
-paths:
-  # input_file: "ca_filtered_merged_tracking_ids_dji_0100_0101_0102_no_unwanted_viewpoints_pre_miewid.json" # Path to the input JSON file
-  input_file: "miewid_output.json" # Path to the input JSON file
-  stage1_output: "out1.json" # Output file after frame sampling (Stage 1)
-  final_output: "out2.json" # Final output file after threshold filtering (Stage 2)
-
 thresholds:
-  t_seconds: 10 # Minimum time gap (in seconds) between selected annotations
-  frame_interval: 7 # Number of frames per second (used to convert t_seconds to frame gap)
-  threshold_percentage_stage1: 0.8 # Stage 1: Use 80% of the max CA score as the threshold
-  threshold_percentage_stage2: 0.9 # Stage 2: Use 90% of the highest CA score per tracking ID as the threshold
+  t_seconds: 20 # Minimum time gap (in seconds) between selected annotations
+  frames_per_subsequence: 2 # Number of frames per subsequence
+  frame_interval: 8 # Number of frames per second (used to convert t_seconds to frame gap)
+  threshold_percentage_stage2: 0.1 # Stage 2: Use 90% of the highest CA score per tracking ID as the threshold
+
+settings:
+  use_ca_score: true # Use CA score for filtering IF available
+  use_viewpoint: true # Use viewpoint for filtering IF available
