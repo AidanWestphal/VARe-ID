@@ -15,8 +15,6 @@ from torchvision import transforms
 from torchvision.transforms import functional as F
 from torchvision.models import resnet50
 from torchvision.ops import nms
-from tqdm import tqdm
-import json
 
 
 class CustomImageDataset(Dataset):
@@ -29,10 +27,9 @@ class CustomImageDataset(Dataset):
         return len(self.img_data)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_data.iloc[idx]["image fname"])
 
         # Read image as PIL Image
-        image = Image.open(img_path).convert("RGB")
+        image = Image.open(self.img_data.iloc[idx]["image path"]).convert("RGB")
 
         # Get the bounding box coordinates
         bbox = self.img_data.iloc[idx]["bbox_xyxy"]
@@ -175,10 +172,41 @@ def apply_nms(df, iou_threshold):
 
 def format_and_save(df, path):
     # file_name	tracking_id	confidence	detection_class	species	bbox	viewpoint	individual_id	CA_score	annotations_census
-    df = df.rename(columns={"image uuid": "image_uuid", "annot uuid": "uuid", "image fname": "file_name", "tracking id": "tracking_id", "bbox pred score": "confidence", "category id": "detection_class", "species_prediction": "species", "species_pred_simple": "category_id", "predicted_viewpoint": "viewpoint", "bbox_xywh": "bbox", "frame number": "frame_number"})
+    df = df.rename(
+        columns={
+            "image uuid": "image_uuid",
+            "annot uuid": "uuid",
+            "image fname": "file_name",
+            "tracking id": "tracking_id",
+            "bbox pred score": "confidence",
+            "category id": "detection_class",
+            "species_prediction": "species",
+            "species_pred_simple": "category_id",
+            "predicted_viewpoint": "viewpoint",
+            "bbox_xywh": "bbox",
+            "frame number": "frame_number",
+        }
+    )
     df["individual_id"] = 0
 
-    columns_kept = ["image_uuid", "uuid", "file_name", "tracking_id", "confidence", "detection_class", "species", "bbox", "viewpoint", "individual_id", "CA_score", "annotations_census", "category_id", "frame_number", "timestamp"]
+    columns_kept = [
+        "image_uuid",
+        "uuid",
+        "file_name",
+        "tracking_id",
+        "confidence",
+        "detection_class",
+        "species",
+        "bbox",
+        "viewpoint",
+        "individual_id",
+        "CA_score",
+        "annotations_census",
+        "category_id",
+        "frame_number",
+        "timestamp",
+        "image path",
+    ]
 
     df = df.drop(columns=df.columns.difference(columns_kept))
 
@@ -341,7 +369,7 @@ def main(args):
 
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
-    format_and_save(final_df,args.out_csv_path)
+    format_and_save(final_df, args.out_csv_path)
 
     print(
         f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"

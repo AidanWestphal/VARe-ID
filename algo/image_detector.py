@@ -96,6 +96,7 @@ def detect_images(image_data, model, threshold):
                         "category id": int(box.cls.item()),
                         "tracking id": tracking_id,
                         "timestamp": image["time_posix"],
+                        "image path": image["uri_original"],
                     }
                 )
                 # For images, assign unique tracking ids to every image
@@ -255,7 +256,7 @@ def main(args):
     exp_dir = Path(args.exp_dir)
     annots = Path(args.annot_dir)
 
-    with open(args.image_data, 'r') as file:
+    with open(args.image_data, "r") as file:
         image_data = json.load(file)
 
     os.makedirs(exp_dir, exist_ok=True)
@@ -275,7 +276,7 @@ def main(args):
     detector = select_model(yolo_model, config, model_dir)
 
     threshold = config["confidence_threshold"]
-    predictions = detect_images(image_data,detector,threshold)
+    predictions = detect_images(image_data, detector, threshold)
 
     pred_json_name = args.annots_csv_filename + ".json"
     pred_csv_name = args.annots_csv_filename + ".csv"
@@ -323,9 +324,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Detect bounding boxes for database of animal images"
     )
-    parser.add_argument(
-        "image_data", type=str, help="The image metadata file"
-    )
+    parser.add_argument("image_data", type=str, help="The image metadata file")
     parser.add_argument(
         "annot_dir", type=str, help="The directory to export annotations to"
     )

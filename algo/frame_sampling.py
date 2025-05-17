@@ -394,8 +394,6 @@ def main():
         final_data, t_seconds, frame_interval, ca_available
     )
 
-    final_count_after_separation = len(final_data_with_separation["annotations"])
-
     save_json(final_data_with_separation, final_output)
     print(f"Final output saved to {final_output}")
 
