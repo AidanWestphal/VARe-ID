@@ -5,9 +5,9 @@ The following tool helps visualize annotations generated from the pipeline by ov
 
 Import data under the `annots` parameter. This should be a path to the post CA classifier annotation file. Save data via the `out_dir` param.
 
-Please specify whether the data is in video or image mode through the parameter `video_mode`, which is boolean.
+Please specify whether the data is in video or image mode through the parameter `--video_mode`, which is boolean.
 
-If you have a specific set of images you want displayed, you can specify the optinal field `image_paths`, which is a list of relative paths (from GGR) to each desired image. If not specified, the images are generated randomly. You can also specify the number of images to generate visualizations of, through the parameter `num_images`. Including a value for `image_paths` renders `num_images` redundant. It will generate annotations for all images in the provided list.
+If you have a specific set of images you want displayed, you can specify the optinal field `--image_paths`, which is a list of relative paths (from GGR) to each desired image. If not specified, the images are generated randomly. You can also specify the number of images to generate visualizations of, through the parameter `--num_images`. You can select all images with `--all` keyword. Of these keywords, the order of precedence is `--all` then `--image_paths` then `--num_images`.
 
 To specify which fields to include on each annotation, see the following list of optional parameters:
 
@@ -30,6 +30,8 @@ TODO RAFACTORS:
 Example Executions:
 python3 visualization/visualize.py {video/image data json} {CA Output CSV} {Output Directory} --num_images 100 --CA_score --species --confidence --viewpoint
 python3 visualization/visualize.py {video/image data json} {CA Output CSV} {Output Directory} --video_mode --image_paths {p1} {p2} {p3} ... --CA_score --species --confidence --viewpoint
+
+python3 visualize.py /fs/ess/PAS2136/ggr_data/results/GGR2020_subset/image_data.json /fs/ess/PAS2136/ggr_data/results/GGR2020_subset/ca_classifier/final_output_with_softmax_and_census.csv annot_dir --all --species --viewpoint --CA_score
 '''
 
 import ast
@@ -37,6 +39,8 @@ import argparse
 import os
 import cv2
 import json
+import numbers
+
 
 import numpy as np
 import pandas as pd
@@ -58,6 +62,9 @@ parser.add_argument(
 )
 parser.add_argument(
     "--num_images", type=int, nargs='?', default=None, help="The number of images to display"
+)
+parser.add_argument(
+    "--all", action="store_true", help="Displays all images"
 )
 parser.add_argument(
     "--image_paths", type=str, nargs='*', default=None, help="The number of images to display"
@@ -106,19 +113,23 @@ for image in image_metadata:
 
 # Step 2: Get the list of appropriate URIs to display
 
-# Case 1: A list was provided. Only take in valid strs (we will cross check later if they exist in annots)
-if args.image_paths is not None:
+# Case 1: Use all images
+if args.all:
+    images = uri_list
+
+# Case 2: A list was provided. Only take in valid strs (we will cross check later if they exist in annots)
+elif args.image_paths is not None:
     images_input = [path for path in args.image_paths if isinstance(path,str)]
     images = list(set(images_input) & set(uri_list))
 
-# Case 2: No list was provided. Take in at most num_images random images
+# Case 3: No list was provided. Take in at most num_images random images
 elif args.num_images is not None:
     rands = np.random.choice(len(uri_list), args.num_images, replace=False)
     images = list(np.array(uri_list)[rands])
 
-# Case 3: Invalid input
+# Case 4: Invalid input
 else:
-    raise Exception("Invalid inputs. Must specify either num_images or image_paths.")
+    raise Exception("Invalid inputs. Must specify either num_images, image_paths, or all.")
 
 # GET THE ANNOTATIONS CORRESPONDING TO EACH URI
 
@@ -130,18 +141,21 @@ annot_df = pd.read_csv(args.annots)
 # Inner join because we can process this via a select w/ no returns
 df = pd.merge(images_df, annot_df, on="image_uuid", how="inner")
 
-# BUILD THE FORMATTER
-format_str = ""
+# FORMATTER
 keys = []
 args_dict = vars(args)
 for key in args_dict:
-    if key not in ["metadata", "annots", "video_mode", "num_images", "image_paths", "out_dir"] and args_dict[key]:
-        format_str += key + " {} "
+    if key not in ["metadata", "annots", "video_mode", "num_images", "image_paths", "out_dir", "all"] and args_dict[key]:
         keys.append(key)
 
 def format(annot):
-    values = [annot[key] for key in keys]
-    return format_str.format(*values)
+    format_str = ""
+    # Only include fields with values (and not NaN)
+    for key in keys:
+        if annot[key] and not (isinstance(annot[key], numbers.Number) and np.isnan(annot[key])):
+            format_str += key + f" {annot[key]} "
+
+    return format_str
 
 if not os.path.exists(args.out_dir):
     os.makedirs(args.out_dir, exist_ok=True)
@@ -150,16 +164,33 @@ if not os.path.exists(args.out_dir):
 
 for uri in images:
     select = df[df["uri"] == uri]
-    img = cv2.imread(uri)
 
     # Add the annots to the image
     for _, row in select.iterrows():
+        img = cv2.imread(uri)
         annot_str = format(row)
         bbox = np.array(ast.literal_eval(row["bbox"])).astype(int)
         color = np.random.randint(0, 256, 3).tolist()
-        img = cv2.rectangle(img, (bbox[0], bbox[1]), (bbox[0] + bbox[2], bbox[1] + bbox[3]), color, thickness=3)
-        img = cv2.putText(img, annot_str, ( bbox[0], bbox[1] + bbox[3]), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
+        # Bounding Box
+        x1 = bbox[0]
+        y1 = bbox[1]
+        x2 = bbox[0] + bbox[2]
+        y2 = bbox[1] + bbox[3]
+        img = cv2.rectangle(img, (x1,y1), (x2,y2), color, thickness=3)
 
-    # Save the image
-    path = os.path.join(args.out_dir,uri_uuid_mapping[uri] + ".jpg")
-    cv2.imwrite(path, img)
+        # Text (commented lines are text placed ON bbox)
+        (tw, th), _ = cv2.getTextSize(annot_str, cv2.FONT_HERSHEY_SIMPLEX, 3, 3)
+        # img = cv2.rectangle(img, (x1, y1 - th - 2), (x1 + tw + 2, y1), color, -1)
+        img = cv2.rectangle(img, (0, 0), (tw + 2, th + 2), color, -1)
+        # Get the grayscale version of color s.t. we can contrast it
+        gray_color = 0.299*color[0] + 0.587*color[1] + 0.114*color[2]
+        if gray_color < 127.5:
+            text_color = [255,255,255]
+        else:
+            text_color = [0,0,0]
+        # img = cv2.putText(img, annot_str, (x1-1,y1+1), cv2.FONT_HERSHEY_SIMPLEX, 2, text_color, 2)
+        img = cv2.putText(img, annot_str, (1,th+1), cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 3)
+
+        # Save the image on an annotation basis
+        path = os.path.join(args.out_dir,row["uuid"] + ".jpg")
+        cv2.imwrite(path, img)
