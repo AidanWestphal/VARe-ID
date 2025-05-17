@@ -72,10 +72,8 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
         y0 = row["bbox y"]
         w = row["bbox w"]
         h = row["bbox h"]
-        image_filename = row["image fname"]
 
-        image_filepath = os.path.join(image_dir, f"{image_filename}")
-        original_image = Image.open(image_filepath)
+        original_image = Image.open(row["image path"])
         cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")

@@ -1,6 +1,6 @@
-exp_name: "/home/aidan/Code/Research/Wildbook/D1"
-data_dir_in: "/home/aidan/Code/Research/Wildbook/PLACE_TEST_HERE"
-data_video: True
+exp_name: "./D1"
+data_dir_in: "./PLACE_TEST_HERE"
+data_video: False
 
 image_dirname: "images"
 video_dirname: "videos"
