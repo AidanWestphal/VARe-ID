@@ -82,7 +82,7 @@ def get_chip(row, images):
     theta = 0.0
     img_uuid = row["image_uuid"]
     image_path = [x["file_name"] for x in images if x["uuid"] == img_uuid][0]
-    img = cv2.imread(os.path.join(args.image_dir, image_path))[:, :, ::-1]
+    img = cv2.imread(row["image path"])[:, :, ::-1]
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2
@@ -122,7 +122,7 @@ def get_embeddings(loader, model, device):
 
 
 def topk_precision(names, distmat, k, names_db=None, return_matches=False):
-    """Computes precision at k given a distance matrix. 
+    """Computes precision at k given a distance matrix.
     Assumes the distance matrix is square and does one-vs-all evaluation"""
     # assert distmat.shape[0] == distmat.shape[1], "Distance matrix must be square"
 
@@ -133,10 +133,10 @@ def topk_precision(names, distmat, k, names_db=None, return_matches=False):
     y = torch.Tensor(names[:]).squeeze(0)
     ids_tensor = torch.Tensor(names_db)
 
-    ranks = list(range(1,k+1))
+    ranks = list(range(1, k + 1))
     max_k = k
 
-    topk_idx = output.topk(max_k)[1][:, :] ### 
+    topk_idx = output.topk(max_k)[1][:, :]  ###
     topk_names = ids_tensor[topk_idx]
 
     match_mat = topk_names == y[:, None].expand(topk_names.shape)
@@ -150,7 +150,7 @@ def topk_precision(names, distmat, k, names_db=None, return_matches=False):
         return scores, match_mat, topk_idx, topk_names
     else:
         return scores
-    
+
 
 def cosine_distance(input1, input2):
     """Computes cosine distance.
@@ -170,7 +170,7 @@ def cosine_distance(input1, input2):
 
 def avg_distance(distmat, labels):
     """Calculates the average distance between a selection of points (by labels).
-    
+
     Args:
         distmat: 2-D distance matrix.
         labels: List of column/row numbers to consider.
@@ -186,18 +186,22 @@ def avg_distance(distmat, labels):
         return 0
     # Calculate average value of upper triangular section, ignoring main diagonal (don't count edges to self)
     important = torch.triu(splice, diagonal=1)
-    indices = torch.triu_indices(splice.shape[0],splice.shape[1],1)
+    indices = torch.triu_indices(splice.shape[0], splice.shape[1], 1)
     num_pts = indices.shape[1]
     sum = torch.sum(important)
 
-    return sum/num_pts
+    return sum / num_pts
+
 
 def eval_metrics(embeddings, df, config, dir):
     # STEP 1: Get distmat and labels (map annot uuid to individual id)
     distmat = cosine_distance(torch.Tensor(embeddings[0]), torch.Tensor(embeddings[0]))
     names_uuids = pd.DataFrame({"uuid": embeddings[1]})
     names_df = pd.merge(df, names_uuids, on=["uuid"])
-    names_list = ["IID: " + str(d["individual_id"]) +  " Viewpoint: " + d["viewpoint"] for _, d in names_df.iterrows()]
+    names_list = [
+        "IID: " + str(d["individual_id"]) + " Viewpoint: " + d["viewpoint"]
+        for _, d in names_df.iterrows()
+    ]
     names = torch.zeros(len(names_list)) - 1
     # ASSIGN INTEGERS FOR ABOVE NAME LIST
     for i in range(len(names_list)):
@@ -211,10 +215,10 @@ def eval_metrics(embeddings, df, config, dir):
 
     # STEP 2: Read rest of params
     k = config["k"]
-    log_file = os.path.join(dir,config["eval_file"])
+    log_file = os.path.join(dir, config["eval_file"])
 
     # STEP 3: Evaluate functions for all pairs
-    scores = torch.Tensor(topk_precision(names,distmat,k))
+    scores = torch.Tensor(topk_precision(names, distmat, k))
     scores = scores[-1]
     avg_prec = {}
     avg_dist = {}
@@ -223,13 +227,15 @@ def eval_metrics(embeddings, df, config, dir):
         # If this hasn't been assigned yet...
         if i not in avg_prec.keys():
             indices = torch.where(names == i)[0]
-            avg_dist[i] = avg_distance(distmat,indices)
+            avg_dist[i] = avg_distance(distmat, indices)
             avg_prec[i] = torch.mean(scores[indices])
 
     # STEP 4: SAVE
     with open(log_file, "w") as f:
         for i in avg_prec.keys():
-            f.write(f"{names_list[i]}: Average Precision: {avg_prec[i]} Average Distance: {avg_dist[i]}\n")
+            f.write(
+                f"{names_list[i]}: Average Precision: {avg_prec[i]} Average Distance: {avg_dist[i]}\n"
+            )
 
 
 if __name__ == "__main__":
@@ -294,7 +300,7 @@ if __name__ == "__main__":
         print("Evaluating Top-K miewid precision...")
         sep = args.out_file.rfind("/")
         dir = args.out_file[:sep]
-        eval_metrics(embeddings,df,config,dir)
+        eval_metrics(embeddings, df, config, dir)
 
     print(f"Saving embeddings file {args.out_file}...")
     with open(args.out_file, "wb") as f:
