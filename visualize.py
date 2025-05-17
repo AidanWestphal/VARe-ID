@@ -28,8 +28,8 @@ TODO RAFACTORS:
 - Improve output coloring & formatting
 
 Example Executions:
-python3 visualization/visualize.py {video/image data json} {CA Output CSV} {True/False} {Output Directory} --num_images 100 --CA_score --species --confidence --viewpoint
-python3 visualization/visualize.py {video/image data json} {CA Output CSV} {True/False} {Output Directory} --image_paths {p1} {p2} {p3} ... --CA_score --species --confidence --viewpoint
+python3 visualization/visualize.py {video/image data json} {CA Output CSV} {Output Directory} --num_images 100 --CA_score --species --confidence --viewpoint
+python3 visualization/visualize.py {video/image data json} {CA Output CSV} {Output Directory} --video_mode --image_paths {p1} {p2} {p3} ... --CA_score --species --confidence --viewpoint
 '''
 
 import ast
@@ -51,10 +51,10 @@ parser.add_argument(
     "annots", type=str, help="The post CA classifier CSV file"
 )
 parser.add_argument(
-    "video_mode", type=bool, help="Boolean flag identifying the format of the metadata file"
+    "out_dir", type=str, help="The directory to save annotated images to"
 )
 parser.add_argument(
-    "out_dir", type=str, help="The directory to save annotated images to"
+    "--video_mode", action="store_true", help="Boolean flag identifying the format of the metadata file"
 )
 parser.add_argument(
     "--num_images", type=int, nargs='?', default=None, help="The number of images to display"
