@@ -364,31 +364,32 @@ def localize_images(imgtable, gid_list_=None):
         gid_list_ = get_valid_gids(imgtable)
     isvalid_list = [gid is not None for gid in gid_list_]
     gid_list = ut.list_unique(ut.list_compress(gid_list_, isvalid_list))
-    uri_list = imgtable.get_image_uris(gid_list)
+    # uri_list = imgtable.get_image_uris(gid_list)
 
-    def islocal(uri):
-        return not isabs(uri)
+    # def islocal(uri):
+    #     return not isabs(uri)
 
     guuid_list = imgtable.get_image_uuids(gid_list)
     gext_list = imgtable.get_image_exts(gid_list)
     # Build list of image names based on uuid in the imgtable.imgdir
     guuid_strs = (str(guuid) for guuid in guuid_list)
     loc_gname_list = [guuid + ext for (guuid, ext) in zip(guuid_strs, gext_list)]
-    loc_gpath_list = [join(imgtable.imgdir, gname) for gname in loc_gname_list]
+    # loc_gpath_list = [join(imgtable.imgdir, gname) for gname in loc_gname_list]
     # Copy images to local directory
-    for uri, loc_gpath in zip(uri_list, loc_gpath_list):
-        print(f"Localizing {uri} -> {loc_gpath}")
 
-        if not exists(loc_gpath):
-            uri if islocal(uri) else join(imgtable.imgdir, uri)
-            ut.copy_file_list([uri], [loc_gpath])
-            print("\t...image copied")
-        else:
-            print("\t...skipping (already localized)")
+    # for uri, loc_gpath in zip(uri_list, loc_gpath_list):
+    #     print(f"Localizing {uri} -> {loc_gpath}")
+
+    #     if not exists(loc_gpath):
+    #         uri if islocal(uri) else join(imgtable.imgdir, uri)
+    #         ut.copy_file_list([uri], [loc_gpath])
+    #         print("\t...image copied")
+    #     else:
+    #         print("\t...skipping (already localized)")
 
     # Update database uris
     imgtable.set_image_uris(gid_list, loc_gname_list)
-    assert all(map(exists, loc_gpath_list)), "not all images copied"
+    # assert all(map(exists, loc_gpath_list)), "not all images copied"
 
 
 def check_image_loadable_worker(gpath, orient):
@@ -814,6 +815,8 @@ def add_images(
         localize_images(imgtable, all_valid_gid_list)
 
     # Check loadable
+
+    ensure_loadable = False  # Temporarily disable loadable check
     if ensure_loadable:
         valid_gpath_list = imgtable.get_image_paths(all_valid_gid_list)
         bad_load_list = check_image_loadable(

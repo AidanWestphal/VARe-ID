@@ -1,0 +1,20 @@
+interactive: false # Set to true to force ipywidgets (if working reliably), or false to use console input
+
+csv:
+  detections1: "/users/PAS2136/upadha2/detection_script/detections_with_timestamps_dji_0143.csv"
+  detections2: "/users/PAS2136/upadha2/detection_script/detections_with_timestamps_dji_0144.csv"
+  merged_detections: "/users/PAS2136/upadha2/detection_script/LCA_postrpocessing_script/merged_detections_with_timestamps_dji_0143_0144.csv"
+  metadata: "/users/PAS2136/upadha2/detection_script/ca_filtered_merged_tracking_ids_dji_0143_0144_no_unwanted_viewpoints_pre_miewid.csv"
+  merged_bbox: "/users/PAS2136/upadha2/detection_script/LCA_postrpocessing_script/ca_filtered_merged_tracking_ids_dji_0143_0144_no_unwanted_viewpoints_pre_miewid_with_timestamp.csv"
+
+json:
+  left:
+    input: "/users/PAS2136/upadha2/LCA_postprocessing/feb_28_2025_updated_annotations_left_dji_0143_0144.json"
+    output: "/users/PAS2136/upadha2/detection_script/LCA_postrpocessing_script/feb_28_2025_test_copy_updated_annotations_left_with_timestamp.json"
+
+  right:
+    input: "/users/PAS2136/upadha2/LCA_postprocessing/feb_28_2025_updated_annotations_right_dji_0143_0144.json"
+    output: "/users/PAS2136/upadha2/detection_script/LCA_postrpocessing_script/feb_28_2025_test_copy_updated_annotations_right_with_timestamp.json"
+
+image:
+  directory: "/users/PAS2136/upadha2/DJI_0143_0144_merged_rounded_detection_result/"
