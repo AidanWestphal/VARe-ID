@@ -189,9 +189,9 @@ def main(args):
         original_csv["species_pred_simple"].isin(config["filtered_classes"])
     ]
 
-    filtered_csv["path"] = filtered_csv["image fname"].apply(
-        lambda x: os.path.join(args.image_dir, x)
-    )
+    # filtered_csv["path"] = filtered_csv["image fname"].apply(
+    #     lambda x: os.path.join(args.image_dir, x)
+    # )
 
     # Create a single 'bbox' column from the four bbox columns
     filtered_csv["bbox_xywh"] = list(

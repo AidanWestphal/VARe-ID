@@ -10,6 +10,10 @@ scratch/
 *lca_run_*.sh
 
 TEST_DATA/
+config_*.yaml
+test_dataset/
+./*.out
+algo/lca_run_*.sh
 
 
 D1/

@@ -4,6 +4,7 @@ import warnings
 import argparse
 import pandas as pd
 import json
+import os
 
 warnings.filterwarnings("ignore")
 
@@ -88,16 +89,19 @@ if __name__ == "__main__":
 
     df = df[df["annotations_census"] == True]
     df = df.merge(
-        df[["file_name", "tracking_id", "individual_id"]],
-        on=["file_name", "tracking_id"],
+        df[["image path", "tracking_id", "individual_id"]],
+        on=["image path", "tracking_id"],
         how="left",
     )
+
+    # Extract file_name from image path
+    df["file_name"] = df["image path"].apply(lambda x: os.path.basename(x))
 
     counts = df.groupby("viewpoint").size()
     print(counts)
 
     num_annotations = len(df)
-    num_images = len(df["file_name"].unique())
+    num_images = len(df["image path"].unique())
 
     print("Dataset Statistics:")
     print(f"Number of annotations: {num_annotations}")
@@ -108,10 +112,10 @@ if __name__ == "__main__":
     # IF UUIDS AREN'T ALREADY PROVIDED (GT FILES), ADD THEM
     if "image uuid" not in df.columns or "uuid" not in df.columns:
         image_uuid_map = {
-            file_name: str(uuid.uuid4()) for file_name in df["file_name"].unique()
+            image_path: str(uuid.uuid4()) for image_path in df["image path"].unique()
         }
         # Add the UUIDs to the DataFrame
-        df["image_uuid"] = df["file_name"].map(image_uuid_map)
+        df["image_uuid"] = df["image path"].map(image_uuid_map)
         df["uuid"] = [str(uuid.uuid4()) for _ in range(len(df))]
 
     df["individual_id"] = df["individual_id_x"]
@@ -149,6 +153,8 @@ if __name__ == "__main__":
             "category_id",
             "frame_number",
             "timestamp",
+            "file_name",
+            "image path",
         ]
     else:
         df_annotations_fields = [
@@ -169,7 +175,7 @@ if __name__ == "__main__":
 
     df_annotations = df[df_annotations_fields]
 
-    df_images_fields = ["image_uuid", "file_name"]
+    df_images_fields = ["image_uuid", "image path"]
     df_images_fields = df.columns.intersection(df_images_fields)
     df_images = (
         df[df_images_fields].drop_duplicates(keep="first").reset_index(drop=True)

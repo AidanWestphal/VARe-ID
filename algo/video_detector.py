@@ -72,7 +72,7 @@ def detect_videos(video_data, model, threshold):
         frames = vid["frame data"]
         fcount = 0
 
-        for frame in tqdm(frames,desc=f"Detecting frames from {vid_name}..."):
+        for frame in tqdm(frames, desc=f"Detecting frames from {vid_name}..."):
             fcount += 1
             # Open image
             img = cv2.imread(frame["uri"])
@@ -100,16 +100,22 @@ def detect_videos(video_data, model, threshold):
                         {
                             "annot uuid": str(uuid.uuid4()),
                             "image uuid": frame["uuid"],
-                            "image fname": frame["original_name"],
+                            "image path": frame["uri"],
                             "video path": vid["video path"],
                             "frame number": fcount,
                             "bbox x": x1,
                             "bbox y": y1,
                             "bbox w": x2 - x1,
                             "bbox h": y2 - y1,
-                            "bbox pred score": box.conf.item() if box.conf is not None else -1,
-                            "category id": int(box.cls.item()) if box.cls is not None else -1,
-                            "tracking id": int(box.id.item()) if box.id is not None else -1,
+                            "bbox pred score": (
+                                box.conf.item() if box.conf is not None else -1
+                            ),
+                            "category id": (
+                                int(box.cls.item()) if box.cls is not None else -1
+                            ),
+                            "tracking id": (
+                                int(box.id.item()) if box.id is not None else -1
+                            ),
                         }
                     )
 
@@ -130,7 +136,7 @@ def parse_srt(srt_path):
     (assuming it’s the date/time) as srt_dict[X].
     """
     srt_dict = {}
-    with open(srt_path, 'r', encoding='utf-8') as f:
+    with open(srt_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     i = 0
@@ -145,7 +151,9 @@ def parse_srt(srt_path):
             if i + 1 < len(lines):
                 possible_time = lines[i + 1].strip()
                 # If it looks like a datetime, store it
-                if re.search(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3},\d+", possible_time):
+                if re.search(
+                    r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3},\d+", possible_time
+                ):
                     srt_dict[srt_cnt] = possible_time
             i += 2
         else:
@@ -175,24 +183,28 @@ def add_timestamps(video_data, annots, desired_fps):
         # If the associated srt was not cached, find and cache it
         if video_path not in srt_table.keys():
             # Find the matching video in video_data by the video's path. It's guaranteed that there is only one match
-            data = [video for video in video_data["videos"] if video["video path"] == video_path][0]
+            data = [
+                video
+                for video in video_data["videos"]
+                if video["video path"] == video_path
+            ][0]
             srt_table[video_path] = parse_srt(data["srt path"])
-            fps_table[video_path] = data["fps"]  
+            fps_table[video_path] = data["fps"]
 
         # Reference the srt file and assign the timestamp
         srt = srt_table[video_path]
         frame_interval = round(fps_table[video_path] / desired_fps)
         # Undo 1-indexed frames, scale by frame interval, and redo 1-index
-        original_frame_number = (annot["frame number"] - 1)*frame_interval + 1
+        original_frame_number = (annot["frame number"] - 1) * frame_interval + 1
         timestamp = srt[original_frame_number]
-        
+
         # Assign the timestamp to the annotation
         annots[index]["timestamp"] = timestamp
 
 
 def postprocess_tracking_ids(annots):
     """
-    Ensures that tracking ids for separate videos do not overlap in the same range of numbers 
+    Ensures that tracking ids for separate videos do not overlap in the same range of numbers
     by remapping tracking ids to unused integer values.
     """
 
@@ -228,7 +240,7 @@ def postprocess_tracking_ids(annots):
         # Assign the tid
         annots[index]["tracking id"] = tid
 
-             
+
 def main(args):
     config = load_config("algo/detector.yaml")
 
@@ -237,9 +249,11 @@ def main(args):
 
     exp_dir = Path(args.exp_dir)
     annots = Path(args.annot_dir)
-    filtered_annot_csv_path = os.path.join(annots, args.annots_filtered_csv_filename) + ".csv"
+    filtered_annot_csv_path = (
+        os.path.join(annots, args.annots_filtered_csv_filename) + ".csv"
+    )
 
-    with open(args.video_data, 'r') as file:
+    with open(args.video_data, "r") as file:
         video_data = json.load(file)
 
     os.makedirs(exp_dir, exist_ok=True)
@@ -268,15 +282,15 @@ def main(args):
     postprocess_tracking_ids(annotations)
 
     print(f"Writing timestamp data from SRT files...")
-    add_timestamps(video_data,annotations,config["video_fps"])
+    add_timestamps(video_data, annotations, config["video_fps"])
 
     print(f"Saving annotations to {filtered_annot_csv_path}...")
-    save_annotations_to_csv({"annotations": annotations},filtered_annot_csv_path)
+    save_annotations_to_csv({"annotations": annotations}, filtered_annot_csv_path)
 
     print(f"Done!")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Detect and track bounding boxes for database of animal videos"
     )
