@@ -3,6 +3,7 @@ import ast
 import os
 import shutil
 import warnings
+import json
 
 import numpy as np
 import pandas as pd
@@ -33,7 +34,6 @@ class CustomImageDataset(Dataset):
 
         # Get the bounding box coordinates
         bbox = self.img_data.iloc[idx]["bbox_xyxy"]
-        bbox = ast.literal_eval(bbox)
 
         # Crop the image according to bbox
         image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
@@ -162,7 +162,7 @@ def test_new(dataloader, model, device):
 
 def apply_nms(df, iou_threshold):
     df = df.sort_values("softmax_output_1", ascending=False)
-    boxes = np.array(df["bbox_xyxy"].apply(ast.literal_eval).to_list())
+    boxes = np.array(df["bbox_xyxy"].to_list())
     scores = df["softmax_output_1"].values
     boxes = torch.as_tensor(boxes).float()
     scores = torch.as_tensor(scores).float()
@@ -213,6 +213,13 @@ def format_and_save(df, path):
         df.to_csv(f, index=False)
 
 
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
 def main(args):
     """
     Doctest Command:
@@ -253,7 +260,7 @@ def main(args):
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
 
     print("Loading and preprocessing data...")
-    df = pd.read_csv(args.in_csv_path)
+    df = load_annotations_from_json(args.in_csv_path)
     print(f"The length of input CSV is: {len(df)}")
     filtered_test, filtered_out = filter_dataframe(df, config)
 

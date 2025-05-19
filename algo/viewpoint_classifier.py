@@ -2,6 +2,7 @@ import argparse
 import os
 import shutil
 import warnings
+import json
 
 import cv2
 import numpy as np
@@ -11,7 +12,6 @@ import torch
 import yaml
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
-from torch.cuda.amp import GradScaler
 from torch.utils.data import Dataset
 
 # Load configuration
@@ -72,6 +72,18 @@ class ImgClassifier(torch.nn.Module):
     def forward(self, x):
         x = self.model(x)
         return x
+
+
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
+def save_annotations_to_json(df, json_file_path):
+    with open(json_file_path, "w") as f:
+        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
 
 
 def get_valid_transforms():
@@ -180,9 +192,8 @@ def main(args):
         Done!
     """
 
-    original_csv = pd.read_csv(args.in_csv_path)
+    original_csv = load_annotations_from_json(args.in_csv_path)
 
-    print(original_csv.columns)
     # Remove rows that are not the correct species
     # is this needed? this would require ground truth
     filtered_csv = original_csv[
@@ -206,9 +217,7 @@ def main(args):
     # Convert xyxy to xywh
     def xywh_to_xyxy(bbox):
         x1, y1, w, h = bbox
-        x2 = x1 + w
-        y2 = y1 + h
-        return [x1, y1, x2, y2]
+        return [x1, y1, x1 + w, y1 + h]
 
     filtered_csv["bbox_xyxy"] = filtered_csv["bbox_xywh"].apply(xywh_to_xyxy)
 
@@ -261,20 +270,6 @@ def main(args):
         model.load_state_dict(
             torch.load(args.model_checkpoint_path, map_location=config["device"])
         )
-        scaler = GradScaler()
-        optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=float(config["lr"]),
-            weight_decay=float(config["weight_decay"]),
-        )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer,
-            T_0=config["T_0"],
-            T_mult=1,
-            eta_min=float(config["min_lr"]),
-            last_epoch=-1,
-        )
-        loss_fn = torch.nn.CrossEntropyLoss().to(device)
 
     print("Running the model...")
     _, all_discrete_labels = predict_labels_new(test_loader, model, device)
@@ -301,7 +296,8 @@ def main(args):
 
     print("Saving the results...")
     os.makedirs(viewpoint_dir, exist_ok=True)
-    final_output.to_csv(args.out_csv_path, index=False)
+
+    save_annotations_to_json(final_output, args.out_csv_path)
 
     print("Done!")
 

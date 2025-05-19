@@ -30,8 +30,8 @@ vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + con
 img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"]
 
 # SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
-vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename + ".csv")
-img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename + ".csv")
+vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename + ".json")
+img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename + ".json")
 
 # for species identifier
 si_dir = os.path.join(exp_name,config["si_dir"])
@@ -52,7 +52,7 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = os.path.join(exp_name,config["cac_dir"])
 cac_model_checkpoint = os.path.join(model_dirname,config["cac_model_checkpoint"])
-cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".csv")
+cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")
 
 # for eda preprocessing
 eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")

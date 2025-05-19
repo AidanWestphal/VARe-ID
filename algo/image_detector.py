@@ -5,9 +5,7 @@ import shutil
 import subprocess
 import uuid
 import warnings
-import cv2
 
-import torch
 import ultralytics
 import yaml
 from tqdm import tqdm
@@ -57,6 +55,7 @@ def select_model(yolo_model, config, model_dir):
     yolo_url = config.get(url_key)
     download_model(yolo_model, yolo_url, model_dir)
     model = YOLO(os.path.join(model_dir, yolo_model + ".pt"))
+    print(f"Model device: {next(model.parameters()).device}")
     return model
 
 
@@ -298,25 +297,16 @@ def main(args):
         filtered_annotations = filtration(pred_df, base_df)
 
         filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
-        filtered_pred_csv_name = args.annots_filtered_csv_filename + ".csv"
 
         filtered_annot_json_path = os.path.join(annots, filtered_pred_json_name)
         save_annotations_to_json(filtered_annotations, filtered_annot_json_path)
-
-        filtered_annot_csv_path = os.path.join(annots, filtered_pred_csv_name)
-        save_annotations_to_csv(filtered_annotations, filtered_annot_csv_path)
     else:
         print("No ground truth annotations detected. Skipped filtering.")
         non_filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
-        non_filtered_pred_csv_name = args.annots_filtered_csv_filename + ".csv"
 
         non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
         print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
         save_annotations_to_json(predictions, non_filtered_annot_json_path)
-
-        non_filtered_annot_csv_path = os.path.join(annots, non_filtered_pred_csv_name)
-        print("Saving annotations to CSV:", non_filtered_annot_csv_path)
-        save_annotations_to_csv(predictions, non_filtered_annot_csv_path)
 
 
 if __name__ == "__main__":
