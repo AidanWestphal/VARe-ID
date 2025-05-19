@@ -1,6 +1,6 @@
 exp_name: "./D1"
-data_dir_in: "./PLACE_TEST_HERE"
-data_video: False
+data_dir_in: "./videos"
+data_video: True
 
 image_dirname: "images"
 video_dirname: "videos"

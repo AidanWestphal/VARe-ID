@@ -81,7 +81,6 @@ def get_chip(row, images):
     h = row["bbox"][3]
     theta = 0.0
     img_uuid = row["image_uuid"]
-    image_path = [x["file_name"] for x in images if x["uuid"] == img_uuid][0]
     img = cv2.imread(row["image path"])[:, :, ::-1]
     x2 = x1 + w
     y2 = y1 + h
