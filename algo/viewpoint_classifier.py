@@ -144,7 +144,7 @@ def crop_rect(img, rect):
 def get_chip(row):
     box = row["bbox_xywh"]  # Changed from bbox to bbox_xywh
     theta = 0.0
-    img = cv2.imread(row["path"])[:, :, ::-1]
+    img = cv2.imread(row["image path"])[:, :, ::-1]
     x1, y1, w, h = box
     x2 = x1 + w
     y2 = y1 + h
@@ -189,9 +189,9 @@ def main(args):
         original_csv["species_pred_simple"].isin(config["filtered_classes"])
     ]
 
-    filtered_csv["path"] = filtered_csv["image fname"].apply(
-        lambda x: os.path.join(args.image_dir, x)
-    )
+    # filtered_csv["path"] = filtered_csv["image fname"].apply(
+    #     lambda x: os.path.join(args.image_dir, x)
+    # )
 
     # Create a single 'bbox' column from the four bbox columns
     filtered_csv["bbox_xywh"] = list(

@@ -1,15 +1,20 @@
 GZCD_Cleaned.csv
 GGR2020_subset/
+test_dataset/
 *__pycache__/
 .snakemake/
 scratch/
 # Mac system
 .DS_Store
+*.pickle
+*lca_run_*.sh
+
 TEST_DATA/
 config_*.yaml
 test_dataset/
 ./*.out
 algo/lca_run_*.sh
+
 
 D1/
 D2/
