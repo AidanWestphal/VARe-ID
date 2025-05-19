@@ -12,3 +12,5 @@ D2/
 D3/
 UI/init_db.sh
 UI/run_gui.sh
+
+config_*.yaml
