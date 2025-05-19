@@ -40,6 +40,7 @@ lca_db_dir: "db"
 lca_log_file: "lca_logs.log"
 lca_verifiers_probs: "verifiers_probs.json"
 lca_separate_viewpoints: True
+use_alternative_clustering: False
 
 post_dir: "output"
 post_lca_left_end: "_LCA_left.json"

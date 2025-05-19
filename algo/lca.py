@@ -40,6 +40,19 @@ if __name__ == "__main__":
         help="True if LCA should be run independently for left and right.",
     )
 
+    parser.add_argument(
+        "log_file", type=str, help="The path to the log file."
+    )
+    parser.add_argument(
+        "exp_name", type=str, help="The name of the experiment"
+    )
+    parser.add_argument(
+        "alg_name", type=str, help="The name of the clustering algorithm: lca or hdbscan"
+    )
+    parser.add_argument(
+        "--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right."
+    )
+
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -68,10 +81,13 @@ if __name__ == "__main__":
     with open(config_loc, "w") as f:
         yaml.dump(config, f)
 
-    # RUN LCA
-    subprocess.run(
-        ["python3", f"{lca_github_loc}/lca/run_drone.py", "--config", config_loc]
-    )
+    # RUN LCA or alternative
+    if args.alg_name == "hdbscan":
+        print('run hdbscan')
+        subprocess.run(["python3", f"{lca_github_loc}/lca/run_hdbscan.py", "--config", config_loc])
+    else:
+        subprocess.run(["python3", f"{lca_github_loc}/lca/run_drone.py", "--config", config_loc])
+
 
     output_dir = args.db_dir
     anno_file = args.annots

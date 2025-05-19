@@ -85,6 +85,12 @@ if config["lca_separate_viewpoints"]:
     lca_sep_viewpoint = "--separate_viewpoints"
 else:
     lca_sep_viewpoint = ""
+if config["use_alternative_clustering"]:
+    lca_alg_name = "hdbscan"
+else:
+    lca_alg_name = "lca"
+
+
 
 # for lca post processing
 fs_file_name = os.path.basename(fs_out_final_path)
@@ -211,7 +217,7 @@ rule lca:
         db=directory(lca_db_dir),
         logs=lca_logs_path
     shell: 
-        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {output.db} {output.logs} {lca_exp_name} {lca_sep_viewpoint}"
+        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {output.db} {output.logs} {lca_exp_name} {lca_alg_name} {lca_sep_viewpoint}"
 
 rule post:
     input:
