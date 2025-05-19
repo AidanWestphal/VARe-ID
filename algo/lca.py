@@ -34,23 +34,11 @@ if __name__ == "__main__":
     parser.add_argument("db_dir", type=str, help="The path to the db directory.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
     parser.add_argument("exp_name", type=str, help="The name of the experiment")
+    parser.add_argument("alg_name", type=str, help="The name of the clustering algorithm: lca or hdbscan")
     parser.add_argument(
         "--separate_viewpoints",
         action="store_true",
         help="True if LCA should be run independently for left and right.",
-    )
-
-    parser.add_argument(
-        "log_file", type=str, help="The path to the log file."
-    )
-    parser.add_argument(
-        "exp_name", type=str, help="The name of the experiment"
-    )
-    parser.add_argument(
-        "alg_name", type=str, help="The name of the clustering algorithm: lca or hdbscan"
-    )
-    parser.add_argument(
-        "--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right."
     )
 
     args = parser.parse_args()
