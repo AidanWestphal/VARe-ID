@@ -4,7 +4,7 @@
 
 set -e
 
-
+ALG_NAME = "hdbscan"
 IMAGES_DIR=""
 ANNOTATIONS_FILE="test_dataset/annotations_LCA.json"
 EMBEDDINGS_FILE="test_dataset/embeddings_LCA.pickle"
@@ -22,4 +22,5 @@ python3 algo/lca.py \
     "$DB_DIR" \
     "$LOG_FILE" \
     "$EXP_NAME" \
+    "$ALG_NAME" \
     --separate_viewpoints

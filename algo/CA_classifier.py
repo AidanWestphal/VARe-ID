@@ -176,7 +176,6 @@ def format_and_save(df, path):
         columns={
             "image uuid": "image_uuid",
             "annot uuid": "uuid",
-            "image fname": "file_name",
             "tracking id": "tracking_id",
             "bbox pred score": "confidence",
             "category id": "detection_class",
@@ -192,7 +191,6 @@ def format_and_save(df, path):
     columns_kept = [
         "image_uuid",
         "uuid",
-        "file_name",
         "tracking_id",
         "confidence",
         "detection_class",
@@ -310,7 +308,7 @@ def main(args):
     print(f"The length of AR thresholded CSV is: {len(ar_filtered)}")
 
     # Step 3: Apply NMS
-    grouped = ar_filtered.groupby("image fname")
+    grouped = ar_filtered.groupby("image path")
     all_results = []
     nms_filtered_out = []
     for name, group in grouped:
