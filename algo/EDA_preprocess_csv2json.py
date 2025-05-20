@@ -55,7 +55,7 @@ def assign_viewpoints(df, excluded_viewpoints):
 
 
 def convert_bbox(bbox_str):
-    bbox_values = bbox_str.strip("()").split(", ")
+    bbox_values = bbox_str.strip("[]").split(", ")
     return [float(value) for value in bbox_values]
 
 

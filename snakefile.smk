@@ -52,7 +52,7 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = os.path.join(exp_name,config["cac_dir"])
 cac_model_checkpoint = os.path.join(model_dirname,config["cac_model_checkpoint"])
-cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")
+cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".csv")
 
 # for eda preprocessing
 eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")

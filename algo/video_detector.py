@@ -1,16 +1,13 @@
-import csv
+import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
 import uuid
+import warnings
 
 import cv2
-import os
-import yaml
-import warnings
-import argparse
-
 import torch
 import ultralytics
 import yaml
@@ -32,10 +29,9 @@ def load_config(config_file_path):
     return config_file
 
 
-def save_annotations_to_csv(annotations_dict, file_path):
-    annotations = annotations_dict["annotations"]
-    df = pd.DataFrame(annotations)
-    df.to_csv(file_path, index=False)
+def save_annotations_to_json(annotations_dict, file_path):
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump(annotations_dict, json_file, indent=4)
 
 
 def clone_yolo_from_github(yolo_dir, repo_url):
@@ -250,7 +246,7 @@ def main(args):
     exp_dir = Path(args.exp_dir)
     annots = Path(args.annot_dir)
     filtered_annot_csv_path = (
-        os.path.join(annots, args.annots_filtered_csv_filename) + ".csv"
+        os.path.join(annots, args.annots_filtered_csv_filename) + ".json"
     )
 
     with open(args.video_data, "r") as file:
@@ -275,19 +271,19 @@ def main(args):
     threshold = config["confidence_threshold"]
 
     # Detect and track objects over all videos
-    print(f"Running detection on all videos...")
+    print("Running detection on all videos...")
     annotations = detect_videos(video_data, detector, threshold)
 
-    print(f"Postprocessing tracking ids to avoid collisions...")
+    print("Postprocessing tracking ids to avoid collisions...")
     postprocess_tracking_ids(annotations)
 
-    print(f"Writing timestamp data from SRT files...")
+    print("Writing timestamp data from SRT files...")
     add_timestamps(video_data, annotations, config["video_fps"])
 
-    print(f"Saving annotations to {filtered_annot_csv_path}...")
-    save_annotations_to_csv({"annotations": annotations}, filtered_annot_csv_path)
+    print("Saving annotations to {filtered_annot_csv_path}...")
+    save_annotations_to_json({"annotations": annotations}, filtered_annot_csv_path)
 
-    print(f"Done!")
+    print("Done!")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 exp_name: "./D1"
 data_dir_in: "./PLACE_TEST_HERE"
-data_video: False
+data_video: True
 
 image_dirname: "images"
 video_dirname: "videos"
@@ -17,7 +17,7 @@ annots_filtered_filename: "filtered_pred_annots_"
 
 si_dir: "species_identifier"
 predictions_dir: "predictions"
-si_out_file_end: "_bioCLIP_predictions.csv"
+si_out_file_end: "_bioCLIP_predictions.json"
 
 vc_dir: "viewpoint_classifier"
 vc_model_checkpoint: "viewport_model.pth"
