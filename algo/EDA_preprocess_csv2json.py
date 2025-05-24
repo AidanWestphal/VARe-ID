@@ -1,10 +1,9 @@
-import uuid
-import matplotlib.pyplot as plt
-import warnings
 import argparse
-import pandas as pd
 import json
-import os
+import uuid
+import warnings
+
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 
@@ -87,43 +86,36 @@ if __name__ == "__main__":
     # bbox pred score,category id,tracking id,timestamp,species_prediction,species_pred_score,species_pred_simple,
     # path,bbox_xywh,bbox_xyxy,predicted_viewpoint,CA_score,annotations_census
 
+    # filter out for true CA annotations.
     df = df[df["annotations_census"] == True]
-    df = df.merge(
-        df[["image path", "tracking_id", "individual_id"]],
-        on=["image path", "tracking_id"],
-        how="left",
-    )
 
-    # Extract file_name from image path
-    df["file_name"] = df["image path"].apply(lambda x: os.path.basename(x))
+    # df = df.merge(
+    #     df[["image_path", "tracking_id", "individual_id"]],
+    #     on=["image_path", "tracking_id"],
+    #     how="left",
+    # )
 
-    counts = df.groupby("viewpoint").size()
-    print(counts)
+    # num_annotations = len(df)
+    # num_images = len(df["image_path"].unique())
 
-    num_annotations = len(df)
-    num_images = len(df["image path"].unique())
-
-    print("Dataset Statistics:")
-    print(f"Number of annotations: {num_annotations}")
-    print(f"Number of images: {num_images}")
+    # print("Dataset Statistics:")
+    # print(f"Number of annotations: {num_annotations}")
+    # print(f"Number of images: {num_images}")
 
     df["bbox"] = df["bbox"].apply(convert_bbox)
 
     # IF UUIDS AREN'T ALREADY PROVIDED (GT FILES), ADD THEM
     if "image uuid" not in df.columns or "uuid" not in df.columns:
         image_uuid_map = {
-            image_path: str(uuid.uuid4()) for image_path in df["image path"].unique()
+            image_path: str(uuid.uuid4()) for image_path in df["image_path"].unique()
         }
         # Add the UUIDs to the DataFrame
-        df["image_uuid"] = df["image path"].map(image_uuid_map)
+        df["image_uuid"] = df["image_path"].map(image_uuid_map)
         df["uuid"] = [str(uuid.uuid4()) for _ in range(len(df))]
 
     df["individual_id"] = df["individual_id_x"]
 
     df = assign_viewpoints(df, excluded_viewpoints=["upback", "upfront"])
-
-    counts = df.groupby("viewpoint").size()
-    print(counts)
 
     # IF CATEGORY ID NOT PROVIDED (GT)
     if "category_id" not in df.columns:
@@ -154,7 +146,7 @@ if __name__ == "__main__":
             "frame_number",
             "timestamp",
             "file_name",
-            "image path",
+            "image_path",
         ]
     else:
         df_annotations_fields = [
@@ -170,12 +162,12 @@ if __name__ == "__main__":
             "CA_score",
             "category_id",
             "timestamp",
-            "image path",
+            "image_path",
         ]
 
     df_annotations = df[df_annotations_fields]
 
-    df_images_fields = ["image_uuid", "image path"]
+    df_images_fields = ["image_uuid", "image_path"]
     df_images_fields = df.columns.intersection(df_images_fields)
     df_images = (
         df[df_images_fields].drop_duplicates(keep="first").reset_index(drop=True)

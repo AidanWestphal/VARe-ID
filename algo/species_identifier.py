@@ -7,6 +7,7 @@ import tempfile
 import warnings
 from pathlib import Path
 import json
+import ast
 
 import pandas as pd
 import torch
@@ -75,13 +76,9 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
     predicted_scores = []
 
     for _, row in tqdm(df.iterrows()):
+        x0, y0, w, h = row["bbox"]
 
-        x0 = row["bbox x"]
-        y0 = row["bbox y"]
-        w = row["bbox w"]
-        h = row["bbox h"]
-
-        original_image = Image.open(row["image path"])
+        original_image = Image.open(row["image_path"])
         cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
@@ -168,9 +165,6 @@ def main(args):
     # Loading Configuration File ...
     config = load_config("algo/species_identifier_drive.yaml")
 
-    # Setting up Device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     images = Path(args.image_dir)
 
     if os.path.exists(args.si_dir):
@@ -195,9 +189,9 @@ def main(args):
     df = pyBioCLIP(labels, images, df)
     print("pyBioCLIP Completed ...")
 
-    print("Post-Processing ...")
-    df = postprerocess_dataframe(df)
-    print("Post-Processing Completed ...")
+    # print("Post-Processing ...")
+    # df = postprerocess_dataframe(df)
+    # print("Post-Processing Completed ...")
 
     prediction_dir = os.path.dirname(args.out_csv_path)
     shutil.rmtree(prediction_dir, ignore_errors=True)
