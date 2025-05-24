@@ -180,11 +180,23 @@ def apply_nms(df, iou_threshold):
     return df.iloc[keep]
 
 
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
+def save_annotations_to_json(df, json_file_path):
+    with open(json_file_path, "w", encoding="utf-8") as f:
+        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
+
+
 def format_and_save(df, path):
     # file_name	tracking_id	confidence	detection_class	species	bbox	viewpoint	individual_id	CA_score	annotations_census
     df = df.rename(
         columns={
-            "annot uuid": "uuid",
+            "annot_uuid": "uuid",
             "bbox_pred_score": "confidence",
             "category_id": "detection_class",
             "species_prediction": "species",
@@ -210,20 +222,12 @@ def format_and_save(df, path):
         "frame_number",
         "timestamp",
         "image_path",
+        "file_name",
     ]
 
     df = df.drop(columns=df.columns.difference(columns_kept))
 
-    # Save to csv
-    with open(path, "w") as f:
-        df.to_csv(f, index=False)
-
-
-def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        data = json.load(f)
-
-    return pd.DataFrame(data["annotations"])
+    save_annotations_to_json(df, path)
 
 
 def expand_bbox_columns(df):
@@ -348,6 +352,7 @@ def main(args):
         # Keep track of removed annotations
         removed = group[~group.index.isin(result_df.index)]
         nms_filtered_out.append(removed)
+
     if all_results:
         nms_filtered = pd.concat(all_results).reset_index(drop=True)
         print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
@@ -356,10 +361,12 @@ def main(args):
         nms_filtered = pd.DataFrame(
             columns=ar_filtered.columns
         )  # Create empty DataFrame with same columns
+
     if nms_filtered_out:
         nms_filtered_out = pd.concat(nms_filtered_out).reset_index(drop=True)
     else:
         nms_filtered_out = pd.DataFrame(columns=ar_filtered.columns)
+
     # print(nms_filtered_out)
     print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
 
