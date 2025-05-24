@@ -1,10 +1,10 @@
-import uuid
-import matplotlib.pyplot as plt
-import warnings
 import argparse
-import pandas as pd
 import json
-import os
+
+# import uuid
+import warnings
+
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 
@@ -54,8 +54,15 @@ def assign_viewpoints(df, excluded_viewpoints):
     return df
 
 
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
 def convert_bbox(bbox_str):
-    bbox_values = bbox_str.strip("()").split(", ")
+    bbox_values = bbox_str.strip("[]").split(", ")
     return [float(value) for value in bbox_values]
 
 
@@ -79,64 +86,57 @@ if __name__ == "__main__":
     anno_path_csv = args.csv_file[sep:].replace("/", "")
     video_mode = args.video
 
-    df = pd.read_csv(
-        annot_dir + "/" + anno_path_csv, delimiter=",", quotechar='"', engine="python"
-    )
+    df = load_annotations_from_json(args.csv_file)
+
+    # df = pd.read_csv(
+    #     annot_dir + "/" + anno_path_csv, delimiter=",", quotechar='"', engine="python"
+    # )
 
     # annot uuid,image uuid,image fname,video path,frame number,bbox x,bbox y,bbox w,bbox h,
     # bbox pred score,category id,tracking id,timestamp,species_prediction,species_pred_score,species_pred_simple,
     # path,bbox_xywh,bbox_xyxy,predicted_viewpoint,CA_score,annotations_census
 
+    # filter out for true CA annotations.
     df = df[df["annotations_census"] == True]
-    df = df.merge(
-        df[["image path", "tracking_id", "individual_id"]],
-        on=["image path", "tracking_id"],
-        how="left",
-    )
 
-    # Extract file_name from image path
-    df["file_name"] = df["image path"].apply(lambda x: os.path.basename(x))
+    # df = df.merge(
+    #     df[["image_path", "tracking_id", "individual_id"]],
+    #     on=["image_path", "tracking_id"],
+    #     how="left",
+    # )
 
-    counts = df.groupby("viewpoint").size()
-    print(counts)
+    # num_annotations = len(df)
+    # num_images = len(df["image_path"].unique())
 
-    num_annotations = len(df)
-    num_images = len(df["image path"].unique())
+    # print("Dataset Statistics:")
+    # print(f"Number of annotations: {num_annotations}")
+    # print(f"Number of images: {num_images}")
 
-    print("Dataset Statistics:")
-    print(f"Number of annotations: {num_annotations}")
-    print(f"Number of images: {num_images}")
+    # # IF UUIDS AREN'T ALREADY PROVIDED (GT FILES), ADD THEM
+    # if "image uuid" not in df.columns or "uuid" not in df.columns:
+    #     image_uuid_map = {
+    #         image_path: str(uuid.uuid4()) for image_path in df["image_path"].unique()
+    #     }
+    #     # Add the UUIDs to the DataFrame
+    #     df["image_uuid"] = df["image_path"].map(image_uuid_map)
+    #     df["uuid"] = [str(uuid.uuid4()) for _ in range(len(df))]
 
-    df["bbox"] = df["bbox"].apply(convert_bbox)
-
-    # IF UUIDS AREN'T ALREADY PROVIDED (GT FILES), ADD THEM
-    if "image uuid" not in df.columns or "uuid" not in df.columns:
-        image_uuid_map = {
-            image_path: str(uuid.uuid4()) for image_path in df["image path"].unique()
-        }
-        # Add the UUIDs to the DataFrame
-        df["image_uuid"] = df["image path"].map(image_uuid_map)
-        df["uuid"] = [str(uuid.uuid4()) for _ in range(len(df))]
-
-    df["individual_id"] = df["individual_id_x"]
+    # df["individual_id"] = df["individual_id_x"]
 
     df = assign_viewpoints(df, excluded_viewpoints=["upback", "upfront"])
-
-    counts = df.groupby("viewpoint").size()
-    print(counts)
 
     # IF CATEGORY ID NOT PROVIDED (GT)
     if "category_id" not in df.columns:
         df["category_id"] = 0
 
-    # IF FRAME NUMBER NOT PROVIDED (GT)
-    if video_mode:
-        if "frame_number" not in df.columns:
-            df["frame_number"] = -1
-            for index, row in df.iterrows():
-                df.at[index, "frame_number"] = int(
-                    row["file_name"].split("_")[-1].split(".")[0]
-                )
+    # # IF FRAME NUMBER NOT PROVIDED (GT)
+    # if video_mode:
+    #     if "frame_number" not in df.columns:
+    #         df["frame_number"] = -1
+    #         for index, row in df.iterrows():
+    #             df.at[index, "frame_number"] = int(
+    #                 row["file_name"].split("_")[-1].split(".")[0]
+    #             )
 
     if video_mode:
         df_annotations_fields = [
@@ -154,7 +154,7 @@ if __name__ == "__main__":
             "frame_number",
             "timestamp",
             "file_name",
-            "image path",
+            "image_path",
         ]
     else:
         df_annotations_fields = [
@@ -170,12 +170,12 @@ if __name__ == "__main__":
             "CA_score",
             "category_id",
             "timestamp",
-            "image path",
+            "image_path",
         ]
 
     df_annotations = df[df_annotations_fields]
 
-    df_images_fields = ["image_uuid", "image path"]
+    df_images_fields = ["image_uuid", "image_path"]
     df_images_fields = df.columns.intersection(df_images_fields)
     df_images = (
         df[df_images_fields].drop_duplicates(keep="first").reset_index(drop=True)
@@ -194,6 +194,6 @@ if __name__ == "__main__":
         "annotations": df_annotations.to_dict(orient="records"),
     }
 
-    with open(args.eda_out, "w") as f:
+    with open(args.eda_out, "w", encoding="utf-8") as f:
         json.dump(result_dict, f, indent=4)
         print("Data is saved to:", args.eda_out)

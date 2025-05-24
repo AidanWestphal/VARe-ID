@@ -2,6 +2,7 @@ import argparse
 import os
 import shutil
 import warnings
+import json
 
 import cv2
 import numpy as np
@@ -11,7 +12,6 @@ import torch
 import yaml
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
-from torch.cuda.amp import GradScaler
 from torch.utils.data import Dataset
 
 # Load configuration
@@ -72,6 +72,18 @@ class ImgClassifier(torch.nn.Module):
     def forward(self, x):
         x = self.model(x)
         return x
+
+
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
+def save_annotations_to_json(df, json_file_path):
+    with open(json_file_path, "w") as f:
+        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
 
 
 def get_valid_transforms():
@@ -142,10 +154,9 @@ def crop_rect(img, rect):
 
 
 def get_chip(row):
-    box = row["bbox_xywh"]  # Changed from bbox to bbox_xywh
     theta = 0.0
-    img = cv2.imread(row["image path"])[:, :, ::-1]
-    x1, y1, w, h = box
+    img = cv2.imread(row["image_path"])[:, :, ::-1]
+    x1, y1, w, h = row["bbox"]
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2
@@ -180,59 +191,21 @@ def main(args):
         Done!
     """
 
-    original_csv = pd.read_csv(args.in_csv_path)
+    original_csv = load_annotations_from_json(args.in_csv_path)
 
-    print(original_csv.columns)
-    # Remove rows that are not the correct species
-    # is this needed? this would require ground truth
+    # Remove rows that are not the desired species
     filtered_csv = original_csv[
-        original_csv["species_pred_simple"].isin(config["filtered_classes"])
+        original_csv["species_prediction"].isin(config["filtered_classes"])
     ]
-
-    # filtered_csv["path"] = filtered_csv["image fname"].apply(
-    #     lambda x: os.path.join(args.image_dir, x)
-    # )
-
-    # Create a single 'bbox' column from the four bbox columns
-    filtered_csv["bbox_xywh"] = list(
-        zip(
-            filtered_csv["bbox x"],
-            filtered_csv["bbox y"],
-            filtered_csv["bbox w"],
-            filtered_csv["bbox h"],
-        )
-    )
-
-    # Convert xyxy to xywh
-    def xywh_to_xyxy(bbox):
-        x1, y1, w, h = bbox
-        x2 = x1 + w
-        y2 = y1 + h
-        return [x1, y1, x2, y2]
-
-    filtered_csv["bbox_xyxy"] = filtered_csv["bbox_xywh"].apply(xywh_to_xyxy)
-
-    #
-    # # Split the original dataframe into two based on the filtering criteria
-    # filtered_test = filtered_csv[
-    #     (filtered_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
-    #     & (filtered_csv["annot species"] == config["species"])
-    # ].reset_index(drop=True)
-    # other_test = filtered_csv[
-    #     ~(filtered_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
-    #     | (filtered_csv["annot species"] != config["species"])
-    # ].reset_index(drop=True)
-    # # Add a 'predicted_viewpoint' column filled with NaNs to the other_test dataframe
-    # other_test["predicted_viewpoint"] = np.nan
 
     # Split based on bbox_xywh and species criteria
     filtered_test = filtered_csv[
-        filtered_csv["bbox_xywh"].notna()
+        filtered_csv["bbox"].notna()
         & (filtered_csv["species_prediction"] == config["species"])
     ].reset_index(drop=True)
 
     other_test = filtered_csv[
-        filtered_csv["bbox_xywh"].isna()
+        filtered_csv["bbox"].isna()
         | (filtered_csv["species_prediction"] != config["species"])
     ].reset_index(drop=True)
 
@@ -261,20 +234,6 @@ def main(args):
         model.load_state_dict(
             torch.load(args.model_checkpoint_path, map_location=config["device"])
         )
-        scaler = GradScaler()
-        optimizer = torch.optim.Adam(
-            model.parameters(),
-            lr=float(config["lr"]),
-            weight_decay=float(config["weight_decay"]),
-        )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer,
-            T_0=config["T_0"],
-            T_mult=1,
-            eta_min=float(config["min_lr"]),
-            last_epoch=-1,
-        )
-        loss_fn = torch.nn.CrossEntropyLoss().to(device)
 
     print("Running the model...")
     _, all_discrete_labels = predict_labels_new(test_loader, model, device)
@@ -282,7 +241,6 @@ def main(args):
     print("Processing the model predictions...")
     # Create a DataFrame from the binary labels
     preds_bin = pd.DataFrame(all_discrete_labels, columns=config["label_cols"])
-    # print(f'The predictions are: {preds_bin}\n')
 
     # Add a new column to the filtered_test DataFrame with the predicted labels
     filtered_test["predicted_viewpoint"] = preds_bin.apply(
@@ -301,7 +259,8 @@ def main(args):
 
     print("Saving the results...")
     os.makedirs(viewpoint_dir, exist_ok=True)
-    final_output.to_csv(args.out_csv_path, index=False)
+
+    save_annotations_to_json(final_output, args.out_csv_path)
 
     print("Done!")
 

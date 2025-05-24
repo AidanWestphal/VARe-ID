@@ -39,7 +39,7 @@ def group_annotations_by_tracking_id_and_subsequences(data):
     for annotation in annotations:
         image_uuid = annotation["image_uuid"]
         if image_uuid in images:
-            image_path = images[image_uuid]["image path"]
+            image_path = images[image_uuid]["image_path"]
             # Extract frame number from file name (assumes format ending with _<frame>.ext)
             frame_number_str = image_path.split("_")[-1].split(".")[0]
             try:
