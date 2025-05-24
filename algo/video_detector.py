@@ -94,22 +94,19 @@ def detect_videos(video_data, model, threshold):
 
                     annotations.append(
                         {
-                            "annot uuid": str(uuid.uuid4()),
-                            "image uuid": frame["uuid"],
-                            "image path": frame["uri"],
-                            "video path": vid["video path"],
-                            "frame number": fcount,
-                            "bbox x": x1,
-                            "bbox y": y1,
-                            "bbox w": x2 - x1,
-                            "bbox h": y2 - y1,
-                            "bbox pred score": (
+                            "annot_uuid": str(uuid.uuid4()),
+                            "image_uuid": frame["uuid"],
+                            "image_path": frame["uri"],
+                            "video_path": vid["video path"],
+                            "frame_number": fcount,
+                            "bbox": [x1, y1, x2 - x1, y2 - y1],
+                            "bbox_pred_score": (
                                 box.conf.item() if box.conf is not None else -1
                             ),
-                            "category id": (
+                            "category_id": (
                                 int(box.cls.item()) if box.cls is not None else -1
                             ),
-                            "tracking id": (
+                            "tracking_id": (
                                 int(box.id.item()) if box.id is not None else -1
                             ),
                         }
@@ -174,7 +171,7 @@ def add_timestamps(video_data, annots, desired_fps):
     fps_table = {}
 
     for index, annot in enumerate(annots):
-        video_path = annot["video path"]
+        video_path = annot["video_path"]
 
         # If the associated srt was not cached, find and cache it
         if video_path not in srt_table.keys():
@@ -191,7 +188,7 @@ def add_timestamps(video_data, annots, desired_fps):
         srt = srt_table[video_path]
         frame_interval = round(fps_table[video_path] / desired_fps)
         # Undo 1-indexed frames, scale by frame interval, and redo 1-index
-        original_frame_number = (annot["frame number"] - 1) * frame_interval + 1
+        original_frame_number = (annot["frame_number"] - 1) * frame_interval + 1
         timestamp = srt[original_frame_number]
 
         # Assign the timestamp to the annotation
@@ -212,8 +209,8 @@ def postprocess_tracking_ids(annots):
     next_unused_id = 1
 
     for index, annot in enumerate(annots):
-        tid = annot["tracking id"]
-        path = annot["video path"]
+        tid = annot["tracking_id"]
+        path = annot["video_path"]
 
         # Check if the key is used by a different image
         if tid in used_keys.keys() and used_keys[tid] != path:
@@ -234,7 +231,7 @@ def postprocess_tracking_ids(annots):
                 next_unused_id += 1
 
         # Assign the tid
-        annots[index]["tracking id"] = tid
+        annots[index]["tracking_id"] = tid
 
 
 def main(args):

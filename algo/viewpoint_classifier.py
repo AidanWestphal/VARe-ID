@@ -154,10 +154,9 @@ def crop_rect(img, rect):
 
 
 def get_chip(row):
-    box = row["bbox_xywh"]  # Changed from bbox to bbox_xywh
     theta = 0.0
-    img = cv2.imread(row["image path"])[:, :, ::-1]
-    x1, y1, w, h = box
+    img = cv2.imread(row["image_path"])[:, :, ::-1]
+    x1, y1, w, h = row["bbox"]
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2
@@ -194,54 +193,19 @@ def main(args):
 
     original_csv = load_annotations_from_json(args.in_csv_path)
 
-    # Remove rows that are not the correct species
-    # is this needed? this would require ground truth
+    # Remove rows that are not the desired species
     filtered_csv = original_csv[
-        original_csv["species_pred_simple"].isin(config["filtered_classes"])
+        original_csv["species_prediction"].isin(config["filtered_classes"])
     ]
-
-    # filtered_csv["path"] = filtered_csv["image fname"].apply(
-    #     lambda x: os.path.join(args.image_dir, x)
-    # )
-
-    # Create a single 'bbox' column from the four bbox columns
-    filtered_csv["bbox_xywh"] = list(
-        zip(
-            filtered_csv["bbox x"],
-            filtered_csv["bbox y"],
-            filtered_csv["bbox w"],
-            filtered_csv["bbox h"],
-        )
-    )
-
-    # Convert xyxy to xywh
-    def xywh_to_xyxy(bbox):
-        x1, y1, w, h = bbox
-        return [x1, y1, x1 + w, y1 + h]
-
-    filtered_csv["bbox_xyxy"] = filtered_csv["bbox_xywh"].apply(xywh_to_xyxy)
-
-    #
-    # # Split the original dataframe into two based on the filtering criteria
-    # filtered_test = filtered_csv[
-    #     (filtered_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
-    #     & (filtered_csv["annot species"] == config["species"])
-    # ].reset_index(drop=True)
-    # other_test = filtered_csv[
-    #     ~(filtered_csv[["bbox x", "bbox y", "bbox w", "bbox h"]].notna().all(axis=1))
-    #     | (filtered_csv["annot species"] != config["species"])
-    # ].reset_index(drop=True)
-    # # Add a 'predicted_viewpoint' column filled with NaNs to the other_test dataframe
-    # other_test["predicted_viewpoint"] = np.nan
 
     # Split based on bbox_xywh and species criteria
     filtered_test = filtered_csv[
-        filtered_csv["bbox_xywh"].notna()
+        filtered_csv["bbox"].notna()
         & (filtered_csv["species_prediction"] == config["species"])
     ].reset_index(drop=True)
 
     other_test = filtered_csv[
-        filtered_csv["bbox_xywh"].isna()
+        filtered_csv["bbox"].isna()
         | (filtered_csv["species_prediction"] != config["species"])
     ].reset_index(drop=True)
 
@@ -277,7 +241,6 @@ def main(args):
     print("Processing the model predictions...")
     # Create a DataFrame from the binary labels
     preds_bin = pd.DataFrame(all_discrete_labels, columns=config["label_cols"])
-    # print(f'The predictions are: {preds_bin}\n')
 
     # Add a new column to the filtered_test DataFrame with the predicted labels
     filtered_test["predicted_viewpoint"] = preds_bin.apply(
