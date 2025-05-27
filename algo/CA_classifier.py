@@ -3,6 +3,7 @@ import ast
 import os
 import shutil
 import warnings
+import json
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,15 @@ from torchvision.models import resnet50
 from torchvision.ops import nms
 
 
+def xywh_to_xyxy(bbox: list):
+    x, y, w, h = bbox
+    x1 = x
+    y1 = y
+    x2 = x + w
+    y2 = y + h
+    return [x1, y1, x2, y2]
+
+
 class CustomImageDataset(Dataset):
     def __init__(self, dataframe, img_dir, transform=None):
         self.img_data = dataframe
@@ -29,11 +39,10 @@ class CustomImageDataset(Dataset):
     def __getitem__(self, idx):
 
         # Read image as PIL Image
-        image = Image.open(self.img_data.iloc[idx]["image path"]).convert("RGB")
+        image = Image.open(self.img_data.iloc[idx]["image_path"]).convert("RGB")
 
         # Get the bounding box coordinates
-        bbox = self.img_data.iloc[idx]["bbox_xyxy"]
-        bbox = ast.literal_eval(bbox)
+        bbox = xywh_to_xyxy(self.img_data.iloc[idx]["bbox"])
 
         # Crop the image according to bbox
         image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
@@ -117,22 +126,23 @@ def filter_dataframe(df, config):
     # Preprocess the predicted_viewpoint column
     df["predicted_viewpoint"] = df["predicted_viewpoint"].apply(preprocess_viewpoint)
 
-    # Filter conditions
-    bbox_condition = (
-        df["bbox x"].notna()
-        & df["bbox y"].notna()
-        & df["bbox w"].notna()
-        & df["bbox h"].notna()
-    )
+    # # Filter conditions
+    # bbox_condition = (
+    #     df["bbox x"].notna()
+    #     & df["bbox y"].notna()
+    #     & df["bbox w"].notna()
+    #     & df["bbox h"].notna()
+    # )
     viewpoint_condition = df["predicted_viewpoint"].isin(config["viewpoints"])
     # Special condition - only applies to gt annotated data where the species was correctly identified
     if "annot species" in df.keys():
-        species_condition = df["annot species"] == config["species"]
+        species_condition = df["annot_species"] == config["species"]
     else:
         species_condition = True
 
     # Create a mask for rows to be filtered out
-    filter_mask = ~(bbox_condition & species_condition & viewpoint_condition)
+    filter_mask = ~(species_condition & viewpoint_condition)
+    # filter_mask = ~(bbox_condition & species_condition & viewpoint_condition)
 
     # Split the dataframe
     filtered_out = df[filter_mask].copy().reset_index(drop=True)
@@ -162,7 +172,7 @@ def test_new(dataloader, model, device):
 
 def apply_nms(df, iou_threshold):
     df = df.sort_values("softmax_output_1", ascending=False)
-    boxes = np.array(df["bbox_xyxy"].apply(ast.literal_eval).to_list())
+    boxes = np.array([xywh_to_xyxy(bbox) for bbox in df["bbox"]])
     scores = df["softmax_output_1"].values
     boxes = torch.as_tensor(boxes).float()
     scores = torch.as_tensor(scores).float()
@@ -170,20 +180,28 @@ def apply_nms(df, iou_threshold):
     return df.iloc[keep]
 
 
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
+def save_annotations_to_json(df, json_file_path):
+    with open(json_file_path, "w", encoding="utf-8") as f:
+        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
+
+
 def format_and_save(df, path):
     # file_name	tracking_id	confidence	detection_class	species	bbox	viewpoint	individual_id	CA_score	annotations_census
     df = df.rename(
         columns={
-            "image uuid": "image_uuid",
-            "annot uuid": "uuid",
-            "tracking id": "tracking_id",
-            "bbox pred score": "confidence",
-            "category id": "detection_class",
+            "annot_uuid": "uuid",
+            "bbox_pred_score": "confidence",
+            "category_id": "detection_class",
             "species_prediction": "species",
             "species_pred_simple": "category_id",
             "predicted_viewpoint": "viewpoint",
-            "bbox_xywh": "bbox",
-            "frame number": "frame_number",
         }
     )
     df["individual_id"] = 0
@@ -203,14 +221,27 @@ def format_and_save(df, path):
         "category_id",
         "frame_number",
         "timestamp",
-        "image path",
+        "image_path",
+        "file_name",
     ]
 
     df = df.drop(columns=df.columns.difference(columns_kept))
 
-    # Save to csv
-    with open(path, "w") as f:
-        df.to_csv(f, index=False)
+    save_annotations_to_json(df, path)
+
+
+def expand_bbox_columns(df):
+    df_copy = df.copy()
+
+    # Extract bbox components into separate columns
+    bbox_data = df_copy["bbox"].apply(
+        lambda x: pd.Series(x, index=["bbox x", "bbox y", "bbox w", "bbox h"])
+    )
+
+    # Add the new columns to the dataframe
+    df_copy = pd.concat([df_copy, bbox_data], axis=1)
+
+    return df_copy
 
 
 def main(args):
@@ -253,7 +284,11 @@ def main(args):
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
 
     print("Loading and preprocessing data...")
-    df = pd.read_csv(args.in_csv_path)
+    df = load_annotations_from_json(args.in_csv_path)
+
+    # Expand bbox column into separate x, y, w, h columns
+    df = expand_bbox_columns(df)
+
     print(f"The length of input CSV is: {len(df)}")
     filtered_test, filtered_out = filter_dataframe(df, config)
 
@@ -308,7 +343,7 @@ def main(args):
     print(f"The length of AR thresholded CSV is: {len(ar_filtered)}")
 
     # Step 3: Apply NMS
-    grouped = ar_filtered.groupby("image path")
+    grouped = ar_filtered.groupby("image_path")
     all_results = []
     nms_filtered_out = []
     for name, group in grouped:
@@ -317,6 +352,7 @@ def main(args):
         # Keep track of removed annotations
         removed = group[~group.index.isin(result_df.index)]
         nms_filtered_out.append(removed)
+
     if all_results:
         nms_filtered = pd.concat(all_results).reset_index(drop=True)
         print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
@@ -325,10 +361,12 @@ def main(args):
         nms_filtered = pd.DataFrame(
             columns=ar_filtered.columns
         )  # Create empty DataFrame with same columns
+
     if nms_filtered_out:
         nms_filtered_out = pd.concat(nms_filtered_out).reset_index(drop=True)
     else:
         nms_filtered_out = pd.DataFrame(columns=ar_filtered.columns)
+
     # print(nms_filtered_out)
     print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
 
@@ -352,11 +390,22 @@ def main(args):
     )
 
     # Drop specified columns
-    columns_to_drop = ["softmax_output_0", "log_AR"]
+    columns_to_drop = [
+        "softmax_output_0",
+        "log_AR",
+        "bbox x",
+        "bbox y",
+        "bbox w",
+        "bbox h",
+    ]
     final_df = final_df.drop(
         columns=[col for col in columns_to_drop if col in final_df.columns]
     )
     final_df = final_df.rename(columns={"softmax_output_1": "CA_score"})
+
+    # Extract file_name from image path
+    final_df["file_name"] = final_df["image_path"].apply(os.path.basename)
+
     print(f"The length of final concatenated CSV is: {len(final_df)}\n")
 
     # Save the updated DataFrame to a new CSV file
