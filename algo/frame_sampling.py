@@ -39,15 +39,15 @@ def group_annotations_by_tracking_id_and_subsequences(data):
     for annotation in annotations:
         image_uuid = annotation["image_uuid"]
         if image_uuid in images:
-            file_name = images[image_uuid]["file_name"]
+            image_path = images[image_uuid]["image path"]
             # Extract frame number from file name (assumes format ending with _<frame>.ext)
-            frame_number_str = file_name.split("_")[-1].split(".")[0]
+            frame_number_str = image_path.split("_")[-1].split(".")[0]
             try:
                 frame_number = int(frame_number_str)
             except ValueError:
                 print(frame_number_str)
                 print(
-                    f"Warning: Could not extract frame number from file name {file_name}"
+                    f"Warning: Could not extract frame number from file name {image_path}"
                 )
                 continue
             annotation["frame_number"] = frame_number
@@ -393,8 +393,6 @@ def main():
     final_data_with_separation = ensure_time_separation(
         final_data, t_seconds, frame_interval, ca_available
     )
-
-    final_count_after_separation = len(final_data_with_separation["annotations"])
 
     save_json(final_data_with_separation, final_output)
     print(f"Final output saved to {final_output}")
