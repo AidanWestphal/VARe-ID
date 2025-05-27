@@ -95,31 +95,21 @@ def preprocess_viewpoint(viewpoint):
     # IF NOT A STRING (NAN)
     if not isinstance(viewpoint, str):
         return ""
+    elif "up" in viewpoint:
+        return "up"
     elif "front" in viewpoint and "right" in viewpoint:
-        if "up" in viewpoint:
-            return "upfrontright"
-        else:
-            return "frontright"
+        return "frontright"
     elif "back" in viewpoint and "right" in viewpoint:
-        if "up" in viewpoint:
-            return "upbackright"
-        else:
-            return "backright"
+        return "backright"
     elif "front" in viewpoint and "left" in viewpoint:
-        if "up" in viewpoint:
-            return "upfrontleft"
-        else:
-            return "frontleft"
+        return "frontleft"
     elif "back" in viewpoint and "left" in viewpoint:
-        if "up" in viewpoint:
-            return "upbackleft"
-        else:
-            return "backleft"
+        return "backleft"
     elif "right" in viewpoint:
         return "right"
     elif "left" in viewpoint:
         return "left"
-    return viewpoint
+    return ""
 
 
 def filter_dataframe(df, config):
