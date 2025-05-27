@@ -7,7 +7,11 @@ Import data under the `annots` parameter. This should be a path to the post CA c
 
 Please specify whether the data is in video or image mode through the parameter `--video_mode`, which is boolean.
 
-If you have a specific set of images you want displayed, you can specify the optinal field `--image_paths`, which is a list of relative paths (from GGR) to each desired image. If not specified, the images are generated randomly. You can also specify the number of images to generate visualizations of, through the parameter `--num_images`. You can select all images with `--all` keyword. Of these keywords, the order of precedence is `--all` then `--image_paths` then `--num_images`.
+There are FOUR ways to generate annotations:
+1. Use `--num_images n` to generate the annotations for n images
+2. Use `--all` to generate the annotations for all images
+3. Use `--image_paths {p1} {p2} ...` to generate the annotations for specific images
+4. Use `--annot-uuids {uuid1} {uuid2} ...` to generate for specific annotations
 
 To specify which fields to include on each annotation, see the following list of optional parameters:
 
