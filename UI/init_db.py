@@ -27,7 +27,7 @@ def add_random_pairs(image_dir, db_path, num_pairs=20):
 
     for _ in range(num_pairs):
         img1, img2 = random.sample(image_files, 2)
-        add_image_pair(img1, img2, db_path)
+        add_image_pair("", img1, "", img2, db_path)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Initialize database and insert image pairs.")
