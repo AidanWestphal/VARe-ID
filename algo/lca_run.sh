@@ -4,7 +4,7 @@
 
 set -e
 
-ALG_NAME="hdbscan"
+ALG_NAME="lca"
 IMAGES_DIR=""
 ANNOTATIONS_FILE="test_dataset/annotations_LCA.json"
 EMBEDDINGS_FILE="test_dataset/embeddings_LCA.pickle"
@@ -16,7 +16,6 @@ LOG_FILE="test_dataset/lca/drone_log.log"
 
 python3 algo/lca.py \
     "$LCA_DIR" \
-    "$IMAGES_DIR" \
     "$OUTPUT_DIR" \
     "$ANNOTATIONS_FILE" \
     "$EMBEDDINGS_FILE" \
@@ -25,4 +24,5 @@ python3 algo/lca.py \
     "$LOG_FILE" \
     "$EXP_NAME" \
     "$ALG_NAME" \
-    --separate_viewpoints
+    --separate_viewpoints \
+    # --image_dir "$IMAGES_DIR" \

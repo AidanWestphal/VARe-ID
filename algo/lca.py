@@ -25,7 +25,7 @@ if __name__ == "__main__":
     print("Loading data...")
     parser = argparse.ArgumentParser(description="Run LCA clustering")
     parser.add_argument("lca_dir", type=str, help="The directory to save files into.")
-    parser.add_argument("image_dir", type=str, help="The path to the image directory.", default=None)
+    parser.add_argument("--image_dir", type=str, default=None, help="The path to the image directory.")
     parser.add_argument("output_dir", type=str, help="The directory to save files into.")
     parser.add_argument("annots", type=str, help="The path to the annotation file.")
     parser.add_argument("embeddings", type=str, help="The path to the embeddings file.")
