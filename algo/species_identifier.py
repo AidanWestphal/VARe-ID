@@ -6,6 +6,8 @@ import sys
 import tempfile
 import warnings
 from pathlib import Path
+import json
+import ast
 
 import pandas as pd
 import torch
@@ -23,9 +25,16 @@ def load_config(config_file_path):
     return config_file
 
 
-def load_annotations_from_csv(csv_file_path):
-    df = pd.read_csv(csv_file_path)
-    return df
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
+
+
+def save_annotations_to_json(df, json_file_path):
+    with open(json_file_path, "w") as f:
+        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
 
 
 def clone_pyBioCLIP_from_github(directory, repo_url):
@@ -67,13 +76,9 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
     predicted_scores = []
 
     for _, row in tqdm(df.iterrows()):
+        x0, y0, w, h = row["bbox"]
 
-        x0 = row["bbox x"]
-        y0 = row["bbox y"]
-        w = row["bbox w"]
-        h = row["bbox h"]
-
-        original_image = Image.open(row["image path"])
+        original_image = Image.open(row["image_path"])
         cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
@@ -160,9 +165,6 @@ def main(args):
     # Loading Configuration File ...
     config = load_config("algo/species_identifier_drive.yaml")
 
-    # Setting up Device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     images = Path(args.image_dir)
 
     if os.path.exists(args.si_dir):
@@ -183,13 +185,13 @@ def main(args):
 
     print("Running pyBioCLIP ...")
     labels = config["custom_labels"]
-    df = load_annotations_from_csv(args.in_csv_path)
+    df = load_annotations_from_json(args.in_csv_path)
     df = pyBioCLIP(labels, images, df)
     print("pyBioCLIP Completed ...")
 
-    print("Post-Processing ...")
-    df = postprerocess_dataframe(df)
-    print("Post-Processing Completed ...")
+    # print("Post-Processing ...")
+    # df = postprerocess_dataframe(df)
+    # print("Post-Processing Completed ...")
 
     prediction_dir = os.path.dirname(args.out_csv_path)
     shutil.rmtree(prediction_dir, ignore_errors=True)
@@ -197,7 +199,7 @@ def main(args):
 
     print("Saving ALL Predictions as CSV ...")
 
-    df.to_csv(args.out_csv_path, index=False)
+    save_annotations_to_json(df, args.out_csv_path)
 
     print("Completed Successfully!")
 

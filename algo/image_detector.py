@@ -5,9 +5,7 @@ import shutil
 import subprocess
 import uuid
 import warnings
-import cv2
 
-import torch
 import ultralytics
 import yaml
 from tqdm import tqdm
@@ -57,6 +55,7 @@ def select_model(yolo_model, config, model_dir):
     yolo_url = config.get(url_key)
     download_model(yolo_model, yolo_url, model_dir)
     model = YOLO(os.path.join(model_dir, yolo_model + ".pt"))
+    print(f"Model device: {next(model.parameters()).device}")
     return model
 
 
@@ -85,18 +84,15 @@ def detect_images(image_data, model, threshold):
 
                 annotations.append(
                     {
-                        "annot uuid": str(uuid.uuid4()),
-                        "image uuid": image["uuid"],
-                        "image fname": image["uri"],
-                        "bbox x": x1,
-                        "bbox y": y1,
-                        "bbox w": x2 - x1,
-                        "bbox h": y2 - y1,
-                        "bbox pred score": box.conf.item(),
-                        "category id": int(box.cls.item()),
-                        "tracking id": tracking_id,
+                        "annot_uuid": str(uuid.uuid4()),
+                        "image_uuid": image["uuid"],
+                        "image_fname": image["uri"],
+                        "bbox": [x1, y1, x2 - x1, y2 - y1],
+                        "bbox_pred_score": box.conf.item(),
+                        "category_id": int(box.cls.item()),
+                        "tracking_id": tracking_id,
                         "timestamp": image["time_posix"],
-                        "image path": image["uri_original"],
+                        "image_path": image["uri_original"],
                     }
                 )
                 # For images, assign unique tracking ids to every image
@@ -113,10 +109,11 @@ def save_annotations_to_json(annotations_dict, file_path):
         json.dump(annotations_dict, json_file, indent=4)
 
 
-def save_annotations_to_csv(annotations_dict, file_path):
-    annotations = annotations_dict["annotations"]
-    df = pd.DataFrame(annotations)
-    df.to_csv(file_path, index=False)
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+
+    return pd.DataFrame(data["annotations"])
 
 
 def calculate_iou(box1: list, box2: list):
@@ -144,16 +141,13 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
 
     for index, row in pred_df.iterrows():
 
-        x0 = row["bbox x"]
-        y0 = row["bbox y"]
-        w = row["bbox w"]
-        h = row["bbox h"]
+        x0, y0, w, h = row["bbox"]
         pred_bbox = [x0, y0, x0 + w, y0 + h]
 
-        image_uuid = row["image uuid"]
-        image_fname = row["image fname"]
+        image_uuid = row["image_uuid"]
+        image_fname = row["image_fname"]
 
-        image_df = original_df[original_df["image uuid"] == row["image uuid"]]
+        image_df = original_df[original_df["image_uuid"] == row["image_uuid"]]
 
         print(f"Filtering annotations: ({index + 1}/{len(pred_df)})", end="")
         if index < len(pred_df) - 1:
@@ -162,55 +156,49 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
         keep = False
 
         for _, org_row in image_df.iterrows():
-            org_bbox_x0 = org_row["bbox x"]
-            org_bbox_y0 = org_row["bbox y"]
-            org_bbox_x1 = org_row["bbox w"] + org_bbox_x0
-            org_bbox_y1 = org_row["bbox h"] + org_bbox_y0
+            org_bbox_x0 = org_row["bbox"][0]
+            org_bbox_y0 = org_row["bbox"][1]
+            org_bbox_x1 = org_row["bbox"][2] + org_bbox_x0
+            org_bbox_y1 = org_row["bbox"][3] + org_bbox_y0
 
             org_bbox = [org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1]
 
             if calculate_iou(pred_bbox, org_bbox) >= iou_thresh:
                 keep = True
-                species = org_row["annot species"]
-                ca = org_row["annot census"]
+                species = org_row["annot_species"]
+                ca = org_row["annot_census"]
                 viewpoint = org_row["viewpoint"]
                 break
 
         if keep:
             annotation = row.to_dict()
-            annotation["annot species"] = species
-            annotation["bbox gt"] = [int(coord) for coord in org_bbox]
-            annotation["bbox pred"] = [int(coord) for coord in pred_bbox]
-            annotation["bbox pred x"] = x0
-            annotation["bbox pred y"] = y0
-            annotation["bbox pred w"] = w
-            annotation["bbox pred h"] = h
+            annotation["annot_species"] = species
+            annotation["bbox_gt"] = [int(coord) for coord in org_bbox]
+            annotation["bbox_pred"] = [int(coord) for coord in pred_bbox]
+            annotation["bbox_pred"] = [x0, y0, w, h]
             annotation["viewpoint"] = viewpoint
-            annotation["annot census"] = ca
-            annotation["image uuid"] = image_uuid
-            annotation["image fname"] = image_fname
+            annotation["annot_census"] = ca
+            annotation["image_uuid"] = image_uuid
+            annotation["image_fname"] = image_fname
             filtered_annotations.append(annotation)
 
     filtered_annotations = [
         {
-            "annot uuid": annotation["annot uuid"],
-            "image uuid": annotation["image uuid"],
-            "bbox pred score": annotation["bbox pred score"],
-            "category id": annotation["category id"],
-            "annot species": (
+            "annot_uuid": annotation["annot_uuid"],
+            "image_uuid": annotation["image_uuid"],
+            "bbox_pred_score": annotation["bbox_pred_score"],
+            "category_id": annotation["category_id"],
+            "annot_species": (
                 "neither"
-                if annotation["annot species"] not in ["zebra_grevys", "zebra_plains"]
-                else annotation["annot species"]
+                if annotation["annot_species"] not in ["zebra_grevys", "zebra_plains"]
+                else annotation["annot_species"]
             ),
-            "annot census": annotation["annot census"],
-            "bbox gt": annotation["bbox gt"],
-            "bbox pred": annotation["bbox pred"],
-            "bbox x": annotation["bbox pred x"],
-            "bbox y": annotation["bbox pred y"],
-            "bbox w": annotation["bbox pred w"],
-            "bbox h": annotation["bbox pred h"],
-            "viewpoint gt": annotation["viewpoint"],
-            "image fname": annotation["image fname"],
+            "annot_census": annotation["annot_census"],
+            "bbox_gt": annotation["bbox_gt"],
+            "bbox_pred": annotation["bbox_pred"],
+            "bbox_x": annotation["bbox_pred"],
+            "viewpoint_gt": annotation["viewpoint"],
+            "image_fname": annotation["image_fname"],
             "timestamp": annotation["timestamp"],
         }
         for annotation in filtered_annotations
@@ -275,48 +263,33 @@ def main(args):
     yolo_model = args.model_version
     detector = select_model(yolo_model, config, model_dir)
 
-    threshold = config["confidence_threshold"]
-    predictions = detect_images(image_data, detector, threshold)
+    predictions = detect_images(image_data, detector, config["confidence_threshold"])
 
     pred_json_name = args.annots_csv_filename + ".json"
-    pred_csv_name = args.annots_csv_filename + ".csv"
 
     annot_json_path = os.path.join(annots, pred_json_name)
     print("Saving annotations to JSON:", annot_json_path)
     save_annotations_to_json(predictions, annot_json_path)
 
-    annot_csv_path = os.path.join(annots, pred_csv_name)
-    print("Saving annotations to CSV:", annot_csv_path)
-    save_annotations_to_csv(predictions, annot_csv_path)
-
     print("Loading ground truth annotations...")
     base_df = load_annotations_from_csv(annotations_csv_fullpath)
 
     if base_df is not None:
-        pred_df = load_annotations_from_csv(annot_csv_path)
+        pred_df = load_annotations_from_json(annot_json_path)
 
         filtered_annotations = filtration(pred_df, base_df)
 
         filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
-        filtered_pred_csv_name = args.annots_filtered_csv_filename + ".csv"
 
         filtered_annot_json_path = os.path.join(annots, filtered_pred_json_name)
         save_annotations_to_json(filtered_annotations, filtered_annot_json_path)
-
-        filtered_annot_csv_path = os.path.join(annots, filtered_pred_csv_name)
-        save_annotations_to_csv(filtered_annotations, filtered_annot_csv_path)
     else:
         print("No ground truth annotations detected. Skipped filtering.")
         non_filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
-        non_filtered_pred_csv_name = args.annots_filtered_csv_filename + ".csv"
 
         non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
         print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
         save_annotations_to_json(predictions, non_filtered_annot_json_path)
-
-        non_filtered_annot_csv_path = os.path.join(annots, non_filtered_pred_csv_name)
-        print("Saving annotations to CSV:", non_filtered_annot_csv_path)
-        save_annotations_to_csv(predictions, non_filtered_annot_csv_path)
 
 
 if __name__ == "__main__":
