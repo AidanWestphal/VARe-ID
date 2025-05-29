@@ -24,14 +24,14 @@ annot_dir = os.path.join(exp_name,annot_dirname)
 ground_truth_csv = os.path.join(model_dirname,config["ground_truth_csv"])
 model_version = config["model_version"]
 
-vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"]
-img_annots_filename = "img_" + config["annots_filename"] + config["model_version"]
-vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + config["model_version"]
-img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"]
+vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"] + ".json"
+img_annots_filename = "img_" + config["annots_filename"] + config["model_version"] + ".json"
+vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + config["model_version"] + ".json"
+img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"] + ".json"
 
 # SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
-vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename + ".json")
-img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename + ".json")
+vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename)
+img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename)
 
 # for species identifier
 si_dir = os.path.join(exp_name,config["si_dir"])
@@ -52,10 +52,10 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = os.path.join(exp_name,config["cac_dir"])
 cac_model_checkpoint = os.path.join(model_dirname,config["cac_model_checkpoint"])
-cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".csv")
+cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
 
 # for eda preprocessing
-eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")
+eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filtered"])
 if data_is_video:
     eda_flag = "--video"
 else:
@@ -160,7 +160,7 @@ rule species_identifier:
     output:
         si_out_path
     shell:
-        "python {input.script} {image_dir} {input.file} {si_dir} {output}"
+        "python {input.script} {input.file} {si_dir} {output}"
     
 rule viewpoint_classifier:
     input:
@@ -169,7 +169,7 @@ rule viewpoint_classifier:
     output:
         vc_out_path
     shell:
-        "python {input.script} {image_dir} {input.file} {vc_model_checkpoint} {output}"
+        "python {input.script} {input.file} {vc_model_checkpoint} {output}"
 
 rule ca_classifier:
     input:
@@ -178,7 +178,7 @@ rule ca_classifier:
     output:
         cac_out_path
     shell:
-        "python {input.script} {image_dir} {input.file} {cac_model_checkpoint} {output}"
+        "python {input.script} {input.file} {cac_model_checkpoint} {output}"
 
 rule eda_preprocess:
     input:
@@ -206,7 +206,7 @@ rule miew_id:
     output:
         mid_out_path
     shell: 
-        "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
+        "python {input.script} {input.file} {mid_model_url} {output}"
 
 rule lca:
     input:

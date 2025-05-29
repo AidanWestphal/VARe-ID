@@ -1,5 +1,5 @@
-exp_name: "./D1"
-data_dir_in: "./PLACE_TEST_HERE"
+exp_name: "../GGR_STREAMLINED"
+data_dir_in: "../GGR_SMALL_TEST"
 data_video: False
 
 image_dirname: "images"
@@ -25,7 +25,8 @@ vc_out_file: "output_with_viewpoint.json"
 
 cac_dir: "ca_classifier"
 cac_model_checkpoint: "ia_model.pth"
-cac_out_filename: "final_output_with_softmax_and_census"
+cac_out_file: "final_output_with_softmax_and_census.json"
+cac_out_filtered: "filtered_final_output_with_softmax_and_census.json"
 
 fs_dir: "frame_sampling"
 fs_out_stage1_json_file: "stage1_fs_output.json"

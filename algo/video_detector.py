@@ -94,16 +94,16 @@ def detect_videos(video_data, model, threshold):
 
                     annotations.append(
                         {
-                            "annot_uuid": str(uuid.uuid4()),
+                            "uuid": str(uuid.uuid4()),
                             "image_uuid": frame["uuid"],
                             "image_path": frame["uri"],
                             "video_path": vid["video path"],
                             "frame_number": fcount,
                             "bbox": [x1, y1, x2 - x1, y2 - y1],
-                            "bbox_pred_score": (
+                            "confidence": (
                                 box.conf.item() if box.conf is not None else -1
                             ),
-                            "category_id": (
+                            "detection_class": (
                                 int(box.cls.item()) if box.cls is not None else -1
                             ),
                             "tracking_id": (
@@ -243,7 +243,7 @@ def main(args):
     exp_dir = Path(args.exp_dir)
     annots = Path(args.annot_dir)
     filtered_annot_csv_path = (
-        os.path.join(annots, args.annots_filtered_csv_filename) + ".json"
+        os.path.join(annots, args.annots_filtered_csv_path)
     )
 
     with open(args.video_data, "r") as file:
@@ -277,8 +277,14 @@ def main(args):
     print("Writing timestamp data from SRT files...")
     add_timestamps(video_data, annotations, config["video_fps"])
 
+    df = pd.DataFrame(annotations)
+    df_images = (
+        df[["image_uuid", "image_path"]].drop_duplicates(keep="first").reset_index(drop=True)
+    )
+    df_images = df_images.rename(columns={"image_uuid": "uuid"})
+
     print("Saving annotations to {filtered_annot_csv_path}...")
-    save_annotations_to_json({"annotations": annotations}, filtered_annot_csv_path)
+    save_annotations_to_json({"images": df_images.to_dict(orient="records"), "annotations": annotations}, filtered_annot_csv_path)
 
     print("Done!")
 
@@ -303,7 +309,7 @@ if __name__ == "__main__":
         help="The name of the output annotations csv file",
     )
     parser.add_argument(
-        "annots_filtered_csv_filename",
+        "annots_filtered_csv_path",
         type=str,
         help="The name of the output filtered annotations csv file",
     )
