@@ -64,8 +64,8 @@ if __name__ == "__main__":
     # NOTE : Comment this out and set log_file to null in lca.yaml, it will still yield the issue
     config["lca"]["logging"]["log_file"] = os.path.join(args.output_dir, args.log_file)
 
-
     os.makedirs(args.output_dir, exist_ok=True)
+    open(config["lca"]["logging"]["log_file"], 'a').close()
 
     config_loc = os.path.join(lca_github_loc, config["config_save_path"])
 

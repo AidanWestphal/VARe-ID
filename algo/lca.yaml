@@ -1,6 +1,6 @@
 # THIS SECTION CONTAINS VALUES IMPORTANT FOR lca.py TO RUN
 
-github_lca_url: git@github.com:WildMeOrg/lca.git
+github_lca_url: https://github.com/WildMeOrg/lca.git
 config_save_path: "lca/configs/config_drone.yaml"
 
 # THE FOLLOWING ARE THE CONFIG VALUES IMPORTANT FOR LCA ITSELF

@@ -1,4 +1,4 @@
-exp_name: "../GGR_X_TEST"
+data_dir_out: "../GGR_X_TEST"
 data_dir_in: "../GGR_XSMALL_TEST"
 data_video: False
 
@@ -37,6 +37,7 @@ mid_model_url: "conservationxlabs/miewid-msv3"
 mid_out_file: "miewid_output.pickle"
 
 lca_dir: "lca"
+lca_out_dir: "lca_output"
 lca_db_dir: "db"
 lca_log_file: "lca_logs.log"
 lca_verifiers_probs: "verifiers_probs.json"

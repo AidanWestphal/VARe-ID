@@ -4,7 +4,7 @@ configfile: "config.yaml"
 
 data_is_video = config["data_video"]
 
-exp_name = config["exp_name"]
+exp_name = config["data_dir_out"]
 
 image_dirname = config["image_dirname"]
 video_dirname = config["video_dirname"]
@@ -77,8 +77,9 @@ mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
 
 # for lca clustering algorithm
 lca_dir = os.path.join(exp_name,config["lca_dir"])
+lca_out_dir = os.path.join(exp_name,config["lca_out_dir"])
 lca_db_dir = os.path.join(lca_dir, config["lca_db_dir"]) 
-lca_logs_path = os.path.join(lca_dir, config["lca_log_file"])
+lca_logs_path = config["lca_log_file"]
 lca_verifiers_path = os.path.join(model_dirname,config["lca_verifiers_probs"])
 lca_exp_name = exp_name
 if config["lca_separate_viewpoints"]:
@@ -90,15 +91,13 @@ if config["use_alternative_clustering"]:
 else:
     lca_alg_name = "lca"
 
-
-
 # for lca post processing
 fs_file_name = os.path.basename(fs_out_final_path)
 post_dir = os.path.join(exp_name,config["post_dir"])
 sep = fs_file_name.rfind(".")
 annot_file_no_ext = fs_file_name[:sep].replace(".","")
-post_right = os.path.join(lca_db_dir,annot_file_no_ext + config["post_lca_left_end"])
-post_left = os.path.join(lca_db_dir,annot_file_no_ext + config["post_lca_right_end"])
+post_right = os.path.join(lca_out_dir,annot_file_no_ext + config["post_lca_left_end"])
+post_left = os.path.join(lca_out_dir,annot_file_no_ext + config["post_lca_right_end"])
 post_right_out = os.path.join(post_dir, config["post_lca_right_out"])
 post_left_out = os.path.join(post_dir, config["post_lca_left_out"])
 
@@ -107,10 +106,11 @@ def get_targets():
     targets = list()
     if data_is_video:
         targets.append([video_out_path, vid_annots_filtered_path])
+        targets.append([post_right_out,post_left_out])
     else:
         targets.append([image_out_path, img_annots_filtered_path])
+        targets.append([post_right,post_left])
 
-    targets.append([post_right_out,post_left_out])
     return targets
 
 rule all: 
@@ -214,10 +214,11 @@ rule lca:
         embeddings=mid_out_path,
         script="algo/lca.py"
     output:
-        db=directory(lca_db_dir),
-        logs=lca_logs_path
+        pr=post_right,
+        pl=post_left,
     shell: 
-        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {output.db} {output.logs} {lca_exp_name} {lca_alg_name} {lca_sep_viewpoint}"
+        "python {input.script} {lca_dir} {lca_out_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {lca_db_dir} {lca_logs_path} {lca_exp_name} {lca_alg_name} {lca_sep_viewpoint}"
+
 
 rule post:
     input:
