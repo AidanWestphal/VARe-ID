@@ -192,7 +192,7 @@ rule eda_preprocess:
 rule frame_sampling:
     input:
         file=eda_preprocess_path,
-        script="algo/frame_sampling.py"
+        script="algo/frame_sampling-3.py"
     output:
         json_stage1=fs_out_stage1_path,
         json_final=fs_out_final_path
