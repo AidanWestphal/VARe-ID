@@ -59,7 +59,7 @@ def select_model(yolo_model, config, model_dir):
     return model
 
 
-def detect_images(image_data, model, threshold):
+def detect_images(image_data, model, threshold, sz):
 
     images = image_data["images"]
     tracking_id = 1
@@ -69,7 +69,7 @@ def detect_images(image_data, model, threshold):
 
     for image in tqdm(images, desc=f"Detecting images..."):
         # Detect from the image
-        results = model(image["uri_original"], conf=threshold, verbose=False)
+        results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
 
         for result in results:
             # Check if any detection in the image is a person (class 0)
@@ -273,7 +273,7 @@ def main(args):
     yolo_model = args.model_version
     detector = select_model(yolo_model, config, model_dir)
 
-    predictions = detect_images(image_data, detector, config["confidence_threshold"])
+    predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size"])
 
     pred_json_name = args.annots_csv_path
 

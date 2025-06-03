@@ -59,7 +59,7 @@ def select_model(yolo_model, config, model_dir):
     return model
 
 
-def detect_videos(video_data, model, threshold):
+def detect_videos(video_data, model, threshold, sz):
     videos = video_data["videos"]
     annotations = []
 
@@ -74,9 +74,9 @@ def detect_videos(video_data, model, threshold):
             img = cv2.imread(frame["uri"])
             # Run YOLO detection and tracking
             if fcount == 1:
-                results = model.track(img, conf=threshold, verbose=False, persist=False)
+                results = model.track(img, conf=threshold, verbose=False, persist=False, imgsz=sz)
             else:
-                results = model.track(img, conf=threshold, verbose=False, persist=True)
+                results = model.track(img, conf=threshold, verbose=False, persist=True, imgsz=sz)
 
             # Extract detections and tracking information
             for result in results:
@@ -266,10 +266,11 @@ def main(args):
     detector = select_model(yolo_model, config, model_dir)
 
     threshold = config["confidence_threshold"]
+    sz = config["img_size"]
 
     # Detect and track objects over all videos
     print("Running detection on all videos...")
-    annotations = detect_videos(video_data, detector, threshold)
+    annotations = detect_videos(video_data, detector, threshold, sz)
 
     print("Postprocessing tracking ids to avoid collisions...")
     postprocess_tracking_ids(annotations)
