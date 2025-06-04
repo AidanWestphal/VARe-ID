@@ -192,7 +192,7 @@ rule eda_preprocess:
 rule frame_sampling:
     input:
         file=eda_preprocess_path,
-        script="algo/frame_sampling-3.py"
+        script="algo/frame_sampling.py"
     output:
         json_stage1=fs_out_stage1_path,
         json_final=fs_out_final_path
@@ -222,11 +222,12 @@ rule lca:
 
 rule post:
     input:
-        db=lca_db_dir, # This establishes a dependency on LCA (LCA doesn't direclty ask for the right/left outputs so we need this)
+        pr=post_right,
+        pl=post_left,
         merged=cac_out_path,
-        script="algo/LCA_postprocessing_evaluation.py"
+        script="algo/LCA_postprocessing_updated.py"
     output:
         right=post_right_out,
         left=post_left_out
     shell:
-        "python {input.script} new {image_dir} {mid_out_path} {input.merged} {post_left} {post_right} {output.left} {output.right}"
+        "python {input.script} {input.merged} {image_dir} {input.pr} {input.pl} {post_left_out} {post_right_out}"

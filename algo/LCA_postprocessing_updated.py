@@ -69,21 +69,13 @@ def get_user_decision(prompt="Merge clusters? (Yes/No): ", interactive_mode=True
             print("Invalid input. Please enter Yes or No.")
             
 # -------------------------
-# Helper: Get image filename (DEFINITION MOVED HERE OR EARLIER)
-# -------------------------
-def get_image_filename(images_metadata_list, image_uuid, image_dir_path):
-    for img_meta in images_metadata_list:
-        if img_meta['uuid'] == image_uuid:
-            return os.path.join(image_dir_path, img_meta['file_name'])
-    return None
-
-
-# -------------------------
 # Helper: Save JSON file with stage suffix.
 # -------------------------
-def save_json_with_stage(data, original_filename, stage_suffix, run_identifier=""):
+def save_json_with_stage(data, original_filename, stage_suffix, run_identifier="", final=False):
     base, ext = os.path.splitext(original_filename)
-    if run_identifier:
+    if final:
+        new_filename = f"{base}{ext}"
+    elif run_identifier:
         new_filename = f"{base}_{run_identifier}_{stage_suffix}{ext}"
     else:
         new_filename = f"{base}_{stage_suffix}{ext}"
@@ -133,94 +125,6 @@ def print_viewpoint_cluster_mapping(data, viewpoint):
     for cluster in sorted(grouped.keys()):
         print(f"  Cluster {cluster}_{viewpoint}: Tracking IDs: {grouped[cluster]}")
 
-
-# =========================
-# Stage 1: Merge Detection CSV Files
-# =========================
-def merge_csv_files(file1_path, file2_path, output_path):
-    # Using the simpler version from the second script
-    df1 = pd.read_csv(file1_path)
-    df2 = pd.read_csv(file2_path)
-    merged_df = pd.concat([df1, df2], ignore_index=True)
-    # Sorting by timestamp is good practice from the first script
-    if 'timestamp' in merged_df.columns:
-        merged_df = merged_df.sort_values('timestamp')
-    merged_df.to_csv(output_path, index=False)
-    print(f"[Stage 1] Merged detection CSV files into: {output_path}")
-    print(f"[Stage 1] Total rows: {len(merged_df)}")
-
-# =========================
-# Stage 2: Merge CSVs with Bounding Boxes
-# =========================
-def parse_bbox_string_xyxy_s2(bbox_str): # s2 for stage 2 to avoid conflict if others exist
-    s = str(bbox_str).strip() # Ensure it's a string
-    s = re.sub(r'[\[\]\(\)]', '', s)
-    parts = s.split(',')
-    try:
-        return tuple(int(float(p.strip())) for p in parts) # float then int for robustness
-    except Exception as e:
-        # print(f"Error parsing bbox (xyxy): {bbox_str} -> {e}")
-        return None
-
-def parse_bbox_string_xywh_s2(bbox_str): # s2 for stage 2
-    s = str(bbox_str).strip() # Ensure it's a string
-    s = re.sub(r'[\[\]\(\)]', '', s)
-    parts = s.split(',')
-    try:
-        coords = [int(float(p.strip())) for p in parts] # float then int
-        if len(coords) != 4:
-            return None
-        x1, y1, w, h = coords
-        return (x1, y1, x1 + w, y1 + h)
-    except Exception as e:
-        # print(f"Error parsing bbox (xywh): {bbox_str} -> {e}")
-        return None
-
-def merge_csvs_with_bbox(timestamps_csv, metadata_csv, output_csv):
-    # Using the simpler version from the second script, with parsing from first script
-    dict_ts = {}
-    with open(timestamps_csv, 'r', newline='', encoding='utf-8') as f1:
-        reader1 = csv.DictReader(f1)
-        ts_fieldnames = reader1.fieldnames or []
-        for row in reader1:
-            ts_filename = row.get('frame_name')
-            if not ts_filename: continue
-            ts_bbox_str = row.get('bounding_box')
-            if not ts_bbox_str: continue
-            ts_bbox = parse_bbox_string_xyxy_s2(ts_bbox_str) # Use robust parser
-            if ts_bbox is None: continue
-            key = (ts_filename, ts_bbox)
-            dict_ts[key] = row
-
-    merged_rows = []
-    combined_fieldnames = set(ts_fieldnames)
-    with open(metadata_csv, 'r', newline='', encoding='utf-8') as f2:
-        reader2 = csv.DictReader(f2)
-        metadata_fieldnames = reader2.fieldnames or []
-        for col in metadata_fieldnames: combined_fieldnames.add(col)
-        for row in reader2:
-            md_filename = row.get('file_name')
-            if not md_filename: continue
-            md_bbox_str = row.get('bbox')
-            if not md_bbox_str: continue
-            md_bbox = parse_bbox_string_xywh_s2(md_bbox_str) # Use robust parser
-            if md_bbox is None: continue
-            key = (md_filename, md_bbox)
-            if key in dict_ts:
-                ts_row = dict_ts[key]
-                merged_dict = {**ts_row, **row} # Simpler merge
-                merged_rows.append(merged_dict)
-
-    combined_fieldnames = list(combined_fieldnames)
-    with open(output_csv, 'w', newline='', encoding='utf-8') as out:
-        writer = csv.DictWriter(out, fieldnames=combined_fieldnames, extrasaction='ignore')
-        writer.writeheader()
-        writer.writerows(merged_rows)
-
-    print(f"[Stage 2] Merged CSV with bounding boxes written to: {output_csv}")
-    print(f"[Stage 2] Total merged rows: {len(merged_rows)}")
-
-
 # =========================
 # Stage 3: Update JSON Annotations with Timestamps
 # =========================
@@ -231,7 +135,7 @@ def parse_bbox_for_json_update(bbox_str): # From first script's Stage 3
     except:
         return None
 
-def make_comparable_dict_from_csv_s3(row, file_to_uuid): # s3 from script 1's stage 3 logic
+def make_comparable_dict_from_csv_s3(row): # s3 from script 1's stage 3 logic
     def safe_int(x):
         try: return int(str(x).strip())
         except: return None
@@ -247,7 +151,7 @@ def make_comparable_dict_from_csv_s3(row, file_to_uuid): # s3 from script 1's st
     individual_id = safe_int(row.get("individual_id", ""))
     species = row.get("species", "").strip()
     bbox = parse_bbox_for_json_update(row.get("bbox", ""))
-    image_uuid = file_to_uuid.get(row.get("file_name", "").strip(), None)
+    image_uuid = row.get("image_uuid", "")
     timestamp = row.get("timestamp", "").strip()
 
     return {
@@ -270,12 +174,11 @@ def make_comparable_dict_from_json_s3(ann): # s3 from script 1's stage 3 logic
 
 def update_json_with_timestamp(json_input, csv_input, json_output): # Stage 3 logic
     with open(json_input, "r") as f: data = json.load(f)
-    file_to_uuid = {img["file_name"]: img["uuid"] for img in data["images"]}
     csv_common_list = []
     with open(csv_input, "r", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            comp_fields, ts = make_comparable_dict_from_csv_s3(row, file_to_uuid)
+            comp_fields, ts = make_comparable_dict_from_csv_s3(row)
             if comp_fields["image_uuid"] is not None: # Must have image_uuid to match
                 csv_common_list.append((comp_fields, ts))
 
@@ -363,8 +266,7 @@ def pairwise_verification_interactive_deterministic(
         fig, axes = plt.subplots(1, 2, figsize=(10, 5))
         for i, ann_ref in enumerate([best_ann1, best_ann2]):
             ax = axes[i]
-            img_uuid = ann_ref['image_uuid']
-            file_path = get_image_filename(data_context_for_display['images'], img_uuid, image_dir_path)
+            file_path = ann_ref['image_path']
             if file_path and os.path.exists(file_path):
                 try:
                     image = Image.open(file_path)
@@ -876,57 +778,22 @@ def main():
     parser = argparse.ArgumentParser(
         description="Post process LCA outputs"
     )
-    subparsers = parser.add_subparsers(dest="command")
-
-    old_parser = subparsers.add_parser("old", help="Process given a separate timestamp and metadata file.")
-    old_parser.add_argument(
-        "images", type=str, help="The image directory."
-    )
-    old_parser.add_argument(
-        "embeddings", type=str, help="The full path to the embeddings file."
-    )
-    old_parser.add_argument(
-        "timestamps", type=str, help="The full path to the timestamp file."
-    )
-    old_parser.add_argument(
-        "metadata", type=str, help="The full path to the metadata (annots) file."
-    )
-    old_parser.add_argument(
-        "merged_annots", type=str, help="The full path to the save the merged file to."
-    )
-    old_parser.add_argument(
-        "in_left", type=str, help="The full path to the left annotations for LCA.",
-    )
-    old_parser.add_argument(
-        "in_right", type=str, help="The full path to the right annotations for LCA.",
-    )
-    old_parser.add_argument(
-        "out_left", type=str, help="The path to save the processed left LCA json."
-    )
-    old_parser.add_argument(
-        "out_right", type=str, help="The path to save the processed right LCA json."
-    )
-
-    new_parser = subparsers.add_parser("new", description="Process given a merged csv containing timestamps and metadata information.")  
-    new_parser.add_argument(
-        "images", type=str, help="The image directory."
-    )
-    new_parser.add_argument(
-        "embeddings", type=str, help="The full path to the embeddings file."
-    )
-    new_parser.add_argument(
+    parser.add_argument(
         "merged_annots", type=str, help="The full path to the annotation file, merged with timestamp."
     )
-    new_parser.add_argument(
+    parser.add_argument(
+        "images", type=str, help="The image directory."
+    )
+    parser.add_argument(
         "in_left", type=str, help="The full path to the left annotations for LCA.",
     )
-    new_parser.add_argument(
+    parser.add_argument(
         "in_right", type=str, help="The full path to the right annotations for LCA.",
     )
-    new_parser.add_argument(
+    parser.add_argument(
         "out_left", type=str, help="The path to save the processed left LCA json."
     )
-    new_parser.add_argument(
+    parser.add_argument(
         "out_right", type=str, help="The path to save the processed right LCA json."
     )
 
@@ -934,37 +801,29 @@ def main():
 
     with open("algo/config_evaluation_LCA.yaml", "r") as f:
         config = yaml.safe_load(f)
+
+    # Save args into config
+    config["json"]["left"]["input"] = args.in_left
+    config["json"]["left"]["output"] = args.out_left
+    config["json"]["right"]["input"] = args.in_right
+    config["json"]["right"]["output"] = args.out_right
+    config["csv"]["merged_bbox"] = args.merged_annots
+    
+    image_dir = args.images
     
     interactive_mode = config.get("interactive", True)
-    image_dir = config.get("image", {}).get("directory", None)
     if not image_dir or not os.path.isdir(image_dir) :
         print(f"Warning: Image directory '{image_dir}' not found or not specified in config. Image display will be skipped.")
         image_dir = None # Ensure it's None if invalid
 
-    run_id = datetime.now().strftime("%Y%m%d_%H%M%S") # Unique ID for this run's files
+    # run_id = datetime.now().strftime("%Y%m%d_%H%M%S") # Unique ID for this run's files
 
-    # Stage 1: Merge detection CSV files
-    print("\n--- Stage 1: Merging Detection CSV Files ---")
-    merged_detections_csv = config['csv']['merged_detections'].replace(".csv", f"_{run_id}.csv")
-    merge_csv_files(
-        config['csv']['detections1'],
-        config['csv']['detections2'],
-        merged_detections_csv
-    )
-
-    # Stage 2: Merge CSVs with bounding boxes
-    print("\n--- Stage 2: Merging CSVs with Bounding Boxes ---")
-    merged_bbox_csv = config['csv']['merged_bbox'].replace(".csv", f"_{run_id}.csv")
-    merge_csvs_with_bbox(
-        merged_detections_csv, # Use the output from Stage 1
-        config['csv']['metadata'],
-        merged_bbox_csv
-    )
+    merged_bbox_csv = config['csv']['merged_bbox'] # .replace(".csv", f"_{run_id}.csv")
 
     # Stage 3: Update JSON annotations with timestamps
     print("\n--- Stage 3: Updating JSON Annotations with Timestamps ---")
-    left_json_ts = config['json']['left']['output'].replace(".json", f"_{run_id}_ts.json")
-    right_json_ts = config['json']['right']['output'].replace(".json", f"_{run_id}_ts.json")
+    left_json_ts = config['json']['left']['output'] # .replace(".json", f"_{run_id}_ts.json")
+    right_json_ts = config['json']['right']['output'] # .replace(".json", f"_{run_id}_ts.json")
     update_json_with_timestamp(config['json']['left']['input'], merged_bbox_csv, left_json_ts)
     update_json_with_timestamp(config['json']['right']['input'], merged_bbox_csv, right_json_ts)
 
@@ -990,8 +849,8 @@ def main():
     consistency_check_interactive_deterministic(grouped_right_split_stage, data_right, "Right", image_dir, interactive_mode, stage="split")
     data_right['annotations'] = [ann for anns in grouped_right_split_stage.values() for ann in anns]
 
-    left_split_file = save_json_with_stage(data_left, config['json']['left']['output'], "split_verified", run_id)
-    right_split_file = save_json_with_stage(data_right, config['json']['right']['output'], "split_verified", run_id)
+    left_split_file = save_json_with_stage(data_left, config['json']['left']['output'], "split_verified")
+    right_split_file = save_json_with_stage(data_right, config['json']['right']['output'], "split_verified")
     print_cluster_summary(data_left, "After Split Verification Left")
     print_cluster_summary(data_right, "After Split Verification Right")
 
@@ -1047,14 +906,14 @@ def main():
 
     assign_ids_after_equivalence_check_s1(data_left, data_right, final_eq_sets)
 
-    left_final_file = save_json_with_stage(data_left, left_time_file, "final_ids", "")
-    right_final_file = save_json_with_stage(data_right, right_time_file, "final_ids", "")
+    left_final_file = save_json_with_stage(data_left, left_time_file, "final_ids", final=True)
+    right_final_file = save_json_with_stage(data_right, right_time_file, "final_ids", final=True)
 
     print_cluster_summary(data_left, "Final Left Viewpoint")
     print_cluster_summary(data_right, "Final Right Viewpoint")
 
     print("\nAll stages completed.")
-    print(f"Final processed files (with run_id '{run_id}' in intermediates):")
+    print(f"Final processed files:")
     print(f"  Left: {left_final_file}")
     print(f"  Right: {right_final_file}")
 
