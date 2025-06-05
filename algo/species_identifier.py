@@ -28,13 +28,12 @@ def load_config(config_file_path):
 def load_annotations_from_json(json_file_path):
     with open(json_file_path, "r") as f:
         data = json.load(f)
+    return data
 
-    return pd.DataFrame(data["annotations"])
 
-
-def save_annotations_to_json(df, json_file_path):
-    with open(json_file_path, "w") as f:
-        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
+def save_annotations_to_json(annotations_dict, file_path):
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump(annotations_dict, json_file, indent=4)
 
 
 def clone_pyBioCLIP_from_github(directory, repo_url):
@@ -70,7 +69,7 @@ def get_bioCLIP(url, target_dir):
         print(e.stderr.decode("utf-8"))
 
 
-def run_pyBioclip(bioclip_classifier, image_dir, df):
+def run_pyBioclip(bioclip_classifier, df):
 
     predicted_labels = []
     predicted_scores = []
@@ -95,16 +94,19 @@ def run_pyBioclip(bioclip_classifier, image_dir, df):
         predicted_scores.append(pred_conf_score)
         os.remove(temp_file.name)
 
-    df["species_prediction"] = predicted_labels
-    df["species_pred_score"] = predicted_scores
+    category_ids, _ = pd.factorize(predicted_labels)
+
+    df["species"] = predicted_labels
+    df["species_score"] = predicted_scores
+    df["category_id"] = category_ids
 
     return df
 
 
-def pyBioCLIP(labels, image_dir, df):
+def pyBioCLIP(labels, df):
 
     classifier = CustomLabelsClassifier(labels)
-    df = run_pyBioclip(classifier, image_dir, df)
+    df = run_pyBioclip(classifier, df)
 
     return df
 
@@ -116,20 +118,20 @@ def simplify_species(species_name, category_map):
     return None
 
 
-def postprerocess_dataframe(df):
+# def postprerocess_dataframe(df):
 
-    # this is only when dectection has filter (ground truth)
-    # category_map_true = {"zebra_grevys": 0, "zebra_plains": 1, "neither": 2}
-    # df["species_true_simple"] = df["annot species"].apply(
-    #     lambda x: simplify_species(x, category_map_true)
-    # )
+#     # this is only when dectection has filter (ground truth)
+#     # category_map_true = {"zebra_grevys": 0, "zebra_plains": 1, "neither": 2}
+#     # df["species_true_simple"] = df["annot species"].apply(
+#     #     lambda x: simplify_species(x, category_map_true)
+#     # )
 
-    category_map_pred = {"grevy's zebra": 0, "plains zebra": 1, "neither": 2}
-    df["species_pred_simple"] = df["species_prediction"].apply(
-        lambda x: simplify_species(x, category_map_pred)
-    )
+#     category_map_pred = {"grevy's zebra": 0, "plains zebra": 1, "neither": 2}
+#     df["category_id"] = df["species"].apply(
+#         lambda x: simplify_species(x, category_map_pred)
+#     )
 
-    return df
+#     return df
 
 
 def main(args):
@@ -165,8 +167,6 @@ def main(args):
     # Loading Configuration File ...
     config = load_config("algo/species_identifier_drive.yaml")
 
-    images = Path(args.image_dir)
-
     if os.path.exists(args.si_dir):
         print("Removing Previous Instance of Experiment")
         shutil.rmtree(args.si_dir)
@@ -185,8 +185,9 @@ def main(args):
 
     print("Running pyBioCLIP ...")
     labels = config["custom_labels"]
-    df = load_annotations_from_json(args.in_csv_path)
-    df = pyBioCLIP(labels, images, df)
+    data = load_annotations_from_json(args.in_csv_path)
+    df = pd.DataFrame(data["annotations"])
+    df = pyBioCLIP(labels, df)
     print("pyBioCLIP Completed ...")
 
     # print("Post-Processing ...")
@@ -197,9 +198,20 @@ def main(args):
     shutil.rmtree(prediction_dir, ignore_errors=True)
     os.makedirs(prediction_dir, exist_ok=True)
 
-    print("Saving ALL Predictions as CSV ...")
+    print("Saving ALL Predictions as JSON ...")
 
-    save_annotations_to_json(df, args.out_csv_path)
+    # Get category set
+    df_categories = (
+        df[["category_id", "species"]].drop_duplicates(keep="first").reset_index(drop=True)
+    )
+    df_categories = df_categories.rename(columns={"category_id": "id"})
+    
+    annotations = {
+        "categories": df_categories.to_dict(orient="records"),
+        "images": data["images"],
+        "annotations": df.to_dict(orient="records"),
+    }
+    save_annotations_to_json(annotations,args.out_csv_path)
 
     print("Completed Successfully!")
 
@@ -208,9 +220,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Detect bounding boxes for database of animal images"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
     )
     parser.add_argument(
         "in_csv_path",

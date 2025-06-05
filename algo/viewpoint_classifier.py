@@ -53,15 +53,6 @@ class ClassifierDataset(Dataset):
         else:
             return img
 
-    def load_image(self, img_path):
-        # Load image from the file system; placeholder function
-        # You should replace this with actual image loading logic
-        img = np.random.rand(
-            224, 224, 3
-        )  # Placeholder: Replace with actual image loading
-        return img
-
-
 class ImgClassifier(torch.nn.Module):
     def __init__(self, model_arch, n_class, pretrained=False):
         super().__init__()
@@ -77,13 +68,12 @@ class ImgClassifier(torch.nn.Module):
 def load_annotations_from_json(json_file_path):
     with open(json_file_path, "r") as f:
         data = json.load(f)
+    return data
 
-    return pd.DataFrame(data["annotations"])
 
-
-def save_annotations_to_json(df, json_file_path):
-    with open(json_file_path, "w") as f:
-        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
+def save_annotations_to_json(annotations_dict, file_path):
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump(annotations_dict, json_file, indent=4)
 
 
 def get_valid_transforms():
@@ -100,6 +90,16 @@ def get_valid_transforms():
         ],
         p=1.0,
     )
+
+
+def reformat_viewpoint(viewpoint):    
+    out = ""
+    precedence = ["up", "front", "back", "right", "left"]
+    for p in precedence:
+        if p in viewpoint:
+            out += p
+    
+    return out
 
 
 def predict_labels_new(test_loader, model, device):
@@ -191,25 +191,25 @@ def main(args):
         Done!
     """
 
-    original_csv = load_annotations_from_json(args.in_csv_path)
+    original_json = load_annotations_from_json(args.in_csv_path)
+    annots = pd.DataFrame(original_json["annotations"])
 
     # Remove rows that are not the desired species
-    filtered_csv = original_csv[
-        original_csv["species_prediction"].isin(config["filtered_classes"])
+    filtered_annots = annots[
+        annots["species"].isin(config["filtered_classes"])
     ]
 
+    # NOTE: MAY REMOVE LATER
     # Split based on bbox_xywh and species criteria
-    filtered_test = filtered_csv[
-        filtered_csv["bbox"].notna()
-        & (filtered_csv["species_prediction"] == config["species"])
+    filtered_test = filtered_annots[
+        filtered_annots["bbox"].notna()
     ].reset_index(drop=True)
 
-    other_test = filtered_csv[
-        filtered_csv["bbox"].isna()
-        | (filtered_csv["species_prediction"] != config["species"])
+    other_test = filtered_annots[
+        filtered_annots["bbox"].isna()
     ].reset_index(drop=True)
 
-    other_test["predicted_viewpoint"] = np.nan
+    other_test["viewpoint"] = ""
 
     # print(f'Filtered dataset is: \n {filtered_test}')
     # print(f'\n Other dataset is: \n {other_test}')
@@ -243,12 +243,17 @@ def main(args):
     preds_bin = pd.DataFrame(all_discrete_labels, columns=config["label_cols"])
 
     # Add a new column to the filtered_test DataFrame with the predicted labels
-    filtered_test["predicted_viewpoint"] = preds_bin.apply(
+    filtered_test["viewpoint"] = preds_bin.apply(
         lambda row: ", ".join(row.index[row == 1]), axis=1
     )
 
     # Concatenate filtered_test and other_test dataframes
     final_output = pd.concat([filtered_test, other_test])
+
+    # Reformat viewpoints to singular words
+    final_output["viewpoint"] = final_output["viewpoint"].apply(
+        lambda x: reformat_viewpoint(x)
+    )
 
     # Save the updated DataFrame to a new CSV file
     viewpoint_dir = os.path.dirname(args.out_csv_path)
@@ -260,7 +265,12 @@ def main(args):
     print("Saving the results...")
     os.makedirs(viewpoint_dir, exist_ok=True)
 
-    save_annotations_to_json(final_output, args.out_csv_path)
+    final_json = {
+        "categories": original_json["categories"],
+        "images": original_json["images"],
+        "annotations": final_output.to_dict(orient="records"),
+    }
+    save_annotations_to_json(final_json, args.out_csv_path)
 
     print("Done!")
 
@@ -269,9 +279,6 @@ if __name__ == "__main__":
     print("Loading data...")
     parser = argparse.ArgumentParser(
         description="Run viewpoint classifier for database of animal images"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
     )
     parser.add_argument(
         "in_csv_path",

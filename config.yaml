@@ -1,5 +1,5 @@
-exp_name: "./D1"
-data_dir_in: "./PLACE_TEST_HERE"
+data_dir_out: "../GGR_X_TEST"
+data_dir_in: "../GGR_XSMALL_TEST"
 data_video: False
 
 image_dirname: "images"
@@ -25,7 +25,8 @@ vc_out_file: "output_with_viewpoint.json"
 
 cac_dir: "ca_classifier"
 cac_model_checkpoint: "ia_model.pth"
-cac_out_filename: "final_output_with_softmax_and_census"
+cac_out_file: "final_output_with_softmax_and_census.json"
+cac_out_filtered: "filtered_final_output_with_softmax_and_census.json"
 
 fs_dir: "frame_sampling"
 fs_out_stage1_json_file: "stage1_fs_output.json"
@@ -36,6 +37,7 @@ mid_model_url: "conservationxlabs/miewid-msv3"
 mid_out_file: "miewid_output.pickle"
 
 lca_dir: "lca"
+lca_out_dir: "lca_output"
 lca_db_dir: "db"
 lca_log_file: "lca_logs.log"
 lca_verifiers_probs: "verifiers_probs.json"

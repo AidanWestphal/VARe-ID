@@ -26,10 +26,9 @@ def load_json(file_path):
 
 
 class MiewIDDataset(Dataset):
-    def __init__(self, df, images, transforms=None):
+    def __init__(self, df, transforms=None):
         super().__init__()
         self.df = df.reset_index(drop=True).copy()
-        self.images = images
         self.transforms = transforms
 
         # Build a custom mapping for UUIDS s.t. we have unique integer labels
@@ -45,7 +44,7 @@ class MiewIDDataset(Dataset):
         return len(self.df)
 
     def __getitem__(self, index):
-        img = get_chip(self.df.loc[index], self.images)
+        img = get_chip(self.df.loc[index])
         # print(f'Shape of the input image: {img.shape}')    # Print the shape of the image
         if self.transforms:
             img = self.transforms(image=img)["image"]  # Apply transformations
@@ -74,13 +73,12 @@ def crop_rect(img, rect):
     return img_crop, img_rot
 
 
-def get_chip(row, images):
+def get_chip(row):
     x1 = row["bbox"][0]
     y1 = row["bbox"][1]
     w = row["bbox"][2]
     h = row["bbox"][3]
     theta = 0.0
-    img_uuid = row["image_uuid"]
     img = cv2.imread(row["image_path"])[:, :, ::-1]
     x2 = x1 + w
     y2 = y1 + h
@@ -243,9 +241,6 @@ if __name__ == "__main__":
         description="Generate miewid embeddings for database of animal images"
     )
     parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
-    )
-    parser.add_argument(
         "in_csv_path",
         type=str,
         help="The full path to the ca classifier output csv to use as input",
@@ -282,7 +277,7 @@ if __name__ == "__main__":
     )
 
     print("Building dataset and loader...")
-    ds = MiewIDDataset(df, images, preprocess)
+    ds = MiewIDDataset(df, preprocess)
 
     dl = torch.utils.data.DataLoader(
         ds,
