@@ -153,11 +153,6 @@ def main():
     )
     args = parser.parse_args()
 
-    # Set defaults based on original behavior
-    parser.set_defaults(viewpoint=False, ca_score=False)
-
-    args = parser.parse_args()
-
     # Load configuration from YAML file
     cfg = load_config("algo/frame_sampling.yaml")
     in_file = args.in_json_path
@@ -169,12 +164,8 @@ def main():
     pct1 = cfg['thresholds']['threshold_percentage_stage1']
     pct2 = cfg['thresholds']['threshold_percentage_stage2']
 
-    use_ca = cfg['settings'].get('use_ca_score', True)
-    use_vp = cfg['settings'].get('use_viewpoint', True)
-
-    # Override defaults
-    ca_flag = args.ca_score if args.ca_score is not None else use_ca
-    vp_flag = args.viewpoint if args.viewpoint is not None else use_vp
+    ca_flag = cfg['settings'].get('use_ca_score', True)
+    vp_flag = cfg['settings'].get('use_viewpoint', True)
 
     random.seed(123456789)
 
