@@ -159,7 +159,7 @@ def main():
     args = parser.parse_args()
 
     # Load configuration from YAML file
-    cfg = load_config("algo/frame_sampling-3.yaml")
+    cfg = load_config("algo/frame_sampling.yaml")
     in_file = args.in_json_path
     step1_file = args.json_stage1
     final_out = args.json_final
