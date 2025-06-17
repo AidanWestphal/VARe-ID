@@ -1,7 +1,5 @@
 import argparse
 import json
-
-# import uuid
 import warnings
 
 import pandas as pd
@@ -55,10 +53,14 @@ def assign_viewpoints(df, excluded_viewpoints):
 
 
 def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r", encoding="utf-8") as f:
+    with open(json_file_path, "r") as f:
         data = json.load(f)
+    return data
 
-    return pd.DataFrame(data["annotations"])
+
+def save_annotations_to_json(annotations_dict, file_path):
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump(annotations_dict, json_file, indent=4)
 
 
 def convert_bbox(bbox_str):
@@ -81,53 +83,20 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    sep = args.csv_file.rfind("/")
-    annot_dir = args.csv_file[:sep]
-    anno_path_csv = args.csv_file[sep:].replace("/", "")
     video_mode = args.video
 
-    df = load_annotations_from_json(args.csv_file)
+    data = load_annotations_from_json(args.csv_file)
+    df = pd.DataFrame(data["annotations"])
 
-    # df = pd.read_csv(
-    #     annot_dir + "/" + anno_path_csv, delimiter=",", quotechar='"', engine="python"
-    # )
-
-    # annot uuid,image uuid,image fname,video path,frame number,bbox x,bbox y,bbox w,bbox h,
-    # bbox pred score,category id,tracking id,timestamp,species_prediction,species_pred_score,species_pred_simple,
-    # path,bbox_xywh,bbox_xyxy,predicted_viewpoint,CA_score,annotations_census
-
-    # filter out for true CA annotations.
+    # filter out for true CA annotations
     df = df[df["annotations_census"] == True]
 
-    # df = df.merge(
-    #     df[["image_path", "tracking_id", "individual_id"]],
-    #     on=["image_path", "tracking_id"],
-    #     how="left",
-    # )
-
-    # num_annotations = len(df)
-    # num_images = len(df["image_path"].unique())
-
-    # print("Dataset Statistics:")
-    # print(f"Number of annotations: {num_annotations}")
-    # print(f"Number of images: {num_images}")
-
-    # # IF UUIDS AREN'T ALREADY PROVIDED (GT FILES), ADD THEM
-    # if "image uuid" not in df.columns or "uuid" not in df.columns:
-    #     image_uuid_map = {
-    #         image_path: str(uuid.uuid4()) for image_path in df["image_path"].unique()
-    #     }
-    #     # Add the UUIDs to the DataFrame
-    #     df["image_uuid"] = df["image_path"].map(image_uuid_map)
-    #     df["uuid"] = [str(uuid.uuid4()) for _ in range(len(df))]
-
-    # df["individual_id"] = df["individual_id_x"]
-
+    # Reassign all viewpoints to just left/right
     df = assign_viewpoints(df, excluded_viewpoints=["upback", "upfront"])
 
     # IF CATEGORY ID NOT PROVIDED (GT)
-    if "category_id" not in df.columns:
-        df["category_id"] = 0
+    # if "category_id" not in df.columns:
+    #     df["category_id"] = 0
 
     # # IF FRAME NUMBER NOT PROVIDED (GT)
     # if video_mode:
@@ -138,62 +107,22 @@ if __name__ == "__main__":
     #                 row["file_name"].split("_")[-1].split(".")[0]
     #             )
 
-    if video_mode:
-        df_annotations_fields = [
-            "uuid",
-            "image_uuid",
-            "individual_id",
-            "bbox",
-            "viewpoint",
-            "tracking_id",
-            "confidence",
-            "detection_class",
-            "species",
-            "CA_score",
-            "category_id",
-            "frame_number",
-            "timestamp",
-            "file_name",
-            "image_path",
-        ]
-    else:
-        df_annotations_fields = [
-            "uuid",
-            "image_uuid",
-            "individual_id",
-            "bbox",
-            "viewpoint",
-            "tracking_id",
-            "confidence",
-            "detection_class",
-            "species",
-            "CA_score",
-            "category_id",
-            "timestamp",
-            "image_path",
-        ]
-
-    df_annotations = df[df_annotations_fields]
-
-    df_images_fields = ["image_uuid", "image_path"]
-    df_images_fields = df.columns.intersection(df_images_fields)
+    # WE NEED TO REGENREATE IMAGES AND CATEGORIES AS WE FILTERED OUT ROWS
     df_images = (
-        df[df_images_fields].drop_duplicates(keep="first").reset_index(drop=True)
+        df[["image_uuid", "image_path"]].drop_duplicates(keep="first").reset_index(drop=True)
     )
     df_images = df_images.rename(columns={"image_uuid": "uuid"})
 
-    df_categories_fields = ["category_id", "species"]
     df_categories = (
-        df[df_categories_fields].drop_duplicates(keep="first").reset_index(drop=True)
+        df[["category_id", "species"]].drop_duplicates(keep="first").reset_index(drop=True)
     )
     df_categories = df_categories.rename(columns={"category_id": "id"})
 
-    result_dict = {
+    final_json = {
         "categories": df_categories.to_dict(orient="records"),
         "images": df_images.to_dict(orient="records"),
-        "annotations": df_annotations.to_dict(orient="records"),
+        "annotations": df.to_dict(orient="records"),
     }
+    save_annotations_to_json(final_json, args.eda_out)
 
-    with open(args.eda_out, "w", encoding="utf-8") as f:
-        json.dump(result_dict, f, indent=4)
-        print("Data is saved to:", args.eda_out)
+    print("Data is saved to:", args.eda_out)

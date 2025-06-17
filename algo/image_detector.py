@@ -59,15 +59,17 @@ def select_model(yolo_model, config, model_dir):
     return model
 
 
-def detect_images(image_data, model, threshold):
+def detect_images(image_data, model, threshold, sz):
 
     images = image_data["images"]
-    annotations = []
     tracking_id = 1
+
+    # ANNOTION LIST FOR OUTPUT
+    annotations = []
 
     for image in tqdm(images, desc=f"Detecting images..."):
         # Detect from the image
-        results = model(image["uri_original"], conf=threshold, verbose=False)
+        results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
 
         for result in results:
             # Check if any detection in the image is a person (class 0)
@@ -82,23 +84,31 @@ def detect_images(image_data, model, threshold):
                 x2 = box.xyxy[0][2].item()
                 y2 = box.xyxy[0][3].item()
 
+                # ADD THE ANNOTATION TO THE LIST OF ANNOTS
                 annotations.append(
                     {
-                        "annot_uuid": str(uuid.uuid4()),
+                        "uuid": str(uuid.uuid4()),
                         "image_uuid": image["uuid"],
-                        "image_fname": image["uri"],
                         "bbox": [x1, y1, x2 - x1, y2 - y1],
-                        "bbox_pred_score": box.conf.item(),
-                        "category_id": int(box.cls.item()),
+                        "confidence": box.conf.item(),
+                        "detection_class": int(box.cls.item()),
                         "tracking_id": tracking_id,
                         "timestamp": image["time_posix"],
                         "image_path": image["uri_original"],
                     }
                 )
+
                 # For images, assign unique tracking ids to every image
                 tracking_id += 1
+    
+    # OBTAIN THE SET OF UNIQUE IMAGES TO PUT IN ANNOTATIONS
+    df = pd.DataFrame(annotations)
+    df_images = (
+        df[["image_uuid", "image_path"]].drop_duplicates(keep="first").reset_index(drop=True)
+    )
+    df_images = df_images.rename(columns={"image_uuid": "uuid"})
 
-    annotations_dict = {"annotations": annotations}
+    annotations_dict = {"images": df_images.to_dict(orient="records"), "annotations": annotations}
     print(", done.")
 
     return annotations_dict
@@ -263,9 +273,9 @@ def main(args):
     yolo_model = args.model_version
     detector = select_model(yolo_model, config, model_dir)
 
-    predictions = detect_images(image_data, detector, config["confidence_threshold"])
+    predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size"])
 
-    pred_json_name = args.annots_csv_filename + ".json"
+    pred_json_name = args.annots_csv_path
 
     annot_json_path = os.path.join(annots, pred_json_name)
     print("Saving annotations to JSON:", annot_json_path)
@@ -279,13 +289,13 @@ def main(args):
 
         filtered_annotations = filtration(pred_df, base_df)
 
-        filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
+        filtered_pred_json_name = args.annots_filtered_csv_path
 
         filtered_annot_json_path = os.path.join(annots, filtered_pred_json_name)
         save_annotations_to_json(filtered_annotations, filtered_annot_json_path)
     else:
         print("No ground truth annotations detected. Skipped filtering.")
-        non_filtered_pred_json_name = args.annots_filtered_csv_filename + ".json"
+        non_filtered_pred_json_name = args.annots_filtered_csv_path
 
         non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
         print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
@@ -309,12 +319,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("model_version", type=str, help="The yolo model version to use")
     parser.add_argument(
-        "annots_csv_filename",
+        "annots_csv_path",
         type=str,
         help="The name of the output annotations csv file",
     )
     parser.add_argument(
-        "annots_filtered_csv_filename",
+        "annots_filtered_csv_path",
         type=str,
         help="The name of the output filtered annotations csv file",
     )

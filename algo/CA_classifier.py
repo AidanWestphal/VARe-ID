@@ -28,9 +28,8 @@ def xywh_to_xyxy(bbox: list):
 
 
 class CustomImageDataset(Dataset):
-    def __init__(self, dataframe, img_dir, transform=None):
+    def __init__(self, dataframe, transform=None):
         self.img_data = dataframe
-        self.img_dir = img_dir
         self.transform = transform
 
     def __len__(self):
@@ -48,7 +47,7 @@ class CustomImageDataset(Dataset):
         image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
 
         # Flip the image if left viewpoint
-        if "left" in self.img_data.iloc[idx]["predicted_viewpoint"]:
+        if "left" in self.img_data.iloc[idx]["viewpoint"]:
             image = F.hflip(image)
 
         if self.transform:
@@ -77,6 +76,17 @@ def load_config(config_path):
     return config
 
 
+def load_annotations_from_json(json_file_path):
+    with open(json_file_path, "r") as f:
+        data = json.load(f)
+    return data
+
+
+def save_annotations_to_json(annotations_dict, file_path):
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump(annotations_dict, json_file, indent=4)
+
+
 def load_model(model_path, device):
     model = BinaryClassResNet50()
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -85,55 +95,9 @@ def load_model(model_path, device):
     return model
 
 
-def load_data(csv_path, image_dir, transform, batch_size):
-    dataset = CustomImageDataset(csv_path, image_dir, transform)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
-    return dataloader
-
-
-def preprocess_viewpoint(viewpoint):
-    # IF NOT A STRING (NAN)
-    if not isinstance(viewpoint, str):
-        return ""
-    elif "front" in viewpoint and "right" in viewpoint:
-        if "up" in viewpoint:
-            return "upfrontright"
-        else:
-            return "frontright"
-    elif "back" in viewpoint and "right" in viewpoint:
-        if "up" in viewpoint:
-            return "upbackright"
-        else:
-            return "backright"
-    elif "front" in viewpoint and "left" in viewpoint:
-        if "up" in viewpoint:
-            return "upfrontleft"
-        else:
-            return "frontleft"
-    elif "back" in viewpoint and "left" in viewpoint:
-        if "up" in viewpoint:
-            return "upbackleft"
-        else:
-            return "backleft"
-    elif "right" in viewpoint:
-        return "right"
-    elif "left" in viewpoint:
-        return "left"
-    return viewpoint
-
-
 def filter_dataframe(df, config):
-    # Preprocess the predicted_viewpoint column
-    df["predicted_viewpoint"] = df["predicted_viewpoint"].apply(preprocess_viewpoint)
-
-    # # Filter conditions
-    # bbox_condition = (
-    #     df["bbox x"].notna()
-    #     & df["bbox y"].notna()
-    #     & df["bbox w"].notna()
-    #     & df["bbox h"].notna()
-    # )
-    viewpoint_condition = df["predicted_viewpoint"].isin(config["viewpoints"])
+    # Filter based on accepted viewpoint
+    viewpoint_condition = df["viewpoint"].isin(config["viewpoints"])
     # Special condition - only applies to gt annotated data where the species was correctly identified
     if "annot species" in df.keys():
         species_condition = df["annot_species"] == config["species"]
@@ -142,7 +106,6 @@ def filter_dataframe(df, config):
 
     # Create a mask for rows to be filtered out
     filter_mask = ~(species_condition & viewpoint_condition)
-    # filter_mask = ~(bbox_condition & species_condition & viewpoint_condition)
 
     # Split the dataframe
     filtered_out = df[filter_mask].copy().reset_index(drop=True)
@@ -180,30 +143,9 @@ def apply_nms(df, iou_threshold):
     return df.iloc[keep]
 
 
-def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    return pd.DataFrame(data["annotations"])
-
-
-def save_annotations_to_json(df, json_file_path):
-    with open(json_file_path, "w", encoding="utf-8") as f:
-        json.dump({"annotations": df.to_dict(orient="records")}, f, indent=4)
-
-
-def format_and_save(df, path):
+# CLEARS ADDED COLUMNS FOR CA CLASSIFICATION THRESHOLDING
+def clear_columns(df):
     # file_name	tracking_id	confidence	detection_class	species	bbox	viewpoint	individual_id	CA_score	annotations_census
-    df = df.rename(
-        columns={
-            "annot_uuid": "uuid",
-            "bbox_pred_score": "confidence",
-            "category_id": "detection_class",
-            "species_prediction": "species",
-            "species_pred_simple": "category_id",
-            "predicted_viewpoint": "viewpoint",
-        }
-    )
     df["individual_id"] = 0
 
     columns_kept = [
@@ -225,23 +167,18 @@ def format_and_save(df, path):
         "file_name",
     ]
 
-    df = df.drop(columns=df.columns.difference(columns_kept))
-
-    save_annotations_to_json(df, path)
+    return df.drop(columns=df.columns.difference(columns_kept))
 
 
 def expand_bbox_columns(df):
-    df_copy = df.copy()
-
     # Extract bbox components into separate columns
-    bbox_data = df_copy["bbox"].apply(
+    bbox_data = df["bbox"].apply(
         lambda x: pd.Series(x, index=["bbox x", "bbox y", "bbox w", "bbox h"])
     )
 
     # Add the new columns to the dataframe
-    df_copy = pd.concat([df_copy, bbox_data], axis=1)
-
-    return df_copy
+    df = pd.concat([df, bbox_data], axis=1)
+    return df
 
 
 def main(args):
@@ -284,7 +221,8 @@ def main(args):
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
 
     print("Loading and preprocessing data...")
-    df = load_annotations_from_json(args.in_csv_path)
+    data = load_annotations_from_json(args.in_csv_path)
+    df = pd.DataFrame(data["annotations"])
 
     # Expand bbox column into separate x, y, w, h columns
     df = expand_bbox_columns(df)
@@ -300,7 +238,7 @@ def main(args):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
-    dataset = CustomImageDataset(filtered_test, args.image_dir, transform)
+    dataset = CustomImageDataset(filtered_test, transform)
     dataloader = DataLoader(dataset, batch_size=config["batch_size"], shuffle=False)
 
     print("Loading model...")
@@ -403,9 +341,6 @@ def main(args):
     )
     final_df = final_df.rename(columns={"softmax_output_1": "CA_score"})
 
-    # Extract file_name from image path
-    final_df["file_name"] = final_df["image_path"].apply(os.path.basename)
-
     print(f"The length of final concatenated CSV is: {len(final_df)}\n")
 
     # Save the updated DataFrame to a new CSV file
@@ -416,7 +351,14 @@ def main(args):
 
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
-    format_and_save(final_df, args.out_csv_path)
+    final_df = clear_columns(final_df)
+
+    final_json = {
+        "categories": data["categories"],
+        "images": data["images"],
+        "annotations": final_df.to_dict(orient="records"),
+    }
+    save_annotations_to_json(final_json, args.out_csv_path)
 
     print(
         f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"
@@ -428,9 +370,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description="Run viewpoint classifier for database of animal images"
-    )
-    parser.add_argument(
-        "image_dir", type=str, help="The directory where localized images are found"
     )
     parser.add_argument(
         "in_csv_path",

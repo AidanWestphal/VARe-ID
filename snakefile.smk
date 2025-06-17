@@ -4,7 +4,7 @@ configfile: "config.yaml"
 
 data_is_video = config["data_video"]
 
-exp_name = config["exp_name"]
+exp_name = config["data_dir_out"]
 
 image_dirname = config["image_dirname"]
 video_dirname = config["video_dirname"]
@@ -24,14 +24,14 @@ annot_dir = os.path.join(exp_name,annot_dirname)
 ground_truth_csv = os.path.join(model_dirname,config["ground_truth_csv"])
 model_version = config["model_version"]
 
-vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"]
-img_annots_filename = "img_" + config["annots_filename"] + config["model_version"]
-vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + config["model_version"]
-img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"]
+vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"] + ".json"
+img_annots_filename = "img_" + config["annots_filename"] + config["model_version"] + ".json"
+vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + config["model_version"] + ".json"
+img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"] + ".json"
 
 # SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
-vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename + ".json")
-img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename + ".json")
+vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename)
+img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename)
 
 # for species identifier
 si_dir = os.path.join(exp_name,config["si_dir"])
@@ -52,10 +52,10 @@ vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
 # for census annotation classifier
 cac_dir = os.path.join(exp_name,config["cac_dir"])
 cac_model_checkpoint = os.path.join(model_dirname,config["cac_model_checkpoint"])
-cac_out_path = os.path.join(cac_dir, config["cac_out_filename"] + ".csv")
+cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
 
 # for eda preprocessing
-eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filename"] + ".json")
+eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filtered"])
 if data_is_video:
     eda_flag = "--video"
 else:
@@ -77,8 +77,9 @@ mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
 
 # for lca clustering algorithm
 lca_dir = os.path.join(exp_name,config["lca_dir"])
+lca_out_dir = os.path.join(exp_name,config["lca_out_dir"])
 lca_db_dir = os.path.join(lca_dir, config["lca_db_dir"]) 
-lca_logs_path = os.path.join(lca_dir, config["lca_log_file"])
+lca_logs_path = config["lca_log_file"]
 lca_verifiers_path = os.path.join(model_dirname,config["lca_verifiers_probs"])
 lca_exp_name = exp_name
 if config["lca_separate_viewpoints"]:
@@ -90,15 +91,13 @@ if config["use_alternative_clustering"]:
 else:
     lca_alg_name = "lca"
 
-
-
 # for lca post processing
 fs_file_name = os.path.basename(fs_out_final_path)
 post_dir = os.path.join(exp_name,config["post_dir"])
 sep = fs_file_name.rfind(".")
 annot_file_no_ext = fs_file_name[:sep].replace(".","")
-post_right = os.path.join(lca_db_dir,annot_file_no_ext + config["post_lca_left_end"])
-post_left = os.path.join(lca_db_dir,annot_file_no_ext + config["post_lca_right_end"])
+post_right = os.path.join(lca_out_dir,annot_file_no_ext + config["post_lca_left_end"])
+post_left = os.path.join(lca_out_dir,annot_file_no_ext + config["post_lca_right_end"])
 post_right_out = os.path.join(post_dir, config["post_lca_right_out"])
 post_left_out = os.path.join(post_dir, config["post_lca_left_out"])
 
@@ -107,10 +106,11 @@ def get_targets():
     targets = list()
     if data_is_video:
         targets.append([video_out_path, vid_annots_filtered_path])
+        targets.append([post_right_out,post_left_out])
     else:
         targets.append([image_out_path, img_annots_filtered_path])
+        targets.append([post_right,post_left])
 
-    targets.append([post_right_out,post_left_out])
     return targets
 
 rule all: 
@@ -160,7 +160,7 @@ rule species_identifier:
     output:
         si_out_path
     shell:
-        "python {input.script} {image_dir} {input.file} {si_dir} {output}"
+        "python {input.script} {input.file} {si_dir} {output}"
     
 rule viewpoint_classifier:
     input:
@@ -169,7 +169,7 @@ rule viewpoint_classifier:
     output:
         vc_out_path
     shell:
-        "python {input.script} {image_dir} {input.file} {vc_model_checkpoint} {output}"
+        "python {input.script} {input.file} {vc_model_checkpoint} {output}"
 
 rule ca_classifier:
     input:
@@ -178,7 +178,7 @@ rule ca_classifier:
     output:
         cac_out_path
     shell:
-        "python {input.script} {image_dir} {input.file} {cac_model_checkpoint} {output}"
+        "python {input.script} {input.file} {cac_model_checkpoint} {output}"
 
 rule eda_preprocess:
     input:
@@ -206,7 +206,7 @@ rule miew_id:
     output:
         mid_out_path
     shell: 
-        "python {input.script} {image_dir} {input.file} {mid_model_url} {output}"
+        "python {input.script} {input.file} {mid_model_url} {output}"
 
 rule lca:
     input:
@@ -214,18 +214,20 @@ rule lca:
         embeddings=mid_out_path,
         script="algo/lca.py"
     output:
-        db=directory(lca_db_dir),
-        logs=lca_logs_path
+        pr=post_right,
+        pl=post_left,
     shell: 
-        "python {input.script} {lca_dir} {image_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {output.db} {output.logs} {lca_exp_name} {lca_alg_name} {lca_sep_viewpoint}"
+        "python {input.script} {lca_dir} {lca_out_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {lca_db_dir} {lca_logs_path} {lca_exp_name} {lca_alg_name} {lca_sep_viewpoint}"
+
 
 rule post:
     input:
-        db=lca_db_dir, # This establishes a dependency on LCA (LCA doesn't direclty ask for the right/left outputs so we need this)
+        pr=post_right,
+        pl=post_left,
         merged=cac_out_path,
-        script="algo/LCA_postprocessing_evaluation.py"
+        script="algo/LCA_postprocessing_updated.py"
     output:
         right=post_right_out,
         left=post_left_out
     shell:
-        "python {input.script} new {image_dir} {mid_out_path} {input.merged} {post_left} {post_right} {output.left} {output.right}"
+        "python {input.script} {input.merged} {image_dir} {input.pr} {input.pl} {post_left_out} {post_right_out}"
