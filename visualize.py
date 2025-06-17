@@ -32,8 +32,8 @@ TODO RAFACTORS:
 - Improve output coloring & formatting
 
 Example Executions:
-python3 visualization/visualize.py {video/image data json} {CA Output CSV} {Output Directory} --num_images 100 --CA_score --species --confidence --viewpoint
-python3 visualization/visualize.py {video/image data json} {CA Output CSV} {Output Directory} --video_mode --image_paths {p1} {p2} {p3} ... --CA_score --species --confidence --viewpoint
+python3 visualize.py {video/image data json} {CA Output CSV} {Output Directory} --num_images 100 --CA_score --species --confidence --viewpoint
+python3 visualize.py {video/image data json} {CA Output CSV} {Output Directory} --video_mode --image_paths {p1} {p2} {p3} ... --CA_score --species --confidence --viewpoint
 
 python3 visualize.py /fs/ess/PAS2136/ggr_data/results/GGR2020_subset/image_data.json /fs/ess/PAS2136/ggr_data/results/GGR2020_subset/ca_classifier/final_output_with_softmax_and_census.csv annot_dir --all --species --viewpoint --CA_score
 '''
@@ -140,7 +140,9 @@ else:
 images_df = pd.DataFrame(images, columns=["uri"])
 images_df["image_uuid"] = images_df["uri"].map(uri_uuid_mapping)
 
-annot_df = pd.read_csv(args.annots)
+with open(args.annots, "r") as f:
+    data = json.load(f)
+    annot_df = pd.DataFrame(data["annotations"])
 
 # Inner join because we can process this via a select w/ no returns
 df = pd.merge(images_df, annot_df, on="image_uuid", how="inner")
@@ -173,7 +175,7 @@ for uri in images:
     for _, row in select.iterrows():
         img = cv2.imread(uri)
         annot_str = format(row)
-        bbox = np.array(ast.literal_eval(row["bbox"])).astype(int)
+        bbox = np.array(row["bbox"]).astype(int)
         color = np.random.randint(0, 256, 3).tolist()
         # Bounding Box
         x1 = bbox[0]
