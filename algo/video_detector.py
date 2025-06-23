@@ -116,85 +116,6 @@ def detect_videos(video_data, model, threshold, sz):
     return annotations
 
 
-def parse_srt(srt_path):
-    """
-    Parse an SRT file and return a dict mapping:
-        srt_dict[SrtCnt] = "timestamp string"
-    For example, lines in the SRT might look like:
-
-        SrtCnt : 1, DiffTime : 33ms
-        2023-01-19 10:56:36,107,334
-
-    We'll look for `SrtCnt : X` and store the next line
-    (assuming it’s the date/time) as srt_dict[X].
-    """
-    srt_dict = {}
-    with open(srt_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    i = 0
-    while i < len(lines):
-        line = lines[i].strip()
-
-        # Look for something like "SrtCnt : 123"
-        match = re.search(r"SrtCnt\s*:\s*(\d+)", line)
-        if match:
-            srt_cnt = int(match.group(1))  # This is 1-based
-            # The very next line should have the date/time
-            if i + 1 < len(lines):
-                possible_time = lines[i + 1].strip()
-                # If it looks like a datetime, store it
-                if re.search(
-                    r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3},\d+", possible_time
-                ):
-                    srt_dict[srt_cnt] = possible_time
-            i += 2
-        else:
-            i += 1
-    return srt_dict
-
-
-def add_timestamps(video_data, annots, desired_fps):
-    """
-    Reads input_csv with columns like: frame_name, bounding_box, etc.
-    We assume frame_name is something like WD_0087_10.jpg,
-    where "10" is the "extracted frame index".
-
-    The original frame index = extracted_idx * frame_interval.
-    SRT is 1-based, so we use original_idx + 1 to look up the timestamp
-    from srt_dict.
-
-    Writes a new CSV with an extra 'timestamp' column appended.
-    """
-
-    srt_table = {}
-    fps_table = {}
-
-    for index, annot in enumerate(annots):
-        video_path = annot["video_path"]
-
-        # If the associated srt was not cached, find and cache it
-        if video_path not in srt_table.keys():
-            # Find the matching video in video_data by the video's path. It's guaranteed that there is only one match
-            data = [
-                video
-                for video in video_data["videos"]
-                if video["video path"] == video_path
-            ][0]
-            srt_table[video_path] = parse_srt(data["srt path"])
-            fps_table[video_path] = data["fps"]
-
-        # Reference the srt file and assign the timestamp
-        srt = srt_table[video_path]
-        frame_interval = round(fps_table[video_path] / desired_fps)
-        # Undo 1-indexed frames, scale by frame interval, and redo 1-index
-        original_frame_number = (annot["frame_number"] - 1) * frame_interval + 1
-        timestamp = srt[original_frame_number]
-
-        # Assign the timestamp to the annotation
-        annots[index]["timestamp"] = timestamp
-
-
 def postprocess_tracking_ids(annots):
     """
     Ensures that tracking ids for separate videos do not overlap in the same range of numbers
@@ -275,14 +196,11 @@ def main(args):
     print("Postprocessing tracking ids to avoid collisions...")
     postprocess_tracking_ids(annotations)
 
-    print("Writing timestamp data from SRT files...")
-    add_timestamps(video_data, annotations, config["video_fps"])
-
     df = pd.DataFrame(annotations)
     df_images = (
-        df[["image_uuid", "image_path"]].drop_duplicates(keep="first").reset_index(drop=True)
+        df[["image_uuid", "image_path", "time_posix", "frame_number"]].drop_duplicates(keep="first").reset_index(drop=True)
     )
-    df_images = df_images.rename(columns={"image_uuid": "uuid"})
+    df_images = df_images.rename(columns={"image_uuid": "uuid", "time_posix": "timestamp"})
 
     print("Saving annotations to {filtered_annot_csv_path}...")
     save_annotations_to_json({"images": df_images.to_dict(orient="records"), "annotations": annotations}, filtered_annot_csv_path)

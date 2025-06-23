@@ -104,7 +104,7 @@ def detect_images(image_data, model, threshold, sz):
     # OBTAIN THE SET OF UNIQUE IMAGES TO PUT IN ANNOTATIONS
     df = pd.DataFrame(annotations)
     df_images = (
-        df[["image_uuid", "image_path"]].drop_duplicates(keep="first").reset_index(drop=True)
+        df[["image_uuid", "image_path", "timestamp"]].drop_duplicates(keep="first").reset_index(drop=True)
     )
     df_images = df_images.rename(columns={"image_uuid": "uuid"})
 
