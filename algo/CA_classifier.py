@@ -299,7 +299,7 @@ def main(args):
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
     annotations = split_dataframe(final_df)
-    save_json(annotations)
+    save_json(annotations,args.out_csv_path)
 
     print(
         f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"

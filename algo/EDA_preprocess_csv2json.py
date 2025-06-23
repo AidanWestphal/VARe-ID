@@ -83,13 +83,16 @@ if __name__ == "__main__":
     df = df[df["annotations_census"] == True]
 
     # Drop the annotation_census column
-    df = df.drop("annotations_census")
+    df = df.drop("annotations_census", axis=1)
+
+    # Make individual id column
+    df["individual_id"] = 0
 
     # Reassign all viewpoints to just left/right
     df = assign_viewpoints(df, excluded_viewpoints=["upback", "upfront"])
 
     # Save data
     annotations = split_dataframe(df)
-    save_json(annotations)
+    save_json(annotations, args.eda_out)
 
     print("Data is saved to:", args.eda_out)
