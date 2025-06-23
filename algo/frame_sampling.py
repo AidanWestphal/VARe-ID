@@ -5,17 +5,7 @@ import argparse
 from collections import defaultdict
 from copy import deepcopy
 
-def load_json(file_path):
-    with open(file_path, 'r') as f:
-        return json.load(f)
-
-def save_json(data, file_path):
-    with open(file_path, 'w') as f:
-        json.dump(data, f, indent=4)
-
-def load_config(config_path):
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
 
 def group_annotations_by_tracking_id_and_subsequences(data):
     annotations = data['annotations']
@@ -171,6 +161,7 @@ def main():
 
     print("=== Stage 1 ===")
     data = load_json(in_file)
+    data = join_dataframe_dict(data)
     stage1 = frame_sampling_algorithm_combined(
         data, t_sec, frame_int, pct1,
         ca_available=ca_flag,
@@ -186,6 +177,7 @@ def main():
     filtered = filter_annotations(grouped, pct2, ca_flag)
     final_data = reconstruct_annotations(d2, filtered)
     print(f"Final annotations: {len(final_data['annotations'])}")
+    final_data = split_dataframe(final_data['annotations'])
     save_json(final_data, final_out)
     print(f"Saved final output → {final_out}")
 

@@ -1,5 +1,5 @@
 data_dir_out: "../GGR_X_TEST"
-data_dir_in: "../GGR_XSMALL_TEST"
+data_dir_in: "../GGR_SMALL_TEST"
 data_video: False
 
 image_dirname: "images"

@@ -20,18 +20,9 @@ from pathlib import Path
 import pandas as pd
 from ultralytics import YOLO
 
+from util.format_funcs import load_config, load_json, save_json, split_dataframe
+
 warnings.filterwarnings("ignore")
-
-
-def load_config(config_file_path):
-    with open(config_file_path, "r") as file:
-        config_file = yaml.safe_load(file)
-    return config_file
-
-
-def save_annotations_to_json(annotations_dict, file_path):
-    with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(annotations_dict, json_file, indent=4)
 
 
 def clone_yolo_from_github(yolo_dir, repo_url):
@@ -158,17 +149,10 @@ def postprocess_tracking_ids(annots):
 def main(args):
     config = load_config("algo/detector.yaml")
 
-    # Setting up Device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     exp_dir = Path(args.exp_dir)
     annots = Path(args.annot_dir)
-    filtered_annot_csv_path = (
-        os.path.join(annots, args.annots_filtered_csv_path)
-    )
 
-    with open(args.video_data, "r") as file:
-        video_data = json.load(file)
+    video_data = load_json(args.video_data)
 
     os.makedirs(exp_dir, exist_ok=True)
     shutil.rmtree(annots, ignore_errors=True)
@@ -197,13 +181,10 @@ def main(args):
     postprocess_tracking_ids(annotations)
 
     df = pd.DataFrame(annotations)
-    df_images = (
-        df[["image_uuid", "image_path", "time_posix", "frame_number"]].drop_duplicates(keep="first").reset_index(drop=True)
-    )
-    df_images = df_images.rename(columns={"image_uuid": "uuid", "time_posix": "timestamp"})
+    annotations = split_dataframe(df)
 
     print("Saving annotations to {filtered_annot_csv_path}...")
-    save_annotations_to_json({"images": df_images.to_dict(orient="records"), "annotations": annotations}, filtered_annot_csv_path)
+    save_json(annotations)
 
     print("Done!")
 
