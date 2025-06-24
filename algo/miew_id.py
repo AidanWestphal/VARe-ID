@@ -82,9 +82,10 @@ def get_chip(row):
     return crop_rect(img, ((xm, ym), (x2 - x1, y2 - y1), theta))[0]
 
 
-def download_model(model_url):
+def download_model(model_url, device):
     # Load model directly
     model = AutoModel.from_pretrained(model_url, trust_remote_code=True)
+    model.to(device)
     return model
 
 
@@ -250,7 +251,8 @@ if __name__ == "__main__":
     config = load_config("algo/miew_id.yaml")
 
     print(f"Downloading model {args.model_url}...")
-    model = download_model(args.model_url)
+    device = torch.device(config["device"])
+    model = download_model(args.model_url, device)
 
     preprocess = Compose(
         [
@@ -276,7 +278,6 @@ if __name__ == "__main__":
         pin_memory=False,
     )
 
-    device = torch.device(config["device"])
     embeddings = get_embeddings(dl, model, device)
 
     if "eval_file" in config.keys():
