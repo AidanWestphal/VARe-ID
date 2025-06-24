@@ -17,7 +17,7 @@ ANNOTATION_COLNAMES = [
     "detection_class",
     "annotations_census",
     "CA_score",
-    "catgory_id",
+    "category_id",
     "LCA_clustering_id"
 ]
 
