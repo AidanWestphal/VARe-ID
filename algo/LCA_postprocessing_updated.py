@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from PIL import Image
 
+from util.format_funcs import join_dataframe_dict
+
 # If running in a Jupyter Notebook, enable inline plotting.
 try:
     get_ipython().run_line_magic("matplotlib", "inline")
@@ -174,6 +176,8 @@ def make_comparable_dict_from_json_s3(ann): # s3 from script 1's stage 3 logic
 
 def update_json_with_timestamp(json_input, csv_input, json_output): # Stage 3 logic
     with open(json_input, "r") as f: data = json.load(f)
+    # UPDATE: ADDED JOINING TO DICTIONARY
+    data = join_dataframe_dict(data)
     csv_common_list = []
     with open(csv_input, "r", newline="") as f:
         reader = csv.DictReader(f)

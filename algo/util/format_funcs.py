@@ -8,7 +8,6 @@ import pandas as pd
 ANNOTATION_COLNAMES = [
     "uuid",
     "image_uuid",
-    "image_path",
     "video_path",
     "bbox",
     "viewpoint",
@@ -16,7 +15,6 @@ ANNOTATION_COLNAMES = [
     "individual_id",
     "confidence",
     "detection_class",
-    "species",
     "annotations_census",
     "CA_score",
     "catgory_id",
