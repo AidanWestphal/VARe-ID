@@ -37,6 +37,7 @@ CATEGORY_COL_RENAMES = {
 IMAGE_COLNAMES = [
     "image_uuid",
     "image_path",
+    "video_path",
     "timestamp",
     "frame_number"
 ]

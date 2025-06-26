@@ -100,6 +100,7 @@ def detect_videos(video_data, model, threshold, sz):
                             "tracking_id": (
                                 int(box.id.item()) if box.id is not None else -1
                             ),
+                            "timestamp": frame["time_posix"],
                         }
                     )
 
