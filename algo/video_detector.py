@@ -183,8 +183,9 @@ def main(args):
     df = pd.DataFrame(annotations)
     annotations = split_dataframe(df)
 
-    print("Saving annotations to {args.annots_filtered_csv_path}...")
-    save_json(annotations, args.annots_filtered_csv_path)
+    print(f"Saving annotations to {args.annots_filtered_csv_path}...")
+    filtered_annot_json_path = os.path.join(annots, args.annots_filtered_csv_path)
+    save_json(annotations, filtered_annot_json_path)
 
     print("Done!")
 
