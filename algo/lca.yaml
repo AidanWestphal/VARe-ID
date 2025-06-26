@@ -11,7 +11,7 @@ comment: Experiment comment goes here
 data:
   # images_dir <-- ADDED IN CODE
   viewpoint_list: ["left", "right"]
-  name_keys: ["individual_id"]
+  name_keys: ["tracking_id"]
   n_filter_min: 1
   n_filter_max: 10000
   # annotation_file <-- ADDED IN CODE
