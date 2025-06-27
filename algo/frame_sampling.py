@@ -4,6 +4,7 @@ import random
 import argparse
 from collections import defaultdict
 from copy import deepcopy
+import pandas as pd
 
 from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
 
@@ -177,7 +178,7 @@ def main():
     filtered = filter_annotations(grouped, pct2, ca_flag)
     final_data = reconstruct_annotations(d2, filtered)
     print(f"Final annotations: {len(final_data['annotations'])}")
-    final_data = split_dataframe(final_data['annotations'])
+    final_data = split_dataframe(pd.DataFrame(final_data['annotations']))
     save_json(final_data, final_out)
     print(f"Saved final output → {final_out}")
 
