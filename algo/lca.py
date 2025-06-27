@@ -4,7 +4,9 @@ import subprocess
 import sys
 import yaml
 
-from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+import pandas as pd
+
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
 
 
 def clone_from_github(directory, repo_url):
@@ -15,23 +17,18 @@ def clone_from_github(directory, repo_url):
     else:
         print("Repository already cloned...")
 
-
 def save_lca_results(input_dir, anno_file, output_dir, viewpoint=None):
     clustering_file = os.path.join(input_dir, "clustering.json")
     node2uuid_file = os.path.join(input_dir, "node2uuid_file.json")
 
-    data = load_json(anno_file)
-    df = join_dataframe(data)
-
-    # Optionally filter by viewpoint
-    if viewpoint is not None:
-        df = df[df['viewpoint'] == viewpoint]
+    # Load original annotation file
+    data = join_dataframe_dict(load_json(anno_file))
 
     # Load clustering results
     clusters = load_json(clustering_file)
     node2uuid = load_json(node2uuid_file)
 
-    # Map UUIDs to cluster IDs
+    # Build mapping from UUID to cluster ID
     uuid_to_cluster = {}
     for cluster_id, nodes in clusters.items():
         for node in nodes:
@@ -39,25 +36,33 @@ def save_lca_results(input_dir, anno_file, output_dir, viewpoint=None):
             if uuid:
                 uuid_to_cluster[uuid] = cluster_id
 
-    # Ensure UUID column exists
-    if 'uuid' not in df.columns:
-        df['uuid'] = df['uuid_x']
+    # Filter annotations based on viewpoint if provided
+    if viewpoint is not None:
+        filtered_annotations = [
+            ann for ann in data
+            if ann.get('viewpoint', '').strip().lower() == viewpoint.strip().lower()
+        ]
+        print(f"Filtered {len(filtered_annotations)} annotations with viewpoint='{viewpoint}' "
+            f"out of {len(data)}")
+    else:
+        filtered_annotations = data
 
-    # Assign cluster IDs
-    df['LCA_clustering_id'] = df['uuid'].map(uuid_to_cluster).where(df['uuid'].isin(uuid_to_cluster), None)
-
+    # Add LCA_clustering_id to each annotation
+    for ann in filtered_annotations:
+        ann['LCA_clustering_id'] = uuid_to_cluster.get(ann['uuid'], None)
+    
     # Modify output file name
     suffix = f"LCA_{viewpoint}" if viewpoint else "LCA"
     name, ext = os.path.splitext(os.path.basename(anno_file))
     output_filename = f"{name}_{suffix}{ext}"
     output_path = os.path.join(output_dir, output_filename)
 
-    result_dict = split_dataframe(df)
+    # Save final result with same categories/images, modified annotations
+    result_dict = split_dataframe(pd.DataFrame(filtered_annotations))
 
-    # Save result
     os.makedirs(output_dir, exist_ok=True)
     save_json(result_dict, output_path)
-
+    
 
 if __name__ == "__main__":
     print("Loading data...")
