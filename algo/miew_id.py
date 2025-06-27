@@ -18,12 +18,7 @@ from torch.utils.data import Dataset
 
 from transformers import AutoModel
 
-
-def load_json(file_path):
-    """Load JSON data from the given file."""
-    with open(file_path, "r") as file:
-        return json.load(file)
-
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 class MiewIDDataset(Dataset):
     def __init__(self, df, transforms=None):
@@ -87,15 +82,10 @@ def get_chip(row):
     return crop_rect(img, ((xm, ym), (x2 - x1, y2 - y1), theta))[0]
 
 
-def load_config(config_file_path):
-    with open(config_file_path, "r") as file:
-        config_file = yaml.safe_load(file)
-    return config_file
-
-
-def download_model(model_url):
+def download_model(model_url, device):
     # Load model directly
     model = AutoModel.from_pretrained(model_url, trust_remote_code=True)
+    model.to(device)
     return model
 
 
@@ -256,12 +246,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     data = load_json(args.in_csv_path)
-    df = pd.DataFrame(data["annotations"])
-    images = data["images"]
+    # Joining is not necessary here, but done for consistency
+    df = join_dataframe(data)
     config = load_config("algo/miew_id.yaml")
 
     print(f"Downloading model {args.model_url}...")
-    model = download_model(args.model_url)
+    device = torch.device(config["device"])
+    model = download_model(args.model_url, device)
 
     preprocess = Compose(
         [
@@ -287,7 +278,6 @@ if __name__ == "__main__":
         pin_memory=False,
     )
 
-    device = torch.device(config["device"])
     embeddings = get_embeddings(dl, model, device)
 
     if "eval_file" in config.keys():

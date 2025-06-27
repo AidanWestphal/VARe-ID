@@ -14,10 +14,10 @@ from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset
 
-# Load configuration
-with open("algo/viewpoint_classifier.yaml", "r") as file:
-    config = yaml.safe_load(file)
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
+# Load configuration
+config = load_config("algo/viewpoint_classifier.yaml")
 
 class ClassifierDataset(Dataset):
     def __init__(self, df, transforms=None, output_label=False):
@@ -63,17 +63,6 @@ class ImgClassifier(torch.nn.Module):
     def forward(self, x):
         x = self.model(x)
         return x
-
-
-def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        data = json.load(f)
-    return data
-
-
-def save_annotations_to_json(annotations_dict, file_path):
-    with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(annotations_dict, json_file, indent=4)
 
 
 def get_valid_transforms():
@@ -191,8 +180,8 @@ def main(args):
         Done!
     """
 
-    original_json = load_annotations_from_json(args.in_csv_path)
-    annots = pd.DataFrame(original_json["annotations"])
+    original_json = load_json(args.in_csv_path)
+    annots = join_dataframe(original_json)
 
     # Remove rows that are not the desired species
     filtered_annots = annots[
@@ -265,12 +254,8 @@ def main(args):
     print("Saving the results...")
     os.makedirs(viewpoint_dir, exist_ok=True)
 
-    final_json = {
-        "categories": original_json["categories"],
-        "images": original_json["images"],
-        "annotations": final_output.to_dict(orient="records"),
-    }
-    save_annotations_to_json(final_json, args.out_csv_path)
+    final_json = split_dataframe(final_output)
+    save_json(final_json, args.out_csv_path)
 
     print("Done!")
 
