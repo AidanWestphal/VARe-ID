@@ -3,13 +3,8 @@ import os
 import subprocess
 import sys
 import yaml
-from save_lca_results import save_lca_results
 
-
-def load_config(config_file_path):
-    with open(config_file_path, "r") as file:
-        config_file = yaml.safe_load(file)
-    return config_file
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def clone_from_github(directory, repo_url):
@@ -19,6 +14,49 @@ def clone_from_github(directory, repo_url):
         print("Repository cloned successfully...")
     else:
         print("Repository already cloned...")
+
+
+def save_lca_results(input_dir, anno_file, output_dir, viewpoint=None):
+    clustering_file = os.path.join(input_dir, "clustering.json")
+    node2uuid_file = os.path.join(input_dir, "node2uuid_file.json")
+
+    data = load_json(anno_file)
+    df = join_dataframe(data)
+
+    # Optionally filter by viewpoint
+    if viewpoint is not None:
+        df = df[df['viewpoint'] == viewpoint]
+
+    # Load clustering results
+    clusters = load_json(clustering_file)
+    node2uuid = load_json(node2uuid_file)
+
+    # Map UUIDs to cluster IDs
+    uuid_to_cluster = {}
+    for cluster_id, nodes in clusters.items():
+        for node in nodes:
+            uuid = node2uuid.get(str(node))
+            if uuid:
+                uuid_to_cluster[uuid] = cluster_id
+
+    # Ensure UUID column exists
+    if 'uuid' not in df.columns:
+        df['uuid'] = df['uuid_x']
+
+    # Assign cluster IDs
+    df['LCA_clustering_id'] = df['uuid'].map(uuid_to_cluster).where(df['uuid'].isin(uuid_to_cluster), None)
+
+    # Modify output file name
+    suffix = f"LCA_{viewpoint}" if viewpoint else "LCA"
+    name, ext = os.path.splitext(os.path.basename(anno_file))
+    output_filename = f"{name}_{suffix}{ext}"
+    output_path = os.path.join(output_dir, output_filename)
+
+    result_dict = split_dataframe(df)
+
+    # Save result
+    os.makedirs(output_dir, exist_ok=True)
+    save_json(result_dict, output_path)
 
 
 if __name__ == "__main__":

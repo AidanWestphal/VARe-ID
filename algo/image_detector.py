@@ -17,20 +17,9 @@ from pathlib import Path
 import pandas as pd
 from ultralytics import YOLO
 
+from util.format_funcs import load_config, load_json, load_csv, save_json, split_dataframe
+
 warnings.filterwarnings("ignore")
-
-
-def load_config(config_file_path):
-    with open(config_file_path, "r") as file:
-        config_file = yaml.safe_load(file)
-    return config_file
-
-
-def load_annotations_from_csv(csv_file_path):
-    if not os.path.exists(csv_file_path):
-        return None
-    df = pd.read_csv(csv_file_path)
-    return df
 
 
 def clone_yolo_from_github(yolo_dir, repo_url):
@@ -101,29 +90,8 @@ def detect_images(image_data, model, threshold, sz):
                 # For images, assign unique tracking ids to every image
                 tracking_id += 1
     
-    # OBTAIN THE SET OF UNIQUE IMAGES TO PUT IN ANNOTATIONS
-    df = pd.DataFrame(annotations)
-    df_images = (
-        df[["image_uuid", "image_path"]].drop_duplicates(keep="first").reset_index(drop=True)
-    )
-    df_images = df_images.rename(columns={"image_uuid": "uuid"})
-
-    annotations_dict = {"images": df_images.to_dict(orient="records"), "annotations": annotations}
     print(", done.")
-
-    return annotations_dict
-
-
-def save_annotations_to_json(annotations_dict, file_path):
-    with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(annotations_dict, json_file, indent=4)
-
-
-def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        data = json.load(f)
-
-    return pd.DataFrame(data["annotations"])
+    return annotations
 
 
 def calculate_iou(box1: list, box2: list):
@@ -247,15 +215,11 @@ def main(args):
     # Loading Configuration File ...
     config = load_config("algo/detector.yaml")
 
-    # Setting up Device
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     annotations_csv_fullpath = args.original_csv_path
     exp_dir = Path(args.exp_dir)
     annots = Path(args.annot_dir)
 
-    with open(args.image_data, "r") as file:
-        image_data = json.load(file)
+    image_data = load_json(args.image_data)
 
     os.makedirs(exp_dir, exist_ok=True)
     shutil.rmtree(annots, ignore_errors=True)
@@ -275,31 +239,35 @@ def main(args):
 
     predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size"])
 
-    pred_json_name = args.annots_csv_path
+    print("Splitting annotations...")
+    df = pd.DataFrame(predictions)
+    predictions = split_dataframe(df)
 
+    pred_json_name = args.annots_csv_path
     annot_json_path = os.path.join(annots, pred_json_name)
     print("Saving annotations to JSON:", annot_json_path)
-    save_annotations_to_json(predictions, annot_json_path)
+    save_json(predictions, annot_json_path)
 
     print("Loading ground truth annotations...")
-    base_df = load_annotations_from_csv(annotations_csv_fullpath)
+    base_df = load_csv(annotations_csv_fullpath)
 
     if base_df is not None:
-        pred_df = load_annotations_from_json(annot_json_path)
+        pred_df = df
+        base_df = pd.DataFrame(base_df)
 
         filtered_annotations = filtration(pred_df, base_df)
 
         filtered_pred_json_name = args.annots_filtered_csv_path
 
         filtered_annot_json_path = os.path.join(annots, filtered_pred_json_name)
-        save_annotations_to_json(filtered_annotations, filtered_annot_json_path)
+        save_json(filtered_annotations, filtered_annot_json_path)
     else:
         print("No ground truth annotations detected. Skipped filtering.")
         non_filtered_pred_json_name = args.annots_filtered_csv_path
 
         non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
         print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
-        save_annotations_to_json(predictions, non_filtered_annot_json_path)
+        save_json(predictions, non_filtered_annot_json_path)
 
 
 if __name__ == "__main__":

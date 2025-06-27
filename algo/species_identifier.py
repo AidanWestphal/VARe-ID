@@ -18,22 +18,7 @@ from bioclip import CustomLabelsClassifier
 warnings.filterwarnings("ignore")
 from PIL import Image
 
-
-def load_config(config_file_path):
-    with open(config_file_path, "r") as file:
-        config_file = yaml.safe_load(file)
-    return config_file
-
-
-def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        data = json.load(f)
-    return data
-
-
-def save_annotations_to_json(annotations_dict, file_path):
-    with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(annotations_dict, json_file, indent=4)
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def clone_pyBioCLIP_from_github(directory, repo_url):
@@ -117,23 +102,6 @@ def simplify_species(species_name, category_map):
             return value
     return None
 
-
-# def postprerocess_dataframe(df):
-
-#     # this is only when dectection has filter (ground truth)
-#     # category_map_true = {"zebra_grevys": 0, "zebra_plains": 1, "neither": 2}
-#     # df["species_true_simple"] = df["annot species"].apply(
-#     #     lambda x: simplify_species(x, category_map_true)
-#     # )
-
-#     category_map_pred = {"grevy's zebra": 0, "plains zebra": 1, "neither": 2}
-#     df["category_id"] = df["species"].apply(
-#         lambda x: simplify_species(x, category_map_pred)
-#     )
-
-#     return df
-
-
 def main(args):
     """
     Doctest Command:
@@ -185,33 +153,18 @@ def main(args):
 
     print("Running pyBioCLIP ...")
     labels = config["custom_labels"]
-    data = load_annotations_from_json(args.in_csv_path)
-    df = pd.DataFrame(data["annotations"])
+    data = load_json(args.in_csv_path)
+    df = join_dataframe(data)
     df = pyBioCLIP(labels, df)
     print("pyBioCLIP Completed ...")
-
-    # print("Post-Processing ...")
-    # df = postprerocess_dataframe(df)
-    # print("Post-Processing Completed ...")
 
     prediction_dir = os.path.dirname(args.out_csv_path)
     shutil.rmtree(prediction_dir, ignore_errors=True)
     os.makedirs(prediction_dir, exist_ok=True)
 
     print("Saving ALL Predictions as JSON ...")
-
-    # Get category set
-    df_categories = (
-        df[["category_id", "species"]].drop_duplicates(keep="first").reset_index(drop=True)
-    )
-    df_categories = df_categories.rename(columns={"category_id": "id"})
-    
-    annotations = {
-        "categories": df_categories.to_dict(orient="records"),
-        "images": data["images"],
-        "annotations": df.to_dict(orient="records"),
-    }
-    save_annotations_to_json(annotations,args.out_csv_path)
+    annotations = split_dataframe(df)
+    save_json(annotations,args.out_csv_path)
 
     print("Completed Successfully!")
 

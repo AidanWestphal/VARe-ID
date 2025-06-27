@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from PIL import Image
 
+from util.format_funcs import save_json, split_dataframe, join_dataframe_dict
+
 # If running in a Jupyter Notebook, enable inline plotting.
 try:
     get_ipython().run_line_magic("matplotlib", "inline")
@@ -79,8 +81,8 @@ def save_json_with_stage(data, original_filename, stage_suffix, run_identifier="
         new_filename = f"{base}_{run_identifier}_{stage_suffix}{ext}"
     else:
         new_filename = f"{base}_{stage_suffix}{ext}"
-    with open(new_filename, "w") as f:
-        json.dump(data, f, indent=4)
+    final_data = split_dataframe(pd.DataFrame(data))
+    save_json(final_data, new_filename)
     print(f"Saved file: {new_filename}")
     return new_filename
 
@@ -174,6 +176,8 @@ def make_comparable_dict_from_json_s3(ann): # s3 from script 1's stage 3 logic
 
 def update_json_with_timestamp(json_input, csv_input, json_output): # Stage 3 logic
     with open(json_input, "r") as f: data = json.load(f)
+    # UPDATE: ADDED JOINING TO DICTIONARY
+    data = join_dataframe_dict(data)
     csv_common_list = []
     with open(csv_input, "r", newline="") as f:
         reader = csv.DictReader(f)

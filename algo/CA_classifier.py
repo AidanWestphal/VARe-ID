@@ -17,6 +17,8 @@ from torchvision.transforms import functional as F
 from torchvision.models import resnet50
 from torchvision.ops import nms
 
+from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+
 
 def xywh_to_xyxy(bbox: list):
     x, y, w, h = bbox
@@ -68,23 +70,6 @@ class BinaryClassResNet50(nn.Module):
     def forward(self, x):
         x = self.resnet50(x)
         return x
-
-
-def load_config(config_path):
-    with open(config_path, "r") as file:
-        config = yaml.safe_load(file)
-    return config
-
-
-def load_annotations_from_json(json_file_path):
-    with open(json_file_path, "r") as f:
-        data = json.load(f)
-    return data
-
-
-def save_annotations_to_json(annotations_dict, file_path):
-    with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(annotations_dict, json_file, indent=4)
 
 
 def load_model(model_path, device):
@@ -143,33 +128,6 @@ def apply_nms(df, iou_threshold):
     return df.iloc[keep]
 
 
-# CLEARS ADDED COLUMNS FOR CA CLASSIFICATION THRESHOLDING
-def clear_columns(df):
-    # file_name	tracking_id	confidence	detection_class	species	bbox	viewpoint	individual_id	CA_score	annotations_census
-    df["individual_id"] = 0
-
-    columns_kept = [
-        "image_uuid",
-        "uuid",
-        "tracking_id",
-        "confidence",
-        "detection_class",
-        "species",
-        "bbox",
-        "viewpoint",
-        "individual_id",
-        "CA_score",
-        "annotations_census",
-        "category_id",
-        "frame_number",
-        "timestamp",
-        "image_path",
-        "file_name",
-    ]
-
-    return df.drop(columns=df.columns.difference(columns_kept))
-
-
 def expand_bbox_columns(df):
     # Extract bbox components into separate columns
     bbox_data = df["bbox"].apply(
@@ -221,8 +179,8 @@ def main(args):
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
 
     print("Loading and preprocessing data...")
-    data = load_annotations_from_json(args.in_csv_path)
-    df = pd.DataFrame(data["annotations"])
+    data = load_json(args.in_csv_path)
+    df = join_dataframe(data)
 
     # Expand bbox column into separate x, y, w, h columns
     df = expand_bbox_columns(df)
@@ -327,18 +285,7 @@ def main(args):
         ignore_index=True,
     )
 
-    # Drop specified columns
-    columns_to_drop = [
-        "softmax_output_0",
-        "log_AR",
-        "bbox x",
-        "bbox y",
-        "bbox w",
-        "bbox h",
-    ]
-    final_df = final_df.drop(
-        columns=[col for col in columns_to_drop if col in final_df.columns]
-    )
+    # Rename to CA_score (desired output)
     final_df = final_df.rename(columns={"softmax_output_1": "CA_score"})
 
     print(f"The length of final concatenated CSV is: {len(final_df)}\n")
@@ -351,14 +298,8 @@ def main(args):
 
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
-    final_df = clear_columns(final_df)
-
-    final_json = {
-        "categories": data["categories"],
-        "images": data["images"],
-        "annotations": final_df.to_dict(orient="records"),
-    }
-    save_annotations_to_json(final_json, args.out_csv_path)
+    annotations = split_dataframe(final_df)
+    save_json(annotations,args.out_csv_path)
 
     print(
         f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"

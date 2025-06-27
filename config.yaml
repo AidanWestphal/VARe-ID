@@ -1,6 +1,6 @@
-data_dir_out: "../GGR_X_TEST"
-data_dir_in: "../GGR_XSMALL_TEST"
-data_video: False
+data_dir_out: "/fs/ess/PAS2136/ggr_data/results/video_test_timestamp_fix"
+data_dir_in: "/fs/ess/PAS2136/ggr_data/video_data/Aidan_Experiment"
+data_video: True
 
 image_dirname: "images"
 video_dirname: "videos"

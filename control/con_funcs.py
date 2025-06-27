@@ -6,7 +6,7 @@ import json
 import os.path
 
 from control.image_funcs import add_images
-from control.video_funcs import add_videos, link_srts
+from control.video_funcs import add_videos, link_srts, update_timestamps
 from db.directory import Directory
 from db.table import ImageTable
 
@@ -139,8 +139,12 @@ def import_video_folder(dir_in, dir_out, file_out, fps=8, max_frames=2000, recur
     srt_directory = Directory(dir_in, recursive=recursive, include_file_extensions=["srt"])
     srts = srt_directory.files()
     
+    # Parse videos
     video_data = add_videos(dir_out, files, fps, max_frames)
+    # Link SRT files to videos
     link_srts(video_data, srts)
+    # Read SRTs into video frames (timestamps)
+    update_timestamps(video_data, fps)
 
     if video_data:
         with open(path_out, "w", encoding="utf-8") as json_file:
