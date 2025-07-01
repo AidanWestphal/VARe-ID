@@ -20,11 +20,11 @@ predictions_dir: "predictions"
 si_out_file_end: "_bioCLIP_predictions.json"
 
 vc_dir: "viewpoint_classifier"
-vc_model_checkpoint: "viewport_model.pth"
+vc_model_checkpoint: "plains_grevys_viewpoint_classifier_june_25_tf_efficientnet_b4_ns_9.pth"
 vc_out_file: "output_with_viewpoint.json"
 
 cac_dir: "ca_classifier"
-cac_model_checkpoint: "ia_model.pth"
+cac_model_checkpoint: "best_june_24_2025_IA_classifier_016.pth"
 cac_out_file: "final_output_with_softmax_and_census.json"
 cac_out_filtered: "filtered_final_output_with_softmax_and_census.json"
 
