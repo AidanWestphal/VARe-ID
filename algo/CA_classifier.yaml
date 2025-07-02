@@ -1,4 +1,4 @@
-device: cpu  # or cpu
+device: cuda  # or cpu
 threshold_CA: 0.35  # threshold for classification
 min_log_AR: -0.4660522261520754
 max_log_AR: 1.4348566194081924
