@@ -250,7 +250,7 @@ def pairwise_verification_interactive_deterministic(
                     x, y, w, h = ann_ref['bbox']
                     cropped = image.crop((x, y, x + w, y + h))
                     ax.imshow(cropped)
-                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nCA: {ann_ref.get('CA_score',0):.3f}")
+                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nUUID: {ann_ref.get('uuid', 'NA')}\nCA: {ann_ref.get('CA_score',0):.3f}")
                     ax.axis('off')
                 except Exception as e: ax.text(0.5,0.5,f"Err: {e}", ha='center'); ax.axis('off')
             else: ax.text(0.5,0.5,"Img N/F", ha='center'); ax.axis('off')

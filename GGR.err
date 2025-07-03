@@ -1,0 +1,199 @@
+Assuming unrestricted shared filesystem usage.
+host: c0812.ten.osc.edu
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 4
+Rules claiming more threads will be scaled down.
+Job stats:
+job                     count
+--------------------  -------
+all                         1
+ca_classifier               1
+detector_videos             1
+eda_preprocess              1
+frame_sampling              1
+import_videos               1
+lca                         1
+miew_id                     1
+post                        1
+species_identifier          1
+viewpoint_classifier        1
+total                      11
+
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 16:22:22 2025]
+localrule import_videos:
+    input: /fs/ess/PAS2136/ggr_data/video_data/Grevys_Experiment_5, import_videos.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/video_data.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/import.txt
+    jobid: 1
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/video_data.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 16:48:24 2025]
+Finished jobid: 1 (Rule: import_videos)
+1 of 11 steps (9%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 16:48:24 2025]
+localrule detector_videos:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/video_data.json, algo/video_detector.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/annots/vid_filtered_pred_annots_yolov10l.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/detector.txt
+    jobid: 2
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/annots/vid_filtered_pred_annots_yolov10l.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/video_data.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 17:10:30 2025]
+Finished jobid: 2 (Rule: detector_videos)
+2 of 11 steps (18%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 17:10:30 2025]
+localrule species_identifier:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/annots/vid_filtered_pred_annots_yolov10l.json, algo/species_identifier.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/species_identifier/predictions/vid_filtered_pred_annots_yolov10l.json_bioCLIP_predictions.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/species_identifier.txt
+    jobid: 9
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/species_identifier/predictions/vid_filtered_pred_annots_yolov10l.json_bioCLIP_predictions.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/annots/vid_filtered_pred_annots_yolov10l.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 18:15:01 2025]
+Finished jobid: 9 (Rule: species_identifier)
+3 of 11 steps (27%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 18:15:01 2025]
+localrule viewpoint_classifier:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/species_identifier/predictions/vid_filtered_pred_annots_yolov10l.json_bioCLIP_predictions.json, algo/viewpoint_classifier.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/viewpoint_classifier/output_with_viewpoint.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/viewpoint_classifier.txt
+    jobid: 8
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/viewpoint_classifier/output_with_viewpoint.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/species_identifier/predictions/vid_filtered_pred_annots_yolov10l.json_bioCLIP_predictions.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 19:01:40 2025]
+Finished jobid: 8 (Rule: viewpoint_classifier)
+4 of 11 steps (36%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 19:01:40 2025]
+localrule ca_classifier:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/viewpoint_classifier/output_with_viewpoint.json, algo/CA_classifier.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/ca_classifier.txt
+    jobid: 7
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/viewpoint_classifier/output_with_viewpoint.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 19:20:39 2025]
+Finished jobid: 7 (Rule: ca_classifier)
+5 of 11 steps (45%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 19:20:39 2025]
+localrule eda_preprocess:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json, algo/EDA_preprocess_csv2json.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/filtered_final_output_with_softmax_and_census.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/eda_preprocess.txt
+    jobid: 6
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/filtered_final_output_with_softmax_and_census.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 19:20:40 2025]
+Finished jobid: 6 (Rule: eda_preprocess)
+6 of 11 steps (55%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 19:20:40 2025]
+localrule frame_sampling:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/filtered_final_output_with_softmax_and_census.json, algo/frame_sampling.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/stage1_fs_output.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/final_fs_output.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/frame_sampling.txt
+    jobid: 5
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/final_fs_output.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/filtered_final_output_with_softmax_and_census.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 19:20:40 2025]
+Finished jobid: 5 (Rule: frame_sampling)
+7 of 11 steps (64%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 19:20:40 2025]
+localrule miew_id:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/final_fs_output.json, algo/miew_id.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/miew_id/miewid_output.pickle
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/miew_id.txt
+    jobid: 10
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/miew_id/miewid_output.pickle; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/final_fs_output.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 19:21:21 2025]
+Finished jobid: 10 (Rule: miew_id)
+8 of 11 steps (73%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 19:21:21 2025]
+localrule lca:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/final_fs_output.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/miew_id/miewid_output.pickle, algo/lca.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/lca.txt
+    jobid: 4
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/frame_sampling/final_fs_output.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/miew_id/miewid_output.pickle
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+[Wed Jul  2 19:21:26 2025]
+Finished jobid: 4 (Rule: lca)
+9 of 11 steps (82%) done
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jul  2 19:21:26 2025]
+localrule post:
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json, algo/LCA_postprocessing_updated.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/post.txt
+    jobid: 3
+    reason: Missing output files: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json; Input files updated by another job: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json
+    resources: tmpdir=/tmp/slurmtmp.1893294
+
+RuleException:
+CalledProcessError in file "/users/PAS2136/upadha2/GGR/snakefile.smk", line 272:
+Command 'set -euo pipefail;  python algo/LCA_postprocessing_updated.py /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/images /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json &> /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/post.txt' returned non-zero exit status 1.
+[Wed Jul  2 19:21:41 2025]
+Error in rule post:
+    message: None
+    jobid: 3
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json, algo/LCA_postprocessing_updated.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/post.txt (check log file(s) for error details)
+    shell:
+        python algo/LCA_postprocessing_updated.py /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/images /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json &> /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/post.txt
+        (command exited with non-zero exit code)
+Removing output files of failed job post since they might be corrupted:
+/fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look below for error messages
+[Wed Jul  2 19:21:41 2025]
+Error in rule post:
+    message: None
+    jobid: 3
+    input: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json, algo/LCA_postprocessing_updated.py
+    output: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json, /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json
+    log: /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/post.txt (check log file(s) for error details)
+    shell:
+        python algo/LCA_postprocessing_updated.py /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/ca_classifier/final_output_with_softmax_and_census.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/images /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_left.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/lca_output/final_fs_output_LCA_right.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_left_LCA.json /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/output/anntations_right_LCA.json &> /fs/ess/PAS2136/ggr_data/results/Grevys_Experiment_5/logs/post.txt
+        (command exited with non-zero exit code)
+Complete log(s): /users/PAS2136/upadha2/GGR/.snakemake/log/2025-07-02T162222.024907.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.
