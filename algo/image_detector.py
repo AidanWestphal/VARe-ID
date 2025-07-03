@@ -16,8 +16,9 @@ from pathlib import Path
 
 import pandas as pd
 from ultralytics import YOLO
+from PIL import Image
 
-from util.format_funcs import load_config, load_json, load_csv, save_json, split_dataframe
+from util.format_funcs import load_config, load_json, load_dataframe, save_json, split_dataframe
 
 warnings.filterwarnings("ignore")
 
@@ -89,6 +90,23 @@ def detect_images(image_data, model, threshold, sz):
 
                 # For images, assign unique tracking ids to every image
                 tracking_id += 1
+            # if len(result.boxes) == 0:
+            #     print(image)
+            #     img = Image.open(image["uri_original"])
+
+            #     # ADD THE ANNOTATION TO THE LIST OF ANNOTS
+            #     annotations.append(
+            #         {
+            #             "annot_uuid": str(uuid.uuid4()),
+            #             "image_uuid": image["uuid"],
+            #             "bbox": [0, 0, img.size[0], img.size[1]],
+            #             "confidence": 0,
+            #             "detection_class": 0,
+            #             "tracking_id": tracking_id,
+            #             "timestamp": image["time_posix"],
+            #             "image_path": image["uri_original"],
+            #         }
+            #     )
     
     print(", done.")
     return annotations
@@ -123,7 +141,10 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
         pred_bbox = [x0, y0, x0 + w, y0 + h]
 
         image_uuid = row["image_uuid"]
-        image_fname = row["image_fname"]
+        if "image_path" in row.keys():
+            image_fname = row["image_path"]
+        else:
+            image_fname = row["image_fname"]
 
         image_df = original_df[original_df["image_uuid"] == row["image_uuid"]]
 
@@ -188,6 +209,53 @@ def filtration(predicted_df, original_df, iou_thresh=0.50):
     filtered_annotations_dict = {"annotations": filtered_annotations}
     return filtered_annotations_dict
 
+def compare(predicted_df, original_df):
+    pred_df = predicted_df
+
+    compared_annotations = []
+
+    for index, row in pred_df.iterrows():
+
+        x0, y0, w, h = row["bbox"]
+        pred_bbox = [x0, y0, x0 + w, y0 + h]
+
+        image_uuid = row["image_uuid"]
+        if "image_path" in row.keys():
+            image_fname = row["image_path"]
+        else:
+            image_fname = row["image_fname"]
+
+        image_df = original_df[original_df["image_uuid"] == row["image_uuid"]]
+
+        print(f"Comparing annotations: ({index + 1}/{len(pred_df)})", end="")
+        if index < len(pred_df) - 1:
+            print("\r", end="")
+
+        max_iou = -1
+        for _, org_row in image_df.iterrows():
+            org_bbox_x0 = org_row["bbox"][0]
+            org_bbox_y0 = org_row["bbox"][1]
+            org_bbox_x1 = org_row["bbox"][2] + org_bbox_x0
+            org_bbox_y1 = org_row["bbox"][3] + org_bbox_y0
+
+            org_bbox = [org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1]
+            iou = calculate_iou(pred_bbox, org_bbox)
+            if iou >= max_iou:
+                max_iou = iou
+
+        
+        annotation = row.to_dict()
+        annotation["gt_iou"] = max_iou
+        compared_annotations.append(annotation)
+
+    
+
+    print(
+        f", done.\nCompared annotations: ({len(compared_annotations)}/{len(pred_df)} total annotations)"
+    )
+    compared_annotations_dict = {"annotations": compared_annotations}
+    return compared_annotations_dict
+
 
 def main(args):
     """
@@ -249,18 +317,21 @@ def main(args):
     save_json(predictions, annot_json_path)
 
     print("Loading ground truth annotations...")
-    base_df = load_csv(annotations_csv_fullpath)
+    base_df = load_dataframe(annotations_csv_fullpath)
 
     if base_df is not None:
         pred_df = df
         base_df = pd.DataFrame(base_df)
 
-        filtered_annotations = filtration(pred_df, base_df)
+        compared_annotations = compare(pred_df, base_df)
+        # print(predictions.keys())
+        compared_dict = predictions.copy()
+        compared_dict["annotations"] = compared_annotations["annotations"]
 
-        filtered_pred_json_name = args.annots_filtered_csv_path
+        compared_pred_json_name = args.annots_filtered_csv_path
 
-        filtered_annot_json_path = os.path.join(annots, filtered_pred_json_name)
-        save_json(filtered_annotations, filtered_annot_json_path)
+        compared_annot_json_path = os.path.join(annots, compared_pred_json_name)
+        save_json(compared_dict, compared_annot_json_path)
     else:
         print("No ground truth annotations detected. Skipped filtering.")
         non_filtered_pred_json_name = args.annots_filtered_csv_path
