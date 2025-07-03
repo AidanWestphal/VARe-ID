@@ -25,3 +25,5 @@ UI/run_gui.sh
 config_*.yaml
 
 .ipynb_checkpoints/
+post_run.ipynb
+post_run.ipynb
