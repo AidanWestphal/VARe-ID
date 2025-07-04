@@ -39,13 +39,13 @@ def save_lca_results(input_dir, anno_file, output_dir, viewpoint=None):
     # Filter annotations based on viewpoint if provided
     if viewpoint is not None:
         filtered_annotations = [
-            ann for ann in data
+            ann for ann in data['annotations']
             if ann.get('viewpoint', '').strip().lower() == viewpoint.strip().lower()
         ]
         print(f"Filtered {len(filtered_annotations)} annotations with viewpoint='{viewpoint}' "
             f"out of {len(data)}")
     else:
-        filtered_annotations = data
+        filtered_annotations = data['annotations']
 
     # Add LCA_clustering_id to each annotation
     for ann in filtered_annotations:

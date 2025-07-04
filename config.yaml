@@ -2,39 +2,50 @@ data_dir_out: "/fs/ess/PAS2136/ggr_data/results/video_test_timestamp_fix"
 data_dir_in: "/fs/ess/PAS2136/ggr_data/video_data/Aidan_Experiment"
 data_video: True
 
+log_dir: "logs"
+
 image_dirname: "images"
 video_dirname: "videos"
 annot_dirname: "annots"
 model_dirname: "PLACE_MODELS_HERE"
 image_out_file: "image_data.json"
 video_out_file: "video_data.json"
+import_logfile: "import.txt"
 
 dt_dir: "detector"
 ground_truth_csv: "annotations.csv"
 model_version: "yolov10l"
 annots_filename: "pred_annots_"
 annots_filtered_filename: "filtered_pred_annots_"
+dt_logfile: "detector.txt"
 
 si_dir: "species_identifier"
 predictions_dir: "predictions"
 si_out_file_end: "_bioCLIP_predictions.json"
+si_logfile: "species_identifier.txt"
 
 vc_dir: "viewpoint_classifier"
-vc_model_checkpoint: "viewport_model.pth"
+vc_model_checkpoint: "plains_grevys_viewpoint_classifier_june_25_tf_efficientnet_b4_ns_9.pth"
 vc_out_file: "output_with_viewpoint.json"
+vc_logfile: "viewpoint_classifier.txt"
 
 cac_dir: "ca_classifier"
-cac_model_checkpoint: "ia_model.pth"
+cac_model_checkpoint: "best_june_24_2025_IA_classifier_016.pth"
 cac_out_file: "final_output_with_softmax_and_census.json"
 cac_out_filtered: "filtered_final_output_with_softmax_and_census.json"
+cac_logfile: "ca_classifier.txt"
+
+eda_logfile: "eda_preprocess.txt"
 
 fs_dir: "frame_sampling"
 fs_out_stage1_json_file: "stage1_fs_output.json"
 fs_out_final_json_file: "final_fs_output.json"
+fs_logfile: "frame_sampling.txt"
 
 mid_dir: "miew_id"
 mid_model_url: "conservationxlabs/miewid-msv3"
 mid_out_file: "miewid_output.pickle"
+mid_logfile: "miew_id.txt"
 
 lca_dir: "lca"
 lca_out_dir: "lca_output"
@@ -43,9 +54,11 @@ lca_log_file: "lca_logs.log"
 lca_verifiers_probs: "verifiers_probs.json"
 lca_separate_viewpoints: True
 use_alternative_clustering: False
+lca_logfile: "lca.txt"
 
 post_dir: "output"
 post_lca_left_end: "_LCA_left.json"
 post_lca_left_out: "anntations_left_LCA.json"
 post_lca_right_end: "_LCA_right.json"
 post_lca_right_out: "anntations_right_LCA.json"
+post_logfile: "post.txt"

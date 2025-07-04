@@ -11,7 +11,7 @@ weight_decay: 1e-6
 num_workers: 1
 accum_iter: 2
 verbose_step: 1
-device: "cpu"
+device: "cuda"
 label_cols: ["back", "front", "left", "right", "up"]
 threshold: 0.5
 filtered_classes: ["grevy's zebra", "plains zebra"]
