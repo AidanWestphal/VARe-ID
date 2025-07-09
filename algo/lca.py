@@ -2,6 +2,7 @@ import argparse
 import os
 import subprocess
 import sys
+import shutil
 import yaml
 
 import pandas as pd
@@ -15,7 +16,11 @@ def clone_from_github(directory, repo_url):
         subprocess.run(["git", "clone", repo_url, directory], check=True)
         print("Repository cloned successfully...")
     else:
-        print("Repository already cloned...")
+        print("Removing dir...")
+        shutil.rmtree(directory)
+        print(f"Cloning repository {repo_url} into {directory}...")
+        subprocess.run(["git", "clone", repo_url, directory], check=True)
+        print("Repository cloned successfully...")
 
 def save_lca_results(input_dir, anno_file, output_path, viewpoint=None, uuid_key="annot_uuid"):
     clustering_file = os.path.join(input_dir, "clustering.json")
@@ -88,8 +93,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    config = load_config(os.path.join(script_dir, "lca.yaml"))
+    config = load_config("algo/lca.yaml")
 
     # Save to lca dir inside lca
     lca_github_loc = os.path.join(args.lca_dir, "lca_code")
