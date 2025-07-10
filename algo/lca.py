@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    config = load_config("algo/lca.yaml")
+    config = load_config("algo/lca_drone.yaml")
 
     # Save to lca dir inside lca
     lca_github_loc = os.path.join(args.lca_dir, "lca_code")
