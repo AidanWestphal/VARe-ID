@@ -269,4 +269,4 @@ rule post:
     log:
         post_logs
     shell:
-        "python {input.script} {input.merged} {image_dir} {input.pr} {input.pl} {post_left_out} {post_right_out} &> {log}"
+        "python {input.script} {input.merged} {image_dir} {input.pl} {input.pr} {post_left_out} {post_right_out} &> {log}"
