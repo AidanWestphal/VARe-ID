@@ -126,7 +126,7 @@ if __name__ == "__main__":
         print('run hdbscan')
         subprocess.run(["python3", f"{lca_github_loc}/lca/run_hdbscan.py", "--config", config_loc])
     else:
-        subprocess.run(["python3", f"{lca_github_loc}/lca/run_drone_new.py", "--config", config_loc])
+        subprocess.run(["python3", f"{lca_github_loc}/lca/run.py", "--config", config_loc])
 
 
     output_path = args.output_path
