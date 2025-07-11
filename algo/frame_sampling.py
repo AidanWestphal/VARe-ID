@@ -5,6 +5,7 @@ import argparse
 from collections import defaultdict
 from copy import deepcopy
 import pandas as pd
+import shutil
 
 from util.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
 
@@ -93,6 +94,36 @@ def group_annotations_by_tracking_id_and_viewpoint(data, viewpoint_available):
         groups[vp][ann['tracking_id']].append(ann)
     return groups
 
+def select_highest_score_per_track(data, ca_available, viewpoint_available):
+    """
+    Selects only the single best annotation for each tracking ID per viewpoint.
+    - If ca_available, 'best' is the one with the highest CA_score.
+    - Otherwise, 'best' is chosen randomly.
+    """
+    data = deepcopy(data)
+    print(f"Initial annotations: {len(data['annotations'])}")
+    
+    grouped_annotations = group_annotations_by_tracking_id_and_viewpoint(data, viewpoint_available)
+    final_annotations = []
+
+    for vp, by_tid in grouped_annotations.items():
+        for tid, anns in by_tid.items():
+            if not anns:
+                continue
+            
+            if ca_available:
+                best_ann = max(anns, key=lambda x: x.get('CA_score', 0))
+                score = best_ann.get('CA_score', 0)
+                print(f"  VP={vp}, TID={tid}: Selected annotation with highest CA score ({score:.3f}) from {len(anns)} candidates.")
+            else:
+                best_ann = random.choice(anns)
+                print(f"  VP={vp}, TID={tid}: Randomly selected 1 annotation from {len(anns)} candidates (CA score not used).")
+            
+            final_annotations.append(best_ann)
+    
+    data['annotations'] = final_annotations
+    return data
+
 def filter_annotations(annotations_by_viewpoint, threshold_pct, ca_available):
     for vp, by_tid in annotations_by_viewpoint.items():
         for tid, anns in by_tid.items():
@@ -121,10 +152,10 @@ def reconstruct_annotations(data, annotations_by_viewpoint):
 
 def main():
 
-# input_file: "ca_filtered_merged_tracking_ids_dji_0087_0088_no_unwanted_viewpoints_pre_miewid.json"  # <--- Specify input file path here
-# final_output: "out2.json" # <--- Specify final output file path here
-# step1_output: "out1.json" # <--- Uncomment and set path to save Step 1 output (for debugging)
-# "python {input.script} {input.file} {output.json_stage1} {output.json_final}"
+    # input_file: "ca_filtered_merged_tracking_ids_dji_0087_0088_no_unwanted_viewpoints_pre_miewid.json"
+    # final_output: "out2.json"
+    # step1_output: "out1.json"
+    # "python {input.script} {input.file} {output.json_stage1} {output.json_final}"
 
     parser = argparse.ArgumentParser(
         description="Run frame sampling algorithm on ca classifier output"
@@ -137,7 +168,7 @@ def main():
     parser.add_argument(
         "json_stage1",
         type=str,
-        help="The full path to the output json file for stage 1",
+        help="The full path to the output json file for stage 1 (only used in 'many' mode)",
     )
     parser.add_argument(
         "json_final", type=str, help="The full path to the output json file for final"
@@ -150,37 +181,54 @@ def main():
     step1_file = args.json_stage1
     final_out = args.json_final
 
-    t_sec = cfg['thresholds']['t_seconds']
-    frame_int = cfg['thresholds']['frame_interval']
-    pct1 = cfg['thresholds']['threshold_percentage_stage1']
-    pct2 = cfg['thresholds']['threshold_percentage_stage2']
-
+    # Get common settings
     ca_flag = cfg['settings'].get('use_ca_score', True)
     vp_flag = cfg['settings'].get('use_viewpoint', True)
+    selection_mode = cfg['settings'].get('selection_mode', 'many') # Default to 'many'
 
     random.seed(123456789)
-
-    print("=== Stage 1 ===")
     data = load_json(in_file)
     data = join_dataframe_dict(data)
-    stage1 = frame_sampling_algorithm_combined(
-        data, t_sec, frame_int, pct1,
-        ca_available=ca_flag,
-        viewpoint_available=vp_flag
-    )
-    save_json(stage1, step1_file)
-    print(f"Saved Stage1 output → {step1_file}")
 
-    print("\n=== Stage 2 ===")
-    d2 = load_json(step1_file)
-    print(f"Loading {len(d2['annotations'])} annotations for Stage 2")
-    grouped = group_annotations_by_tracking_id_and_viewpoint(d2, vp_flag)
-    filtered = filter_annotations(grouped, pct2, ca_flag)
-    final_data = reconstruct_annotations(d2, filtered)
-    print(f"Final annotations: {len(final_data['annotations'])}")
-    final_data = split_dataframe(pd.DataFrame(final_data['annotations']))
-    save_json(final_data, final_out)
-    print(f"Saved final output → {final_out}")
+    if selection_mode == 'one':
+        print("\n=== Running the Single Annotation Selection Mode ===\n")
+        final_data = select_highest_score_per_track(data, ca_flag, vp_flag)
+        print(f"\nFinal annotations: {len(final_data['annotations'])}")
+        final_data = split_dataframe(pd.DataFrame(final_data['annotations']))
+        save_json(final_data, final_out)
+        print(f"Saved final output → {final_out}")
+        # --- 2. ADD THIS LINE ---
+        shutil.copyfile(final_out, step1_file)
+        print(f"Created copy for Snakemake → {step1_file}")
+
+    elif selection_mode == 'many':
+        print("\n=== Running the Many-Frame Sampling Mode ===\n")
+        t_sec = cfg['thresholds']['t_seconds']
+        frame_int = cfg['thresholds']['frame_interval']
+        pct1 = cfg['thresholds']['threshold_percentage_stage1']
+        pct2 = cfg['thresholds']['threshold_percentage_stage2']
+
+        print("=== Stage 1 ===")
+        stage1 = frame_sampling_algorithm_combined(
+            data, t_sec, frame_int, pct1,
+            ca_available=ca_flag,
+            viewpoint_available=vp_flag
+        )
+        save_json(stage1, step1_file)
+        print(f"Saved Stage1 output → {step1_file}")
+
+        print("\n=== Stage 2 ===")
+        d2 = load_json(step1_file)
+        print(f"Loading {len(d2['annotations'])} annotations for Stage 2")
+        grouped = group_annotations_by_tracking_id_and_viewpoint(d2, vp_flag)
+        filtered = filter_annotations(grouped, pct2, ca_flag)
+        final_data = reconstruct_annotations(d2, filtered)
+        print(f"Final annotations: {len(final_data['annotations'])}")
+        final_data = split_dataframe(pd.DataFrame(final_data['annotations']))
+        save_json(final_data, final_out)
+        print(f"Saved final output → {final_out}")
+    else:
+        raise ValueError(f"Unknown selection_mode: '{selection_mode}'. Please use 'one' or 'many'.")
 
 if __name__ == "__main__":
     main()

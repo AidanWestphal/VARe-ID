@@ -5,21 +5,23 @@ thresholds:
   t_seconds: 15 # Minimum time gap (in seconds) between selected annotations after all time suppression steps.
   frame_interval: 8 # Number of frames per second in the source video (used to convert t_seconds to t_frames).
 
-  threshold_percentage_stage1: 0.7 # Step 1 Subsequence Processing:
+  threshold_percentage_stage1: 0.7 # Step 1 Subsequence Processing (only for 'many' mode):
                                    # - If use_ca_score=true: Local max CA must be >= this percentage * subsequence_max_ca to be selected as a candidate.
                                    # - If use_ca_score=false: Randomly sample this percentage of frames from the subsequence as candidates (at least 1).
 
-  threshold_percentage_stage2: 0.9 # Step 2 Final Filtering (applied AFTER time suppression):
+  threshold_percentage_stage2: 0.9 # Step 2 Final Filtering (only for 'many' mode, applied AFTER time suppression):
                                    # - If use_ca_score=true: Final CA must be >= this percentage * track_max_ca.
                                    # - If use_ca_score=false: Randomly sample this percentage of annotations remaining for the track (at least 1).
                                    # - Set to 0 or less to disable this final filtering step entirely.
 
 settings:
+  selection_mode: 'many' # Options: 'one' or 'many'.
+                         # - 'one': Selects only the single highest CA score annotation per track ID per viewpoint. All other settings are ignored.
+                         # - 'many': Runs the full multi-stage sampling algorithm using the thresholds defined above.
+
   use_ca_score: true # Master switch for logic type:
-                     # - true: Use CA score for candidate selection (absolute max + local max > threshold1),
-                     #         time conflict resolution (prefer higher CA), and optional final filtering (threshold2 vs track max CA).
-                     # - false: Use random proportion sampling for candidate selection (based on threshold1),
-                     #          random choice for time conflict resolution, and optional final random proportion filtering (based on threshold2).
+                     # - true: Use CA score for candidate selection.
+                     # - false: Use random sampling for candidate selection.
 
   use_viewpoint: true # Process tracks separately for each distinct viewpoint found in annotations.
                       # If false, all annotations are treated as a single viewpoint ("unknown").
