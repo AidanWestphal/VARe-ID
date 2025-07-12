@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/frame_sampling/frame_sampling.py {config["ia_filtered_out_path"]} {config["fs_stage1_out_path"]} {config["fs_out_path"]} &> {config["fs_logs"]}",
+            f"python -m frame_sampling {config["ia_filtered_out_path"]} {config["fs_stage1_out_path"]} {config["fs_out_path"]} &> {config["fs_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

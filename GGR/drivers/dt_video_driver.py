@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/detection/video_detector.py {config["video_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]} &> {config["dt_logs"]}",
+            f"python -m video_detector {config["video_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]} &> {config["dt_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

@@ -1,10 +1,10 @@
 import argparse
 import os.path
 
-from algo.util.constants import GREVYS_ZEBRA
-from db.table import ImageTable
+from GGR.util.constants import GREVYS_ZEBRA
+from GGR.util.db.table import ImageTable
 
-from control.ggr_funcs import extrapolate_ggr_gps
+from GGR.util.ggr_funcs import extrapolate_ggr_gps
 
 if __name__ == "__main__":
     # Parse command line arguments

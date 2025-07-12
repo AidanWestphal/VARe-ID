@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/import/import_videos.py {config["data_dir_in"]} {config["video_out_path"]} &> {config["import_logs"]}",
+            f"python -m import_videos {config["data_dir_in"]} {config["video_out_path"]} &> {config["import_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

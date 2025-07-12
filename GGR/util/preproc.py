@@ -7,8 +7,8 @@ import uuid
 from os.path import basename, splitext
 from PIL import Image
 
-import algo.util.constants as const
-from algo.util.utils import parse_exif
+import GGR.util.constants as const
+from GGR.util.utils import parse_exif
 
 EXIF_NORMAL = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_000]
 EXIF_UNDEFINED = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_UNDEFINED]

@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/viewpoint_classification/viewpoint_classifier.py {config["si_out_path"]} {config["vp_model_path"]} {config["vp_out_path"]} &> {config["vp_logs"]}",
+            f"python -m viewpoint_classifier {config["si_out_path"]} {config["vp_model_path"]} {config["vp_out_path"]} &> {config["vp_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

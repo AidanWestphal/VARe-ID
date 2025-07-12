@@ -18,7 +18,7 @@ from bioclip import CustomLabelsClassifier
 warnings.filterwarnings("ignore")
 from PIL import Image
 
-from algo.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def clone_pyBioCLIP_from_github(directory, repo_url):

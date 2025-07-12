@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/ia_classification/IA_classifier.py {config["vp_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]} &> {config["ia_logs"]}",
+            f"python -m IA_classifier {config["vp_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]} &> {config["ia_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

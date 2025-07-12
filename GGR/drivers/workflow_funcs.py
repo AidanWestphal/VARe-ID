@@ -1,6 +1,6 @@
 import os
 
-from algo.util.io.format_funcs import load_config
+from GGR.util.io.format_funcs import load_config
 
 def generate_targets(config):
     '''
@@ -96,7 +96,7 @@ def parse_config(filepath):
 
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
-    lca_verifier_probs_path = os.path.join(model_dir, config["lca_verifier_probs"])
+    lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifier_probs"])
     lca_logs = os.path.join(log_dir, config["lca_logfile"])
 
     # In video mode, post expects specifically left and right viewpoints. Build the paths to these files here:
@@ -142,7 +142,7 @@ def parse_config(filepath):
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs
     config["lca_dir"] = lca_dir
-    config["lca_verifier_probs_path"] = lca_verifier_probs_path
+    config["lca_verifiers_probs_path"] = lca_verifiers_probs_path
     config["post_left_in_path"] = post_left_in_path
     config["post_right_in_path"] = post_right_in_path
     config["lca_logs"] = lca_logs

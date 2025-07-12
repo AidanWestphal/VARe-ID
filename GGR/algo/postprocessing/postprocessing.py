@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from PIL import Image
 
-from algo.util.io.format_funcs import load_config, save_json, split_dataframe, join_dataframe_dict
+from GGR.util.io.format_funcs import load_config, save_json, split_dataframe, join_dataframe_dict
 
 # If running in a Jupyter Notebook, enable inline plotting.
 try:

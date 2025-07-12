@@ -17,7 +17,7 @@ from torchvision.transforms import functional as F
 from torchvision.models import resnet50
 from torchvision.ops import nms
 
-from algo.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def xywh_to_xyxy(bbox: list):

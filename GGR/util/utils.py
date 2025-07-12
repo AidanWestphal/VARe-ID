@@ -3,10 +3,10 @@ import os
 import shutil
 import six
 import numpy as np
-from os.path import exists, expanduser, join, normpath, realpath
+from os.path import exists, expanduser, join, normpath, realpath, abspath, dirname
 from PIL import Image, ExifTags
 
-from algo.util.constants import (
+from GGR.util.constants import (
     ORIENTATION_DICT,
     ORIENTATION_000,
     ORIENTATION_090,
@@ -14,6 +14,15 @@ from algo.util.constants import (
     ORIENTATION_270,
 )
 
+def get_abs_path():
+    """
+    Gets the absolute path of the calling script.
+
+    Returns:
+        path (str): string path to the directory the calling script was located in.
+    """
+
+    return dirname(abspath(__file__))
 
 def parse_exif(pil_img):
     """

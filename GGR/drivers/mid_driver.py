@@ -7,7 +7,7 @@ def main(args):
     input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
     try:
         subprocess.run(
-            f"python ../algo/miew_id/miew_id.py {input} {config["mid_model"]} {config["mid_out_path"]} &> {config["mid_logs"]}",
+            f"python -m miew_id {input} {config["mid_model"]} {config["mid_out_path"]} &> {config["mid_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

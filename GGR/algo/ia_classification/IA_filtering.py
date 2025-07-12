@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from algo.util.io.format_funcs import load_json, save_json, split_dataframe, join_dataframe
+from GGR.util.io.format_funcs import load_json, save_json, split_dataframe, join_dataframe
 
 warnings.filterwarnings("ignore")
 

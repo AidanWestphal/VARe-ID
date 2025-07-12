@@ -1,7 +1,7 @@
 import argparse
 import yaml
 
-from control.con_funcs import import_video_folder
+from GGR.util.io.con_funcs import import_video_folder
 
 def load_config(config_file_path):
     with open(config_file_path, "r") as file:

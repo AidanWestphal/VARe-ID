@@ -7,7 +7,7 @@ from copy import deepcopy
 import pandas as pd
 import shutil
 
-from algo.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
+from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
 
 def group_annotations_by_tracking_id_and_subsequences(data):
     annotations = data['annotations']

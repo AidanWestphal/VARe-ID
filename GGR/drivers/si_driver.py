@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/species_identification/species_identifier.py {config["dt_out_path"]} {config["si_dir"]} {config["si_out_path"]} &> {config["si_logs"]}",
+            f"python -m species_identifier {config["dt_out_path"]} {config["si_dir"]} {config["si_out_path"]} &> {config["si_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

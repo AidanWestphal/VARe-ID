@@ -6,7 +6,7 @@ def main(args):
 
     try:
         subprocess.run(
-            f"python ../algo/detection/image_detector.py {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_gt_path"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]} &> {config["dt_logs"]}",
+            f"python -m image_detector {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_gt_path"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]} &> {config["dt_logs"]}",
             shell=True, text=True, check=True
         )
     except Exception as e:

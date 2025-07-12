@@ -3,11 +3,11 @@ from os.path import exists, isabs, join
 from pathlib import Path
 from PIL import Image
 
-import algo.util.constants as const
-import algo.util.utils as ut
-from algo.util import preproc
-from control.ggr_funcs import extrapolate_ggr_gps
-import control.ggr_funcs as ggr
+import GGR.util.constants as const
+import GGR.util.utils as ut
+from GGR.util import preproc
+from GGR.util.ggr_funcs import extrapolate_ggr_gps
+import GGR.util.ggr_funcs as ggr
 
 EXIF_NORMAL = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_000]
 EXIF_UNDEFINED = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_UNDEFINED]

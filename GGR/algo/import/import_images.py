@@ -1,6 +1,6 @@
 import argparse
 
-from control.con_funcs import import_image_folder
+from GGR.util.io.con_funcs import import_image_folder
 
 
 if __name__ == "__main__":

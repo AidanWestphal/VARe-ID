@@ -3,9 +3,9 @@ from os.path import isabs, join
 from PIL import Image
 from shapely.geometry import Point, Polygon
 
-import algo.util.utils as ut
-from algo.util.constants import VALID_COLNAMES
-from algo.util.preproc import get_exif
+import GGR.util.utils as ut
+from GGR.util.constants import VALID_COLNAMES
+from GGR.util.preproc import get_exif
 
 
 class ImageTable:

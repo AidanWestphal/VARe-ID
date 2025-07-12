@@ -1,6 +1,6 @@
 import os
 import subprocess
-from algo.util.io.format_funcs import load_config
+from GGR.util.io.format_funcs import load_config
 
 config = load_config("config.yaml")
 

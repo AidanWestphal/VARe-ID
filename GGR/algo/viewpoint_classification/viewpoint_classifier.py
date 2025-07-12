@@ -14,7 +14,7 @@ from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset
 
-from algo.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 # Load configuration
 config = load_config("algo/viewpoint_classifier.yaml")

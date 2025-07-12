@@ -5,8 +5,8 @@ developer convenience functions
 import json
 import os.path
 
-from control.image_funcs import add_images
-from control.video_funcs import add_videos, link_srts, update_timestamps
+from GGR.util.io.image_funcs import add_images
+from GGR.util.io.image_funcs import add_videos, link_srts, update_timestamps
 from db.directory import Directory
 from db.table import ImageTable
 

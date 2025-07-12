@@ -20,7 +20,7 @@ from pathlib import Path
 import pandas as pd
 from ultralytics import YOLO
 
-from algo.util.io.format_funcs import load_config, load_json, save_json, split_dataframe
+from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe
 
 warnings.filterwarnings("ignore")
 

@@ -4,8 +4,8 @@ import shutil
 import cv2
 from pathlib import Path
 import os
-from algo.util.preproc import parse_imageinfo
-import algo.util.constants as const
+from GGR.util.preproc import parse_imageinfo
+import GGR.util.constants as const
 
 
 EXIF_NORMAL = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_000]
