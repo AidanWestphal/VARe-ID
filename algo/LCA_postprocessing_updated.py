@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from PIL import Image
 
-from util.format_funcs import save_json, split_dataframe, join_dataframe_dict
+from util.format_funcs import load_config, save_json, split_dataframe, join_dataframe_dict
 
 # If running in a Jupyter Notebook, enable inline plotting.
 try:
@@ -81,7 +81,7 @@ def save_json_with_stage(data, original_filename, stage_suffix, run_identifier="
         new_filename = f"{base}_{run_identifier}_{stage_suffix}{ext}"
     else:
         new_filename = f"{base}_{stage_suffix}{ext}"
-    final_data = split_dataframe(pd.DataFrame(data))
+    final_data = split_dataframe(pd.DataFrame(data["annotations"]))
     save_json(final_data, new_filename)
     print(f"Saved file: {new_filename}")
     return new_filename
@@ -174,33 +174,6 @@ def make_comparable_dict_from_json_s3(ann): # s3 from script 1's stage 3 logic
         "individual_id": ann.get("individual_id"),
     }
 
-def update_json_with_timestamp(json_input, csv_input, json_output): # Stage 3 logic
-    with open(json_input, "r") as f: data = json.load(f)
-    # UPDATE: ADDED JOINING TO DICTIONARY
-    data = join_dataframe_dict(data)
-    csv_common_list = []
-    with open(csv_input, "r", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            comp_fields, ts = make_comparable_dict_from_csv_s3(row)
-            if comp_fields["image_uuid"] is not None: # Must have image_uuid to match
-                csv_common_list.append((comp_fields, ts))
-
-    updated_count = 0
-    for (csv_fields_to_match, csv_timestamp) in csv_common_list:
-        for ann in data["annotations"]:
-            ann_fields_to_match = make_comparable_dict_from_json_s3(ann)
-            # Strict comparison of all specified fields
-            match = all(ann_fields_to_match.get(k) == csv_fields_to_match.get(k) for k in csv_fields_to_match)
-            if match:
-                ann["timestamp"] = csv_timestamp
-                updated_count += 1
-                break # Found match for this CSV row, move to next
-    with open(json_output, "w") as f: json.dump(data, f, indent=4)
-    print(f"[Stage 3] Updated JSON written to: {json_output}")
-    print(f"[Stage 3] Number of annotations updated with timestamp: {updated_count}")
-
-
 def group_annotations_by_LCA_all(data): # DEFINITION SHOULD BE HERE OR EARLIER
     annotations = data['annotations']
     grouped = defaultdict(list)
@@ -277,7 +250,7 @@ def pairwise_verification_interactive_deterministic(
                     x, y, w, h = ann_ref['bbox']
                     cropped = image.crop((x, y, x + w, y + h))
                     ax.imshow(cropped)
-                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nCA: {ann_ref.get('CA_score',0):.3f}")
+                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nUUID: {ann_ref.get('uuid', 'NA')}\nCA: {ann_ref.get('CA_score',0):.3f}")
                     ax.axis('off')
                 except Exception as e: ax.text(0.5,0.5,f"Err: {e}", ha='center'); ax.axis('off')
             else: ax.text(0.5,0.5,"Img N/F", ha='center'); ax.axis('off')
@@ -783,9 +756,6 @@ def main():
         description="Post process LCA outputs"
     )
     parser.add_argument(
-        "merged_annots", type=str, help="The full path to the annotation file, merged with timestamp."
-    )
-    parser.add_argument(
         "images", type=str, help="The image directory."
     )
     parser.add_argument(
@@ -800,18 +770,15 @@ def main():
     parser.add_argument(
         "out_right", type=str, help="The path to save the processed right LCA json."
     )
-
     args = parser.parse_args()
 
-    with open("algo/config_evaluation_LCA.yaml", "r") as f:
-        config = yaml.safe_load(f)
+    config = load_config("algo/config_evaluation_LCA.yaml")
 
     # Save args into config
     config["json"]["left"]["input"] = args.in_left
     config["json"]["left"]["output"] = args.out_left
     config["json"]["right"]["input"] = args.in_right
     config["json"]["right"]["output"] = args.out_right
-    config["csv"]["merged_bbox"] = args.merged_annots
     
     image_dir = args.images
     
@@ -820,19 +787,9 @@ def main():
         print(f"Warning: Image directory '{image_dir}' not found or not specified in config. Image display will be skipped.")
         image_dir = None # Ensure it's None if invalid
 
-    # run_id = datetime.now().strftime("%Y%m%d_%H%M%S") # Unique ID for this run's files
-
-    merged_bbox_csv = config['csv']['merged_bbox'] # .replace(".csv", f"_{run_id}.csv")
-
-    # Stage 3: Update JSON annotations with timestamps
-    print("\n--- Stage 3: Updating JSON Annotations with Timestamps ---")
-    left_json_ts = config['json']['left']['output'] # .replace(".json", f"_{run_id}_ts.json")
-    right_json_ts = config['json']['right']['output'] # .replace(".json", f"_{run_id}_ts.json")
-    update_json_with_timestamp(config['json']['left']['input'], merged_bbox_csv, left_json_ts)
-    update_json_with_timestamp(config['json']['right']['input'], merged_bbox_csv, right_json_ts)
-
-    data_left = load_json_data(left_json_ts)
-    data_right = load_json_data(right_json_ts)
+    # Load LCA data and join each side 
+    data_left = join_dataframe_dict(load_json_data(config['json']['left']['input']))
+    data_right = join_dataframe_dict(load_json_data(config['json']['right']['input']))
 
     print_cluster_summary(data_left, "Initial Left")
     print_viewpoint_cluster_mapping(data_left, "left")

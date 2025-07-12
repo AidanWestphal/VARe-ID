@@ -57,6 +57,14 @@ def load_config(file_path):
     return config_file
 
 
+def load_dataframe(file_path):
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() == ".csv":
+        return load_csv(file_path)
+    elif ext.lower() == ".json":
+        return load_json(file_path)
+
+
 def load_json(file_path):
     '''
     Load a file (.json) from a given path.
