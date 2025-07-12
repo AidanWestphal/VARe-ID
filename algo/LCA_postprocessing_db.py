@@ -8,6 +8,7 @@ import csv
 import re
 import ast
 import json
+import sqlite3
 from collections import defaultdict
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -134,9 +135,9 @@ def submit_pair_to_database(best_ann1, best_ann2, data_context, image_dir_path, 
     image_path2 = None
     if image_dir_path:
         for img in data_context["images"]:
-            if img["uuid"] == best_ann1["image_uuid"]:
+            if img["image_uuid"] == best_ann1["image_uuid"]:
                 image_path1 = os.path.join(image_dir_path, img["file_name"])
-            if img["uuid"] == best_ann2["image_uuid"]:
+            if img["image_uuid"] == best_ann2["image_uuid"]:
                 image_path2 = os.path.join(image_dir_path, img["file_name"])
 
     # Extract bounding boxes
@@ -174,9 +175,17 @@ def save_json_with_stage(data, original_filename, stage_suffix, run_identifier="
         new_filename = f"{base}_{run_identifier}_{stage_suffix}{ext}"
     else:
         new_filename = f"{base}_{stage_suffix}{ext}"
-    # final_data = split_dataframe(pd.DataFrame(data))
-    final_data = data
-    save_json(final_data, new_filename)
+    
+    try:
+        # Try the original approach first
+        final_data = split_dataframe(pd.DataFrame(data))
+        save_json(final_data, new_filename)
+    except (ValueError, KeyError) as e:
+        print(f"Warning: Original DataFrame approach failed ({e}), using direct JSON save")
+        # Fallback: save directly as JSON
+        with open(new_filename, 'w') as f:
+            json.dump(data, f, indent=4)
+    
     print(f"Saved file: {new_filename}")
     return new_filename
 
@@ -995,78 +1004,81 @@ def main():
         description="Post process LCA outputs"
     )
     parser.add_argument(
-        "merged_annots", type=str, help="The full path to the annotation file, merged with timestamp."
+        "merged_annots", nargs='?', type=str, help="The full path to the annotation file, merged with timestamp."
     )
     parser.add_argument(
-        "images", type=str, help="The image directory."
+        "images", nargs='?', type=str, help="The image directory."
     )
     parser.add_argument(
-        "in_left", type=str, help="The full path to the left annotations for LCA.",
+        "in_left", nargs='?', type=str, help="The full path to the left annotations for LCA.",
     )
     parser.add_argument(
-        "in_right", type=str, help="The full path to the right annotations for LCA.",
+        "in_right", nargs='?', type=str, help="The full path to the right annotations for LCA.",
     )
     parser.add_argument(
-        "out_left", type=str, help="The path to save the processed left LCA json."
+        "out_left", nargs='?', type=str, help="The path to save the processed left LCA json."
     )
     parser.add_argument(
-        "out_right", type=str, help="The path to save the processed right LCA json."
+        "out_right", nargs='?', type=str, help="The path to save the processed right LCA json."
     )
     parser.add_argument(
         "--db", type=str, help="Database path for verification (optional, can also be set in config as database.path)"
     )
+    parser.add_argument(
+        "--config", type=str, help="Path to the config file (optional, default is /algo/config_evaluation_LCA.yaml)"
+    )
 
     args = parser.parse_args()
 
-    with open("./algo/config_evaluation_LCA_test.yaml", "r") as f:
+    if args.config is None:
+        config_path =  "algo/config_evaluation_LCA.yaml"
+    else:
+        config_path = args.config
+    with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
     # NEW: Determine interaction mode from config (backward compatible)
+    db_path = None
     if "interaction_mode" in config:
         interaction_mode = config["interaction_mode"]
     else:
         # Backward compatibility with original config format
         interactive = config.get("interactive", True)
         if interactive == "database":
+            db_path = args.db or config.get("database", {}).get("path")
+            init_db(db_path)
             interaction_mode = "database"
         elif interactive:
             interaction_mode = True  # ipywidgets mode
         else:
             interaction_mode = False  # console mode
 
-    # NEW: Validate database mode requirements and get database path
-    db_path = None
-    if interaction_mode == "database":
-        if not DATABASE_AVAILABLE:
-            raise ImportError("Database mode requires UI.db_scripts module. Please ensure database components are available.")
-        
-        # Get database path from config or command line
-        db_path = args.db or config.get("database", {}).get("path")
-        if db_path is None:
-            raise ValueError("Database mode requires database path. Specify either --db argument or database.path in config file.")
-        
-        init_db(db_path)
-        print(f"Using database mode with database: {db_path}")
-    elif interaction_mode == True and widgets is None:
-        print("Warning: ipywidgets not available, falling back to console mode")
-        interaction_mode = False
+    # NEW: Use config values as defaults, override with command line args if provided
+    merged_annots = args.merged_annots or config.get("csv", {}).get("merged_bbox")
+    image_dir = args.images or config.get("image", {}).get("directory")
+    in_left = args.in_left or config.get("json", {}).get("left", {}).get("input")
+    in_right = args.in_right or config.get("json", {}).get("right", {}).get("input")
+    out_left = args.out_left or config.get("json", {}).get("left", {}).get("output")
+    out_right = args.out_right or config.get("json", {}).get("right", {}).get("output")
 
-    # image_dir = config["image"]["directory"]
-    # Save args into config (ORIGINAL BEHAVIOR PRESERVED)
-    config["json"]["left"]["input"] = args.in_left
-    config["json"]["left"]["output"] = args.out_left
-    config["json"]["right"]["input"] = args.in_right
-    config["json"]["right"]["output"] = args.out_right
-    config["csv"]["merged_bbox"] = args.merged_annots
-    
-    image_dir = args.images
-    
-    # ORIGINAL: interactive_mode = config.get("interactive", True)
-    # PRESERVED: Use config-driven approach
-    if not image_dir or not os.path.isdir(image_dir) :
-        print(f"Warning: Image directory '{image_dir}' not found or not specified in config. Image display will be skipped.")
-        image_dir = None # Ensure it's None if invalid
+    # Validate required parameters
+    if not merged_annots:
+        raise ValueError("merged_annots is required. Specify as positional argument or set csv.merged_bbox in config.")
+    if not in_left:
+        raise ValueError("in_left is required. Specify as positional argument or set json.left.input in config.")
+    if not in_right:
+        raise ValueError("in_right is required. Specify as positional argument or set json.right.input in config.")
+    if not out_left:
+        raise ValueError("out_left is required. Specify as positional argument or set json.left.output in config.")
+    if not out_right:
+        raise ValueError("out_right is required. Specify as positional argument or set json.right.output in config.")
 
+    # Update config with final values (for backward compatibility with existing code)
+    config["json"]["left"]["input"] = in_left
+    config["json"]["left"]["output"] = out_left
+    config["json"]["right"]["input"] = in_right
+    config["json"]["right"]["output"] = out_right
+    config["csv"]["merged_bbox"] = merged_annots
     # run_id = datetime.now().strftime("%Y%m%d_%H%M%S") # Unique ID for this run's files
 
     merged_bbox_csv = config['csv']['merged_bbox'] # .replace(".csv", f"_{run_id}.csv")
@@ -1111,10 +1123,10 @@ def main():
     grouped_right_time_stage = group_annotations_by_LCA_all(data_right) # Re-group
 
     print("\n--- Stage 6: Time-Overlap Verification ---")
-    time_overlap_verification_interactive_deterministic(grouped_left_time_stage, data_left, "Left", image_dir, interaction_mode)
+    time_overlap_verification_interactive_deterministic(grouped_left_time_stage, data_left, "Left", image_dir, interaction_mode, db_path)
     data_left['annotations'] = [ann for anns in grouped_left_time_stage.values() for ann in anns]
 
-    time_overlap_verification_interactive_deterministic(grouped_right_time_stage, data_right, "Right", image_dir, interaction_mode)
+    time_overlap_verification_interactive_deterministic(grouped_right_time_stage, data_right, "Right", image_dir, interaction_mode, db_path)
     data_right['annotations'] = [ann for anns in grouped_right_time_stage.values() for ann in anns]
     
     left_time_file = save_json_with_stage(data_left, left_split_file, "time_verified", "") # Use previous as base for name
