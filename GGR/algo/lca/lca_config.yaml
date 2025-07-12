@@ -1,11 +1,8 @@
 # CONFIG FOR lca.py SCRIPT
 
 github_lca_url: https://github.com/WildMeOrg/lca.git
-config_save_path: "lca/configs/config_drone.yaml"
+config_save_path: "lca/configs/config_GZCD.yaml"
 
-lca_separate_viewpoints: True
 lca_alternative_clustering: False
-
-lca_db_dir: "db"
 
 lca_log_file: "lca_logs.log"

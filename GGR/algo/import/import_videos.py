@@ -21,6 +21,6 @@ if __name__ == "__main__":
 
     sep_idx = args.out_path.rfind("/")
     dir_out = args.out_path[:sep_idx]
-    out_file = args.out_path[sep_idx:]
+    out_file = args.out_path[sep_idx:].replace("/","")
     # Import images to database
     image_table = import_video_folder(args.dir_in, dir_out, out_file, config["video_fps"], config["video_max_frames"])

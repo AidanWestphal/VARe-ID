@@ -97,9 +97,12 @@ def parse_config(filepath):
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
     lca_verifier_probs_path = os.path.join(model_dir, config["lca_verifier_probs"])
-    lca_left_out_path = os.path.join(lca_dir, config["lca_left_out_file"])
-    lca_right_out_path = os.path.join(lca_dir, config["lca_right_out_file"])
     lca_logs = os.path.join(log_dir, config["lca_logfile"])
+
+    # In video mode, post expects specifically left and right viewpoints. Build the paths to these files here:
+    # Format is lca_dir/{prefix}_{left/right}_{suffix}.json
+    post_left_in_path = os.path.join(lca_dir, f"{config["lca_out_prefix"]}_left_{config["lca_out_suffix"]}.json")
+    post_right_in_path = os.path.join(lca_dir, f"{config["lca_out_prefix"]}_right_{config["lca_out_suffix"]}.json")
 
     # POST PROCESSING STEP
     post_dir = os.path.join(out_dir, config["post_dirname"])
@@ -140,8 +143,8 @@ def parse_config(filepath):
     config["mid_logs"] = mid_logs
     config["lca_dir"] = lca_dir
     config["lca_verifier_probs_path"] = lca_verifier_probs_path
-    config["lca_left_out_path"] = lca_left_out_path
-    config["lca_right_out_path"] = lca_right_out_path
+    config["post_left_in_path"] = post_left_in_path
+    config["post_right_in_path"] = post_right_in_path
     config["lca_logs"] = lca_logs
     config["post_dir"] = post_dir
     config["post_left_out_path"] = post_left_out_path

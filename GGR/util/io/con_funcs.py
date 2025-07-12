@@ -93,7 +93,7 @@ def import_image_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
         >>> shutil.rmtree(db_path + "test_dataset")
     """
 
-    path_out = os.path.join(dir_out, file_out.replace("/", ""))
+    path_out = os.path.join(dir_out, file_out)
     direct = Directory(dir_in, recursive=recursive, images=True)
     imgtable = ImageTable(dir_out, ["None"])
     files = direct.files()
@@ -132,7 +132,7 @@ def import_video_folder(dir_in, dir_out, file_out, fps=8, max_frames=2000, recur
         python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE control/con_funcs.py
     """
 
-    path_out = os.path.join(dir_out, file_out.replace("/", ""))
+    path_out = os.path.join(dir_out, file_out)
     direct = Directory(dir_in, recursive=recursive, include_file_extensions=["mp4", "avi"])
     files = direct.files()
 

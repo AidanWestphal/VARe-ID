@@ -71,12 +71,15 @@ mid_logfile: "miew_id.txt"
 # LCA step fields
 lca_dirname: "lca"
 lca_verifiers_probs: "verifiers_probs.json"
-lca_left_out_file: "lca_left_annots.txt"
-lca_right_out_file: "lca_right_annots.txt"
+lca_separate_viewpoints: True
 lca_logfile: "lca.txt"
+
+# LCA is special: its output is formatted as {prefix}_{viewpoint}_{suffix}.json (or {prefix}_{suffix}.json if not separating viewpoint).
+lca_out_prefix: "lca"
+lca_out_suffix: "annots"
 
 # Postprocessing step fields
 post_dirname: "post"
 post_left_out_file: "post_left_annots.json"
-post_left_out_file: "post_rights_annots.json"
+post_left_out_file: "post_right_annots.json"
 post_logfile: "post.txt"

@@ -22,7 +22,7 @@ def clone_from_github(directory, repo_url):
         subprocess.run(["git", "clone", repo_url, directory], check=True)
         print("Repository cloned successfully...")
 
-def save_lca_results(input_dir, anno_file, output_path, viewpoint=None, uuid_key="annot_uuid"):
+def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, viewpoint=None, uuid_key="annot_uuid"):
     clustering_file = os.path.join(input_dir, "clustering.json")
     node2uuid_file = os.path.join(input_dir, "node2uuid_file.json")
 
@@ -57,10 +57,11 @@ def save_lca_results(input_dir, anno_file, output_path, viewpoint=None, uuid_key
     for ann in filtered_annotations:
         ann['LCA_clustering_id'] = uuid_to_cluster.get(ann[uuid_key], None)
     
-    # Modify output file name
-    suffix = f"LCA_{viewpoint}" if viewpoint else "LCA"
-    name, ext = os.path.splitext(os.path.basename(anno_file))
-    output_filename = f"{name}_{suffix}{ext}"
+    # Build output path
+    if viewpoint is not None:
+        output_filename = f"{prefix}_{viewpoint}_{suffix}.json"
+    else:
+        output_filename = f"{prefix}_{suffix}.json"
     output_path = os.path.join(output_path, output_filename)
 
     # Save final result with same categories/images, modified annotations
@@ -73,59 +74,59 @@ def save_lca_results(input_dir, anno_file, output_path, viewpoint=None, uuid_key
 if __name__ == "__main__":
     print("Loading data...")
     parser = argparse.ArgumentParser(description="Run LCA clustering")
-    parser.add_argument("lca_dir", type=str, help="The directory to save files into.")
-    parser.add_argument("--image_dir", type=str, default=None, help="The path to the image directory.")
-    parser.add_argument("output_path", type=str, help="The directory to save files into.")
     parser.add_argument("annots", type=str, help="The path to the annotation file.")
     parser.add_argument("embeddings", type=str, help="The path to the embeddings file.")
-    parser.add_argument(
-        "verifier_probs", type=str, help="The path to the verifier probabilities."
-    )
-    parser.add_argument("db_path", type=str, help="The path to the db .")
+    parser.add_argument("input_config", type=str, help="The path to input config file (the one used by LCA itself).")
+    parser.add_argument("verifier_probs", type=str, help="The path to the verifier probabilities.")
+    parser.add_argument("lca_dir", type=str, help="The directory to save files into.")
+    parser.add_argument("output_path", type=str, help="The directory to save files into.")
+    parser.add_argument("output_prefix", type=str, help="The prefix for the output annotation file format.")
+    parser.add_argument("output_suffix", type=str, help="The suffix for the output annotation file format.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
-    parser.add_argument("exp_name", type=str, help="The name of the experiment")
-    parser.add_argument("alg_name", type=str, help="The name of the clustering algorithm: lca or hdbscan")
-    parser.add_argument(
-        "--separate_viewpoints",
-        action="store_true",
-        help="True if LCA should be run independently for left and right.",
-    )
+    parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right.")
+    parser.add_argument("--image_dir", type=str, default=None, help="The path to the image directory. Optional, only required if input data doesn't have an image_path field.")
 
     args = parser.parse_args()
 
-    config = load_config("algo/lca_drone.yaml")
+    # Config for LCA itself -- not input config to LCA
+    lca_config = load_config("algo/lca_config.yaml")
+
+    lca_alternative_clustering = lca_config["lca_alternative_clustering"]
 
     # Save to lca dir inside lca
     lca_github_loc = os.path.join(args.lca_dir, "lca_code")
-    clone_from_github(lca_github_loc, config["github_lca_url"])
+    clone_from_github(lca_github_loc, lca_config["github_lca_url"])
+
+    # OPEN LCA INPUT CONFIG
+    input_config = load_config(args.input_config)
 
     # ADD CONFIG INFO
-    config["data"]["images_dir"] = args.image_dir
-    config["data"]["output_path"] = args.output_path
-    config["data"]["annotation_file"] = args.annots
-    config["data"]["embedding_file"] = args.embeddings
-    config["data"]["separate_viewpoints"] = args.separate_viewpoints
-    config["data"]["ui_db_path"] = args.db_path
-    config["lca"]["db_path"] = args.db_path
-    config["edge_weights"]["verifier_file"] = args.verifier_probs
-    config["exp_name"] = args.exp_name
-    # NOTE : Comment this out and set log_file to null in lca.yaml, it will still yield the issue
-    config["logging"]["log_file"] = os.path.join(args.output_path, args.log_file)
+    input_config["data"]["images_dir"] = args.image_dir # or None
+    input_config["data"]["output_path"] = args.output_path
+    input_config["data"]["annotation_file"] = args.annots
+    input_config["data"]["embedding_file"] = args.embeddings
+    input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
+    input_config["edge_weights"]["verifier_file"] = args.verifier_probs
+    input_config["exp_name"] = "" # empty string means all files saved to output_path (saves to output_path/exp_name
+    input_config["logging"]["log_file"] = args.log_file # should append LCA outputs into same log file used by this script
 
-    os.makedirs(args.output_path, exist_ok=True)
-    open(config["logging"]["log_file"], 'a').close()
-
-    config_loc = os.path.join(lca_github_loc, config["config_save_path"])
 
     # WRITE CONFIG FILE INTO LCA
+    config_dir = os.path.dirname(lca_config["config_save_path"])
+
+    sep = args.input_config.rfind("/")
+    config_fname = args.input_config[sep:].replace("/","")
+
+    config_loc = os.path.join(config_dir, config_fname)
     with open(config_loc, "w") as f:
-        yaml.dump(config, f)
+        yaml.dump(input_config, f)
 
     # RUN LCA or alternative
-    if args.alg_name == "hdbscan":
+    if lca_alternative_clustering:
         print('run hdbscan')
         subprocess.run(["python3", f"{lca_github_loc}/lca/run_hdbscan.py", "--config", config_loc])
     else:
+        print('run lca')
         subprocess.run(["python3", f"{lca_github_loc}/lca/run.py", "--config", config_loc])
 
 
@@ -133,11 +134,11 @@ if __name__ == "__main__":
     anno_file = args.annots
 
     if args.separate_viewpoints:
-        for viewpoint in config["data"]["viewpoint_list"]:
+        for viewpoint in input_config["data"]["viewpoint_list"]:
             input_dir = os.path.join(output_path, args.exp_name, viewpoint)
-            save_lca_results(input_dir, anno_file, output_path, viewpoint=viewpoint, uuid_key=config["data"]["id_key"])
+            save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, viewpoint=viewpoint, uuid_key=input_config["data"]["id_key"])
     else:
         input_dir = os.path.join(output_path, args.exp_name)
-        save_lca_results(input_dir, anno_file, output_path, uuid_key=config["data"]["id_key"])
+        save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, uuid_key=input_config["data"]["id_key"])
 
     exit()
