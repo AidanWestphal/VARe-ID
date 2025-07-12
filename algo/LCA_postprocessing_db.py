@@ -43,14 +43,11 @@ except ImportError:
 # -------------------------
 def wait_for_dropdown_value(dropdown):
     """Block until the dropdown value is changed from 'Select'."""
-    # In a non-blocking environment like Jupyter, true blocking is tricky.
-    # This relies on the cell execution waiting.
-    # For console, input() is naturally blocking.
     while dropdown.value == 'Select':
-        if hasattr(sys, 'stdout'): # Basic check if in an environment that can process events
-             plt.pause(0.1) # Allow GUI events to process if possible
+        if hasattr(sys, 'stdout'):
+             plt.pause(0.1)
         else:
-            time.sleep(0.1) # Fallback for simpler environments
+            time.sleep(0.1)
     return dropdown.value
 
 # -------------------------
@@ -63,12 +60,11 @@ def get_user_decision(prompt="Merge clusters? (Yes/No): ", interactive_mode=True
             value='Select',
             description=prompt,
             style={'description_width': 'initial'},
-            layout={'width': 'max-content'} # Try to make description fully visible
+            layout={'width': 'max-content'}
         )
         display(dropdown)
         decision = wait_for_dropdown_value(dropdown)
-        dropdown.close() # Remove the widget after selection
-        # Consider clear_output(wait=True) here if widgets stack up undesirably
+        dropdown.close()
         return decision
     else:
         while True:
@@ -80,7 +76,7 @@ def get_user_decision(prompt="Merge clusters? (Yes/No): ", interactive_mode=True
             print("Invalid input. Please enter Yes or No.")
 
 # -------------------------
-# NEW: Database Helper Functions (only for database mode)
+# Database Helper Functions
 # -------------------------
 def wait_for_database_decisions(db_path, pair_ids, check_interval=5):
     """Wait for specific pairs to be completed"""
@@ -112,7 +108,6 @@ def wait_for_database_decisions(db_path, pair_ids, check_interval=5):
 
 def submit_pair_to_database(best_ann1, best_ann2, data_context, image_dir_path, db_path):
     """Submit a pair to database, returns pair_id or existing decision"""
-    # Order UUIDs to create consistent ID
     uuid1 = best_ann1['uuid']
     uuid2 = best_ann2['uuid']
     if uuid1 > uuid2:
@@ -121,7 +116,6 @@ def submit_pair_to_database(best_ann1, best_ann2, data_context, image_dir_path, 
 
     unique_id = f"{uuid1}_{uuid2}"
 
-    # Check if this pair already exists
     exists, status, decision = check_pair_exists(uuid1, uuid2, db_path)
     
     if exists:
@@ -130,17 +124,19 @@ def submit_pair_to_database(best_ann1, best_ann2, data_context, image_dir_path, 
         else:
             return {'pair_id': unique_id, 'decision': None}
 
-    # Get image paths
+    # Get image paths by looking them up in the data context
     image_path1 = None
     image_path2 = None
-    if image_dir_path:
-        for img in data_context["images"]:
-            if img["image_uuid"] == best_ann1["image_uuid"]:
-                image_path1 = os.path.join(image_dir_path, img["file_name"])
-            if img["image_uuid"] == best_ann2["image_uuid"]:
-                image_path2 = os.path.join(image_dir_path, img["file_name"])
-
-    # Extract bounding boxes
+    for img in data_context.get("images", []):
+        img_identifier = img.get("uuid") or img.get("image_uuid")
+        if img_identifier:
+            if img_identifier == best_ann1.get("image_uuid"):
+                image_path1 = img.get("image_path")
+            if img_identifier == best_ann2.get("image_uuid"):
+                image_path2 = img.get("image_path")
+        if image_path1 and image_path2:
+            break
+    
     bbox1 = None
     bbox2 = None
     if "bbox" in best_ann1 and best_ann1["bbox"]:
@@ -150,7 +146,6 @@ def submit_pair_to_database(best_ann1, best_ann2, data_context, image_dir_path, 
         x, y, w, h = best_ann2["bbox"]
         bbox2 = json.dumps([x, y, x + w, y + h])
 
-    # Add to database
     add_image_pair(
         unique_id,
         uuid1,
@@ -175,8 +170,13 @@ def save_json_with_stage(data, original_filename, stage_suffix, run_identifier="
         new_filename = f"{base}_{run_identifier}_{stage_suffix}{ext}"
     else:
         new_filename = f"{base}_{stage_suffix}{ext}"
-    final_data = split_dataframe(pd.DataFrame(data["annotations"]))
-    save_json(final_data, new_filename)
+    
+    final_data_to_save = {
+        "categories": data.get("categories", []),
+        "images": data.get("images", []),
+        "annotations": split_dataframe(pd.DataFrame(data.get("annotations", [])))
+    }
+    save_json(final_data_to_save, new_filename)
     print(f"Saved file: {new_filename}")
     return new_filename
 
@@ -195,17 +195,15 @@ def print_cluster_summary(data, stage_name=""):
     print(f"\n{stage_name} Cluster Summary - Total annotations: {total}, Unique LCA_clustering_ids: {unique}\n")
     for cluster in sorted(grouped.keys()):
         print(f"LCA_clustering_id: {cluster}")
-        # Iterate through all annotations in the cluster and print details for each
         for ann in grouped[cluster]:
             ca = ann.get("CA_score", 0)
-            ind_id = ann.get("individual_id", "N/A") # Original GT
-            final_id = ann.get("final_id", "N/A") # Assigned ID
+            ind_id = ann.get("individual_id", "N/A")
+            final_id = ann.get("final_id", "N/A")
             print(
                 f"  TrkID: {ann.get('tracking_id')}, GT_IndID: {ind_id}, FinalID: {final_id}, "
                 f"CA: {ca:.4f}, UUID: {ann.get('uuid')}"
             )
-        print() # Print a blank line after each cluster's annotations
-
+        print()
 
 # -------------------------
 # Helper: Print viewpoint cluster-to-tracking ID mapping.
@@ -221,88 +219,16 @@ def print_viewpoint_cluster_mapping(data, viewpoint):
     for cluster in sorted(grouped.keys()):
         print(f"  Cluster {cluster}_{viewpoint}: Tracking IDs: {grouped[cluster]}")
 
-# =========================
-# Stage 3: Update JSON Annotations with Timestamps
-# =========================
-# Using the more robust parsing from the first script for make_comparable_dicts
-def parse_bbox_for_json_update(bbox_str): # From first script's Stage 3
-    try:
-        return list(ast.literal_eval(bbox_str))
-    except:
-        return None
 
-def make_comparable_dict_from_csv_s3(row): # s3 from script 1's stage 3 logic
-    def safe_int(x):
-        try: return int(str(x).strip())
-        except: return None
-    def safe_float(x):
-        try: return float(str(x).strip())
-        except: return None
-
-    tracking_id = safe_int(row.get("tracking_id", ""))
-    confidence = safe_float(row.get("confidence", ""))
-    detection_class = safe_int(row.get("detection_class", ""))
-    CA_score = safe_float(row.get("CA_score", ""))
-    # Important: individual_id from CSV is often GT. Preserve it.
-    individual_id = safe_int(row.get("individual_id", ""))
-    species = row.get("species", "").strip()
-    bbox = parse_bbox_for_json_update(row.get("bbox", ""))
-    image_uuid = row.get("image_uuid", "")
-    timestamp = row.get("timestamp", "").strip()
-
-    return {
-        "image_uuid": image_uuid, "tracking_id": tracking_id,
-        "confidence": confidence, "detection_class": detection_class,
-        "species": species, "bbox": bbox, "CA_score": CA_score,
-        "individual_id": individual_id, # Make sure this is part of the comparison key
-    }, timestamp
-
-def make_comparable_dict_from_json_s3(ann): # s3 from script 1's stage 3 logic
-    bbox_list = list(ann["bbox"]) if ann.get("bbox") else None
-    # Ensure all relevant fields from CSV are included for comparison
-    return {
-        "image_uuid": ann.get("image_uuid"), "tracking_id": ann.get("tracking_id"),
-        "confidence": ann.get("confidence"), "detection_class": ann.get("detection_class"),
-        "species": ann.get("species"), "bbox": bbox_list, "CA_score": ann.get("CA_score"),
-        # individual_id from JSON is also important
-        "individual_id": ann.get("individual_id"),
-    }
-
-def update_json_with_timestamp(json_input, csv_input, json_output): # Stage 3 logic
-    with open(json_input, "r") as f: data = json.load(f)
-    # UPDATE: ADDED JOINING TO DICTIONARY
-    data = join_dataframe_dict(data)
-    csv_common_list = []
-    with open(csv_input, "r", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            comp_fields, ts = make_comparable_dict_from_csv_s3(row)
-            if comp_fields["image_uuid"] is not None: # Must have image_uuid to match
-                csv_common_list.append((comp_fields, ts))
-
-    updated_count = 0
-    for (csv_fields_to_match, csv_timestamp) in csv_common_list:
-        for ann in data["annotations"]:
-            ann_fields_to_match = make_comparable_dict_from_json_s3(ann)
-            # Strict comparison of all specified fields
-            match = all(ann_fields_to_match.get(k) == csv_fields_to_match.get(k) for k in csv_fields_to_match)
-            if match:
-                ann["timestamp"] = csv_timestamp
-                updated_count += 1
-                break # Found match for this CSV row, move to next
-    with open(json_output, "w") as f: json.dump(data, f, indent=4)
-    print(f"[Stage 3] Updated JSON written to: {json_output}")
-    print(f"[Stage 3] Number of annotations updated with timestamp: {updated_count}")
-
-
-def group_annotations_by_LCA_all(data): # DEFINITION SHOULD BE HERE OR EARLIER
-    annotations = data['annotations']
+def group_annotations_by_LCA_all(data):
+    annotations = data.get('annotations', [])
     grouped = defaultdict(list)
     for ann in annotations:
         lca = ann.get('LCA_clustering_id')
         if lca is not None:
             grouped[lca].append(ann)
     return grouped
+
 # =========================
 # Stage 4 & 6: Interactive Verification Core Logic
 # =========================
@@ -311,7 +237,6 @@ def get_cluster_best_ann_for_display(annotations_list):
     return max(annotations_list, key=lambda x: x.get("CA_score", 0.0))
 
 def _update_cluster_merge_deterministic(grouped_annotations, source_cluster_id, target_cluster_id):
-    """ Merges source_cluster into target_cluster. Assumes target_cluster_id is the anchor. """
     if source_cluster_id not in grouped_annotations or target_cluster_id not in grouped_annotations: return
     if source_cluster_id == target_cluster_id: return
 
@@ -323,7 +248,6 @@ def _update_cluster_merge_deterministic(grouped_annotations, source_cluster_id, 
 
 
 def _update_split_no_merge_deterministic(grouped_annotations, anchor_cluster_id, other_cluster_id):
-    """ Handles TIDs for no-merge in split stage, using anchor and other. """
     if anchor_cluster_id not in grouped_annotations or other_cluster_id not in grouped_annotations: return
 
     anchor_tids = {ann['tracking_id'] for ann in grouped_annotations[anchor_cluster_id]}
@@ -341,13 +265,13 @@ def _update_split_no_merge_deterministic(grouped_annotations, anchor_cluster_id,
 
 def pairwise_verification_interactive_deterministic(
     grouped_annotations, cluster1_id, cluster2_id,
-    data_context_for_display, # This will be data_left or data_right
+    data_context_for_display,
     image_dir_path, interactive_mode, stage, db_path=None
 ):
     if cluster1_id not in grouped_annotations or cluster2_id not in grouped_annotations or \
        not grouped_annotations[cluster1_id] or not grouped_annotations[cluster2_id]:
         print(f"  [{stage.capitalize()}] Skipping: {cluster1_id} or {cluster2_id} is missing/empty.")
-        return False # No merge happened
+        return False
 
     best_ann1 = get_cluster_best_ann_for_display(grouped_annotations[cluster1_id])
     best_ann2 = get_cluster_best_ann_for_display(grouped_annotations[cluster2_id])
@@ -356,60 +280,65 @@ def pairwise_verification_interactive_deterministic(
         print(f"  [{stage.capitalize()}] Error: Could not get best annotations for display. Skipping.")
         return False
 
-    # NEW: Check if we're in database mode
     if interactive_mode == "database":
-        # Return submission info for batch processing
         return submit_pair_to_database(best_ann1, best_ann2, data_context_for_display, image_dir_path, db_path)
 
-    # Display images using the helper from the second script (modified for pair)
-    # (Assuming display_image_pair_for_decision is defined elsewhere or inline it)
     print(f"\n  [{stage.capitalize()} Stage] User Verification: Clusters '{cluster1_id}' and '{cluster2_id}'")
-    # (Image display logic would go here using display_image_pair_for_decision if defined)
-    if image_dir_path:
-        fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-        for i, ann_ref in enumerate([best_ann1, best_ann2]):
-            ax = axes[i]
-            file_path = ann_ref['image_path']
-            if file_path and os.path.exists(file_path):
-                try:
-                    image = Image.open(file_path)
-                    x, y, w, h = ann_ref['bbox']
-                    cropped = image.crop((x, y, x + w, y + h))
-                    ax.imshow(cropped)
-                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nUUID: {ann_ref.get('uuid', 'NA')}\nCA: {ann_ref.get('CA_score',0):.3f}")
-                    ax.axis('off')
-                except Exception as e: ax.text(0.5,0.5,f"Err: {e}", ha='center'); ax.axis('off')
-            else: ax.text(0.5,0.5,"Img N/F", ha='center'); ax.axis('off')
-        plt.tight_layout()
-        if widgets and interactive_mode: display(fig)
-        else: plt.show(block=False) # Show non-blocking for console
+    
+    # MODIFICATION: This block now looks up the full image path from the context.
+    # It no longer relies on image_dir_path if the full path is available.
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+    for i, ann_ref in enumerate([best_ann1, best_ann2]):
+        ax = axes[i]
+        
+        file_path = None
+        for img in data_context_for_display.get("images", []):
+            img_identifier = img.get("uuid") or img.get("image_uuid")
+            if img_identifier and img_identifier == ann_ref.get("image_uuid"):
+                file_path = img.get("image_path")
+                break
+        
+        if file_path and os.path.exists(file_path):
+            try:
+                image = Image.open(file_path)
+                x, y, w, h = ann_ref['bbox']
+                cropped = image.crop((x, y, x + w, y + h))
+                ax.imshow(cropped)
+                ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nUUID: {ann_ref.get('uuid', 'NA')}\nCA: {ann_ref.get('CA_score',0):.3f}")
+                ax.axis('off')
+            except Exception as e: ax.text(0.5,0.5,f"Err: {e}", ha='center'); ax.axis('off')
+        else:
+            ax.text(0.5,0.5, "Img N/F", ha='center'); ax.axis('off')
+            print(f"Warning: Image not found at path: {file_path}")
+            
+    plt.tight_layout()
+    if widgets and interactive_mode is True:
+        display(fig)
     else:
-        print("    (Image display skipped as image_dir is not configured)")
+        plt.show(block=False)
 
+    decision = get_user_decision(prompt=f"    Merge {cluster1_id} & {cluster2_id}? (Yes/No): ", interactive_mode=(interactive_mode is True))
+    if widgets and interactive_mode is True: clear_output(wait=True)
 
-    decision = get_user_decision(prompt=f"    Merge {cluster1_id} & {cluster2_id}? (Yes/No): ", interactive_mode=interactive_mode)
-    if widgets and interactive_mode: clear_output(wait=True) # Clean up Jupyter display
-
-    anchor_id, other_id = sorted([cluster1_id, cluster2_id]) # Deterministic anchor/other
+    anchor_id, other_id = sorted([cluster1_id, cluster2_id])
 
     if decision == "Yes":
         print(f"    User chose to MERGE. Anchor: {anchor_id}, Other: {other_id}")
         _update_cluster_merge_deterministic(grouped_annotations, other_id, anchor_id)
-        return True # Merge happened
-    else: # Decision == "No"
+        return True
+    else:
         print(f"    User chose NOT to merge. Anchor: {anchor_id}, Other: {other_id}")
         if stage == 'split':
             _update_split_no_merge_deterministic(grouped_annotations, anchor_id, other_id)
-        # For 'time' stage, no-merge means no specific action on TIDs (consistent)
-        return False # No merge happened
+        return False
 
 def consistency_check_interactive_deterministic(
-    grouped_annotations_view, data_view, # e.g., grouped_left, data_left
+    grouped_annotations_view, data_view,
     viewpoint_name, image_dir_path, interactive_mode, stage="split", db_path=None
 ):
     print(f"\n--- {viewpoint_name} Viewpoint {stage.capitalize()} Consistency Check ---")
     overall_changes_made = False
-    while True: # Loop for this viewpoint until no more merges in a pass
+    while True:
         tid_to_lca_map = defaultdict(set)
         for lca_id, anns_list in grouped_annotations_view.items():
             for ann_item in anns_list:
@@ -422,12 +351,10 @@ def consistency_check_interactive_deterministic(
             print(f"  No tracking ID splits found in {viewpoint_name} viewpoint.")
             break
 
-        # NEW: Database mode batch processing
         if interactive_mode == "database":
             pairs_to_decide = []
             pair_info = {}
             
-            # Collect all pairs
             for tid, lca_set in conflicting_tids.items():
                 print(f"  TID {tid} found in multiple LCAs: {lca_set} in {viewpoint_name}")
                 sorted_lca_list = sorted(list(lca_set))
@@ -440,7 +367,6 @@ def consistency_check_interactive_deterministic(
                 
                 if isinstance(result, dict):
                     if result['decision'] is not None:
-                        # Apply existing decision immediately
                         anchor_id, other_id = sorted([c1_id, c2_id])
                         if result['decision'] == 'correct':
                             _update_cluster_merge_deterministic(grouped_annotations_view, other_id, anchor_id)
@@ -449,11 +375,9 @@ def consistency_check_interactive_deterministic(
                         elif result['decision'] == 'incorrect' and stage == 'split':
                             _update_split_no_merge_deterministic(grouped_annotations_view, anchor_id, other_id)
                     else:
-                        # Need to wait for decision
                         pairs_to_decide.append(result['pair_id'])
                         pair_info[result['pair_id']] = (c1_id, c2_id)
             
-            # Wait for all decisions and process them
             if pairs_to_decide:
                 wait_for_database_decisions(db_path, pairs_to_decide)
                 decisions = get_decisions(pairs_to_decide, db_path)
@@ -473,16 +397,10 @@ def consistency_check_interactive_deterministic(
                             if anchor_id in grouped_annotations_view and other_id in grouped_annotations_view:
                                 _update_split_no_merge_deterministic(grouped_annotations_view, anchor_id, other_id)
         else:
-            # Original interactive processing
             for tid, lca_set in conflicting_tids.items():
                 print(f"  TID {tid} found in multiple LCAs: {lca_set} in {viewpoint_name}")
                 sorted_lca_list = sorted(list(lca_set))
                 
-                # Check pairs. If a merge happens, restart the pass for this viewpoint.
-                # This is complex because merging c1,c2 changes grouped_annotations_view
-                # and can invalidate further items in sorted_lca_list or conflicting_tids
-                
-                # Simplified: Process one conflict pair at a time and if merge, restart
                 c1_id, c2_id = sorted_lca_list[0], sorted_lca_list[1]
 
                 if pairwise_verification_interactive_deterministic(
@@ -491,11 +409,11 @@ def consistency_check_interactive_deterministic(
                 ):
                     overall_changes_made = True
                     made_merge_this_pass = True
-                    break # Break from for_tid loop to restart while True pass
+                    break
         
         if not made_merge_this_pass:
             print(f"  No merges made in this pass for {viewpoint_name}. Consistency check for this viewpoint stable.")
-            break # Viewpoint is stable
+            break
         else:
             print(f"  Merge occurred in {viewpoint_name}, re-evaluating consistency...")
             overall_changes_made = True
@@ -504,81 +422,46 @@ def consistency_check_interactive_deterministic(
 
 # =========================
 # Stage 6: Time-Overlap Verification Helpers
-# (These should be defined before time_overlap_verification_interactive_deterministic)
 # =========================
-def parse_timestamp(ts_str): # Helper for find_clusters_with_no_time_overlap
-    """ Parses a timestamp string into a datetime object. Handles variations with commas for milliseconds. """
-    if not isinstance(ts_str, str): # Add a check if ts_str is not a string
-        # print(f"Warning: Timestamp provided is not a string: {ts_str}. Skipping parse.")
-        raise ValueError("Timestamp input must be a string.")
+def parse_timestamp(ts_numeric):
+    """MODIFICATION: Parses a numeric (unix-style) timestamp."""
+    if not isinstance(ts_numeric, (int, float)):
+        raise ValueError("Timestamp input must be a number.")
+    return datetime.fromtimestamp(ts_numeric)
 
-    try:
-        # Attempt direct parsing first for standard formats
-        return datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S.%f")
-    except ValueError:
-        try:
-            # Handle cases where milliseconds might be separated by a comma or have varying lengths
-            date_part, time_part = ts_str.split(" ", 1)
-            if ',' in time_part:
-                time_part = time_part.replace(',', '.', 1) # Replace only the first comma for milliseconds
-            
-            # Normalize fractional seconds to 6 digits if possible, or truncate
-            if '.' in time_part:
-                main_time_part, fractional_part = time_part.split('.', 1)
-                fractional_part = fractional_part.ljust(6, '0')[:6] # Ensure 6 digits, truncate if longer
-                time_part = f"{main_time_part}.{fractional_part}"
-            else: # No fractional part, add .000000
-                 time_part = f"{time_part}.000000"
-
-            fixed_ts_str = f"{date_part} {time_part}"
-            return datetime.strptime(fixed_ts_str, "%Y-%m-%d %H:%M:%S.%f")
-        except Exception as e:
-            # print(f"Error parsing timestamp string '{ts_str}': {e}")
-            raise # Re-raise the exception if parsing still fails
-
-def intervals_overlap(start1, end1, start2, end2): # Helper for find_clusters_with_no_time_overlap
-    """ Checks if two time intervals [start1, end1] and [start2, end2] overlap. """
+def intervals_overlap(start1, end1, start2, end2):
     return start1 <= end2 and start2 <= end1
 
-def find_clusters_with_no_time_overlap(grouped_annotations, threshold_timedelta=timedelta(seconds=1)):
-    """
-    Identifies pairs of clusters that have no temporal overlap in their annotations.
-    Args:
-        grouped_annotations (dict): Keys are LCA_clustering_ids, values are lists of annotation dicts.
-        threshold_timedelta (timedelta): A small timedelta, not actively used in this version for strict no-overlap.
-                                          Original second script had a 'threshold' param here, keeping for signature.
-    Returns:
-        list: A list of tuples, where each tuple contains two LCA_clustering_ids that do not overlap in time.
-    """
-    cluster_intervals = defaultdict(dict) # {lca_id: {tracking_id: (min_time, max_time)}}
+def find_clusters_with_no_time_overlap(grouped_annotations, data_context):
+    """MODIFICATION: Looks up numeric timestamps from the main images list."""
+    
+    uuid_to_timestamp = {}
+    for img in data_context.get("images", []):
+        img_identifier = img.get("uuid") or img.get("image_uuid")
+        if img_identifier and 'timestamp' in img:
+            uuid_to_timestamp[img_identifier] = img['timestamp']
+
+    cluster_intervals = defaultdict(dict)
     
     for lca_id, anns_list in grouped_annotations.items():
         tid_to_times_map = defaultdict(list)
         for ann_item in anns_list:
-            if 'timestamp' not in ann_item or not ann_item['timestamp']: # Check for missing or empty timestamp
-                # print(f"Warning: Annotation {ann_item.get('uuid', 'Unknown UUID')} in LCA {lca_id} missing timestamp. Skipping.")
+            image_uuid = ann_item.get('image_uuid')
+            if not image_uuid or image_uuid not in uuid_to_timestamp:
                 continue
             
-            timestamp_str = ann_item['timestamp']
+            timestamp_val = uuid_to_timestamp[image_uuid]
             try:
-                datetime_obj = parse_timestamp(timestamp_str)
+                datetime_obj = parse_timestamp(timestamp_val)
                 tid_to_times_map[ann_item.get('tracking_id', 'UnknownTID')].append(datetime_obj)
-            except ValueError as e: # Catch parsing errors from parse_timestamp
-                # print(f"Warning: Could not parse timestamp '{timestamp_str}' for ann {ann_item.get('uuid', 'Unknown UUID')} in LCA {lca_id}. Error: {e}")
-                continue # Skip this annotation's timestamp
-            except Exception as e_gen: # Catch any other unexpected error during parsing
-                # print(f"Unexpected error parsing timestamp '{timestamp_str}': {e_gen}")
+            except (ValueError, TypeError):
                 continue
 
-
         for tid, times_list in tid_to_times_map.items():
-            if times_list: # Ensure there are actual time objects
+            if times_list:
                 times_list.sort()
                 cluster_intervals[lca_id][tid] = (times_list[0], times_list[-1])
-            # else:
-                # print(f"Warning: Tracking ID {tid} in LCA {lca_id} had no valid timestamps after parsing.")
 
-    # Sort cluster IDs for consistent pairing
     sorted_lca_ids = sorted(cluster_intervals.keys())
     non_overlapping_pairs = []
 
@@ -587,21 +470,19 @@ def find_clusters_with_no_time_overlap(grouped_annotations, threshold_timedelta=
             lca_id1 = sorted_lca_ids[i]
             lca_id2 = sorted_lca_ids[j]
 
-            # Ensure both clusters still have interval data (could be empty if all timestamps failed)
             if not cluster_intervals[lca_id1] or not cluster_intervals[lca_id2]:
                 continue
 
             overlap_found_between_lcas = False
-            # Check if any tracking ID interval in lca_id1 overlaps with any in lca_id2
             for tid1_intervals in cluster_intervals[lca_id1].values():
                 start1, end1 = tid1_intervals
                 for tid2_intervals in cluster_intervals[lca_id2].values():
                     start2, end2 = tid2_intervals
                     if intervals_overlap(start1, end1, start2, end2):
                         overlap_found_between_lcas = True
-                        break # Found overlap for this tid1, move to next tid1 or lca pair
+                        break
                 if overlap_found_between_lcas:
-                    break # Found overlap for this lca_id1, move to next lca pair
+                    break
             
             if not overlap_found_between_lcas:
                 non_overlapping_pairs.append((lca_id1, lca_id2))
@@ -616,17 +497,16 @@ def time_overlap_verification_interactive_deterministic(
     image_dir_path, interactive_mode, db_path=None
 ):
     print(f"\n--- {viewpoint_name} Viewpoint Time-Overlap Verification ---")
-    # Now find_clusters_with_no_time_overlap is defined
-    no_overlap_pairs = find_clusters_with_no_time_overlap(grouped_annotations_view) 
+    no_overlap_pairs = find_clusters_with_no_time_overlap(grouped_annotations_view, data_view) 
 
     if not no_overlap_pairs:
         print(f"  All clusters in {viewpoint_name} have some time overlap or too few clusters to check.")
-        return False # No changes made
+        return False
 
     print(f"  Found {len(no_overlap_pairs)} cluster pair(s) in {viewpoint_name} with NO time overlap.")
     
-    # NEW: Database mode batch processing
     if interactive_mode == "database":
+        # ... (rest of function is unchanged)
         pairs_to_decide = []
         pair_info = {}
         any_merges = False
@@ -643,7 +523,6 @@ def time_overlap_verification_interactive_deterministic(
             
             if isinstance(result, dict):
                 if result['decision'] is not None:
-                    # Apply existing decision immediately  
                     anchor_id, other_id = sorted([c1_id, c2_id])
                     if result['decision'] == 'correct':
                         for ann in grouped_annotations_view[other_id]:
@@ -655,11 +534,9 @@ def time_overlap_verification_interactive_deterministic(
                     else:
                         print(f"[Time Stage] No merging performed for clusters {c1_id} and {c2_id}.")
                 else:
-                    # Need to wait for decision
                     pairs_to_decide.append(result['pair_id'])
                     pair_info[result['pair_id']] = (c1_id, c2_id)
         
-        # Wait for all decisions and process them
         if pairs_to_decide:
             wait_for_database_decisions(db_path, pairs_to_decide)
             decisions = get_decisions(pairs_to_decide, db_path)
@@ -683,25 +560,16 @@ def time_overlap_verification_interactive_deterministic(
         
         return any_merges
     else:
-        # Original interactive processing
         any_merges_in_time_stage = False
         for c1_id, c2_id in no_overlap_pairs:
-            # Ensure clusters still exist (might have been merged in a previous iteration of this loop)
             if c1_id not in grouped_annotations_view or c2_id not in grouped_annotations_view:
-                # print(f"    Skipping pair ({c1_id}, {c2_id}): one or both clusters no longer exist.")
                 continue
             print(f"  Verifying non-overlapping pair: {c1_id} & {c2_id}")
-            if pairwise_verification_interactive_deterministic( # This is your core interactive function
+            if pairwise_verification_interactive_deterministic(
                 grouped_annotations_view, c1_id, c2_id,
-                data_view, image_dir_path, interactive_mode, stage="time", db_path=db_path # stage="time"
+                data_view, image_dir_path, interactive_mode, stage="time", db_path=db_path
             ):
                 any_merges_in_time_stage = True
-                # If a merge happens, grouped_annotations_view is modified.
-                # The list no_overlap_pairs is static. Continuing the loop might lead to
-                # attempting to verify a cluster that was just deleted.
-                # A more robust approach would be to re-calculate no_overlap_pairs after each merge,
-                # but for simplicity here, we'll continue and rely on the checks within
-                # pairwise_verification_interactive_deterministic.
                 print(f"    Merge occurred for {c1_id}, {c2_id}. Grouped annotations updated.")
         
         if any_merges_in_time_stage:
@@ -710,30 +578,18 @@ def time_overlap_verification_interactive_deterministic(
             print(f"  No merges made in {viewpoint_name} during time-overlap verification based on user decisions.")
         return any_merges_in_time_stage
 
-def group_annotations_by_LCA_with_viewpoint(data, viewpoint): # Ensure this definition exists and is placed here or earlier
-    """Groups annotations by LCA_clustering_id, appending the viewpoint to the key."""
+def group_annotations_by_LCA_with_viewpoint(data, viewpoint):
     grouped = defaultdict(list)
-    for ann in data.get('annotations', []): # Added .get for safety
+    for ann in data.get('annotations', []):
         lca = ann.get('LCA_clustering_id')
         if lca is not None:
             grouped[f"{lca}_{viewpoint}"].append(ann)
     return grouped
 
 # =========================
-# Stage 5: Cluster Equivalence & Individual ID Assignment (Logic from Script 1)
+# Stage 5: Cluster Equivalence & Individual ID Assignment
 # =========================
-# group_annotations_by_LCA_with_viewpoint (already defined for Script 1 logic)
-
-# check_cluster_equivalence (from Script 1 logic)
 def check_cluster_equivalence_s1(grouped_left_wv, grouped_right_wv):
-    # This is the version from the first script (renamed to avoid conflict if needed)
-    # print("\n[Stage 5] Checking Cluster Equivalence (Script 1 logic)")
-    tid_to_left  = {ann['tracking_id']: cl_key for cl_key, anns in grouped_left_wv.items() for ann in anns}
-    tid_to_right = {ann['tracking_id']: cl_key for cl_key, anns in grouped_right_wv.items() for ann in anns}
-
-    # Summary (optional, can be verbose)
-    # ... (summary printing as in script 1) ...
-
     tid_to_clusters_map = defaultdict(set)
     for cl_key, anns in grouped_left_wv.items():
         for ann in anns: tid_to_clusters_map[ann['tracking_id']].add(cl_key)
@@ -748,7 +604,7 @@ def check_cluster_equivalence_s1(grouped_left_wv, grouped_right_wv):
         for i in range(len(cluster_list)):
             for j in range(i + 1, len(cluster_list)):
                 c1, c2 = cluster_list[i], cluster_list[j]
-                if c1 in adj_list and c2 in adj_list : # Ensure keys exist
+                if c1 in adj_list and c2 in adj_list :
                     adj_list[c1].add(c2)
                     adj_list[c2].add(c1)
     
@@ -763,14 +619,12 @@ def check_cluster_equivalence_s1(grouped_left_wv, grouped_right_wv):
                 if curr not in visited_nodes:
                     visited_nodes.add(curr)
                     current_component.add(curr)
-                    if curr in adj_list: # curr node might not have any edges if isolated after splits
+                    if curr in adj_list:
                          component_stack.extend(adj_list[curr] - visited_nodes)
             if current_component:
                 equivalence_sets.append(current_component)
-    # print(f"[Stage 5] Found {len(equivalence_sets)} equivalence sets.")
     return equivalence_sets
 
-# generate_new_lca_id (from Script 1)
 def generate_new_lca_id_s1(base_lca_id_str, existing_lca_ids_in_viewpoint_data_set):
     base_lca_id_str = str(base_lca_id_str)
     max_suffix = 0
@@ -781,30 +635,24 @@ def generate_new_lca_id_s1(base_lca_id_str, existing_lca_ids_in_viewpoint_data_s
     new_suffix = max_suffix + 1
     return f"{base_lca_id_str}_split{new_suffix}"
 
-# split_conflicting_clusters_iteratively (from Script 1 logic)
 def split_conflicting_clusters_iteratively_s1(grouped_left_wv, grouped_right_wv, data_left, data_right):
     overall_splits_made = False
-    max_outer_loops = 5 # Safety break
+    max_outer_loops = 5
 
     for outer_loop_count in range(max_outer_loops):
-        # print(f"  [Conflict Resolution by Splitting] Outer Loop: {outer_loop_count + 1}")
         split_made_in_this_pass = False
 
-        # --- Right to Left Conflict Splitting ---
         all_current_right_lca_ids = {str(ann['LCA_clustering_id']) for ann in data_right['annotations'] if 'LCA_clustering_id' in ann}
         
-        # Iterate over a copy of keys as grouped_right_wv can be modified
         for r_cluster_key in list(grouped_right_wv.keys()): 
             if r_cluster_key not in grouped_right_wv or not grouped_right_wv[r_cluster_key]:
-                if r_cluster_key in grouped_right_wv: del grouped_right_wv[r_cluster_key] # Clean up empty
+                if r_cluster_key in grouped_right_wv: del grouped_right_wv[r_cluster_key]
                 continue
 
-            original_r_anns_list = list(grouped_right_wv[r_cluster_key]) # Copy of annotations
+            original_r_anns_list = list(grouped_right_wv[r_cluster_key])
             r_cluster_tracking_ids = {ann['tracking_id'] for ann in original_r_anns_list}
-            # All annotations in a group should have the same LCA ID (without _right/_left yet)
             r_cluster_base_lca_id = str(original_r_anns_list[0]['LCA_clustering_id']) 
 
-            # Which Left LCA_clustering_ids do these TIDs map to?
             tid_to_left_lca_map = defaultdict(set)
             mapped_left_lca_ids = set()
             for l_cluster_key_iter, l_anns_list_iter in grouped_left_wv.items():
@@ -815,59 +663,51 @@ def split_conflicting_clusters_iteratively_s1(grouped_left_wv, grouped_right_wv,
                         tid_to_left_lca_map[l_ann_iter['tracking_id']].add(current_l_base_lca_id)
                         mapped_left_lca_ids.add(current_l_base_lca_id)
             
-            if len(mapped_left_lca_ids) > 1: # Conflict! Right cluster maps to multiple Left LCAs
+            if len(mapped_left_lca_ids) > 1:
                 print(f"    Conflict: Right Cluster {r_cluster_key} (Base LCA: {r_cluster_base_lca_id}) maps to multiple Left LCAs: {mapped_left_lca_ids}")
                 split_made_in_this_pass = True
                 overall_splits_made = True
                 
-                newly_created_split_parts = defaultdict(list) # {new_r_cluster_key_with_view: [anns]}
+                newly_created_split_parts = defaultdict(list)
                 moved_ann_uuids_this_conflict = set()
 
-                # For each target Left LCA, create a new split part in Right
                 for target_left_lca_id_str in sorted(list(mapped_left_lca_ids)):
-                    # Identify TIDs in original_r_anns_list that connect to this target_left_lca_id_str
                     tids_for_this_specific_connection = {
                         tid for tid, mapped_lcas in tid_to_left_lca_map.items() if target_left_lca_id_str in mapped_lcas
                     }
                     if not tids_for_this_specific_connection: continue
 
                     new_r_lca_id_for_this_split = generate_new_lca_id_s1(r_cluster_base_lca_id, all_current_right_lca_ids)
-                    all_current_right_lca_ids.add(new_r_lca_id_for_this_split) # Add to set for next generation
+                    all_current_right_lca_ids.add(new_r_lca_id_for_this_split)
                     new_r_cluster_key_for_this_split = f"{new_r_lca_id_for_this_split}_right"
                     print(f"      Defining new Right split part: {new_r_cluster_key_for_this_split} (for TIDs linking to Left LCA {target_left_lca_id_str})")
 
-                    for r_ann in original_r_anns_list: # Iterate original annotations
+                    for r_ann in original_r_anns_list:
                         if r_ann['tracking_id'] in tids_for_this_specific_connection and \
                            r_ann['uuid'] not in moved_ann_uuids_this_conflict:
                             
                             ann_copy_for_split = r_ann.copy()
-                            ann_copy_for_split['LCA_clustering_id'] = new_r_lca_id_for_this_split # Update LCA ID
+                            ann_copy_for_split['LCA_clustering_id'] = new_r_lca_id_for_this_split
                             newly_created_split_parts[new_r_cluster_key_for_this_split].append(ann_copy_for_split)
                             moved_ann_uuids_this_conflict.add(r_ann['uuid'])
                 
-                # Update the original r_cluster_key in grouped_right_wv
                 remaining_r_anns = [ann for ann in original_r_anns_list if ann['uuid'] not in moved_ann_uuids_this_conflict]
                 if not remaining_r_anns:
                     if r_cluster_key in grouped_right_wv: del grouped_right_wv[r_cluster_key]
                 else:
                     grouped_right_wv[r_cluster_key] = remaining_r_anns
                 
-                # Add new split parts to grouped_right_wv
                 for new_key, new_anns in newly_created_split_parts.items():
                     if new_anns: grouped_right_wv[new_key] = new_anns
 
-                # Update data_right['annotations'] to reflect all LCA_clustering_id changes
                 updated_full_data_right_annotations = []
                 for anns_in_cluster in grouped_right_wv.values(): 
                     updated_full_data_right_annotations.extend(anns_in_cluster)
                 data_right['annotations'] = updated_full_data_right_annotations
-                # Crucial: A split was made, restart this outer loop for stability
-                # by breaking from current for-loop (r_cluster_key) and letting outer_loop_count continue
                 break 
         
-        if split_made_in_this_pass: continue # Restart outer loop if a R->L split occurred
+        if split_made_in_this_pass: continue
 
-        # --- Left to Right Conflict Splitting (Symmetric) ---
         all_current_left_lca_ids = {str(ann['LCA_clustering_id']) for ann in data_left['annotations'] if 'LCA_clustering_id' in ann}
         for l_cluster_key in list(grouped_left_wv.keys()):
             if l_cluster_key not in grouped_left_wv or not grouped_left_wv[l_cluster_key]:
@@ -919,44 +759,37 @@ def split_conflicting_clusters_iteratively_s1(grouped_left_wv, grouped_right_wv,
                 for anns_in_cluster in grouped_left_wv.values():
                     updated_full_data_left_annotations.extend(anns_in_cluster)
                 data_left['annotations'] = updated_full_data_left_annotations
-                break # Restart outer loop for L->R split
+                break
         
-        if not split_made_in_this_pass: # No splits in R->L pass AND no splits in L->R pass
+        if not split_made_in_this_pass:
             print(f"  [Conflict Resolution by Splitting] Stable after {outer_loop_count + 1} outer loop(s).")
             return overall_splits_made 
 
     print(f"  [Conflict Resolution by Splitting] Reached max outer loops ({max_outer_loops}).")
     return overall_splits_made
 
-
-# assign_ids_after_equivalence_check (from Script 1 logic - assigns 'final_id')
 def assign_ids_after_equivalence_check_s1(data_left, data_right, eq_sets_from_s1_check):
     print("\n[Stage 5] Assigning Final IDs (Script 1 logic)")
-    assigned_final_ids_map = {}  # cluster_key_with_viewpoint -> final_id
+    assigned_final_ids_map = {}
     next_available_numeric_id = 1
 
-    # 1. Assign permanent numeric IDs to groups spanning both viewpoints
     for eq_group in eq_sets_from_s1_check:
-        viewpoints_in_group = {cl_key.rsplit("_", 1)[1] for cl_key in eq_group} # e.g., {'left', 'right'}
+        viewpoints_in_group = {cl_key.rsplit("_", 1)[1] for cl_key in eq_group}
         if "left" in viewpoints_in_group and "right" in viewpoints_in_group:
-            # This group is a confirmed cross-viewpoint individual
             base_lca_ids_in_group = {cl_key.rsplit('_',1)[0] for cl_key in eq_group}
             print(f"  Equivalent Group {base_lca_ids_in_group} (spans L/R). Assigning Final ID: {next_available_numeric_id}")
             for cl_key in eq_group:
                 assigned_final_ids_map[cl_key] = str(next_available_numeric_id)
             next_available_numeric_id += 1
     
-    # 2. Assign IDs to remaining (single-viewpoint) clusters
-    # Left viewpoint clusters get new permanent numeric IDs if not already processed
     all_left_cluster_keys = {f"{ann['LCA_clustering_id']}_left" for ann in data_left['annotations'] if 'LCA_clustering_id' in ann}
     for l_cl_key in sorted(list(all_left_cluster_keys)):
         if l_cl_key not in assigned_final_ids_map:
             base_lca = l_cl_key.rsplit("_", 1)[0]
             print(f"  Unmatched Left Cluster {base_lca}. Assigning New Final ID: {next_available_numeric_id}")
             assigned_final_ids_map[l_cl_key] = str(next_available_numeric_id)
-            next_available_numeric_id +=1 # Increment for each new distinct individual
+            next_available_numeric_id +=1
 
-    # Right viewpoint clusters (not part of a L/R group) get temporary IDs
     all_right_cluster_keys = {f"{ann['LCA_clustering_id']}_right" for ann in data_right['annotations'] if 'LCA_clustering_id' in ann}
     for r_cl_key in sorted(list(all_right_cluster_keys)):
         if r_cl_key not in assigned_final_ids_map:
@@ -965,7 +798,6 @@ def assign_ids_after_equivalence_check_s1(data_left, data_right, eq_sets_from_s1
             print(f"  Unmatched Right Cluster {base_lca}. Assigning Temporary Final ID: {temp_id}")
             assigned_final_ids_map[r_cl_key] = temp_id
 
-    # Annotate the JSON data with the 'final_id'
     for ann in data_left['annotations']:
         if 'LCA_clustering_id' in ann:
             key = f"{ann['LCA_clustering_id']}_left"
@@ -978,17 +810,13 @@ def assign_ids_after_equivalence_check_s1(data_left, data_right, eq_sets_from_s1
 
 
 # =========================
-# Utility JSON I/O Functions (from Script 2)
+# Utility JSON I/O Functions
 # =========================
 def load_json_data(file_path):
     with open(file_path, 'r') as f: return json.load(f)
 
-def save_json_data(data, file_path): # (already defined as save_json_with_stage)
-    with open(file_path, 'w') as f: json.dump(data, f, indent=4)
-
-
 # =========================
-# Main Workflow: Chain All Stages Together
+# Main Workflow
 # =========================
 def main():
     parser = argparse.ArgumentParser(
@@ -1010,105 +838,69 @@ def main():
         "out_right", nargs='?', type=str, help="The path to save the processed right LCA json."
     )
     parser.add_argument(
-        "--db", type=str, help="Database path for verification (optional, can also be set in config as database.path)"
+        "--db", type=str, help="Database path for verification"
     )
     parser.add_argument(
-        "--config", type=str, help="Path to the config file (optional, default is /algo/config_evaluation_LCA.yaml)"
+        "--config", type=str, help="Path to the config file"
     )
 
     args = parser.parse_args()
 
-    if args.config is None:
-        config_path =  "algo/config_evaluation_LCA.yaml"
-    else:
-        config_path = args.config
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
+    # MODIFICATION: Restored original config handling logic
+    config = {}
+    if args.config:
+        with open(args.config, "r") as f:
+            config = yaml.safe_load(f)
 
-    # NEW: Determine interaction mode from config (backward compatible)
     db_path = None
     if "interaction_mode" in config:
         interaction_mode = config["interaction_mode"]
     else:
-        # Backward compatibility with original config format
         interactive = config.get("interactive", True)
-        if interactive == "database":
-            db_path = args.db or config.get("database", {}).get("path")
-            init_db(db_path)
-            interaction_mode = "database"
-        elif interactive:
-            interaction_mode = True  # ipywidgets mode
-        else:
-            interaction_mode = False  # console mode
+        interaction_mode = interactive
 
-    # NEW: Use config values as defaults, override with command line args if provided
-    # merged_annots = args.merged_annots or config.get("csv", {}).get("merged_bbox")
+    if interaction_mode == "database":
+        db_path = args.db or config.get("database", {}).get("path")
+        if db_path and DATABASE_AVAILABLE:
+            init_db(db_path)
+
     image_dir = args.images or config.get("image", {}).get("directory")
+    
     in_left = args.in_left or config.get("json", {}).get("left", {}).get("input")
     in_right = args.in_right or config.get("json", {}).get("right", {}).get("input")
     out_left = args.out_left or config.get("json", {}).get("left", {}).get("output")
     out_right = args.out_right or config.get("json", {}).get("right", {}).get("output")
 
-    # Validate required parameters
-    # if not merged_annots:
-    #     raise ValueError("merged_annots is required. Specify as positional argument or set csv.merged_bbox in config.")
-    if not in_left:
-        raise ValueError("in_left is required. Specify as positional argument or set json.left.input in config.")
-    if not in_right:
-        raise ValueError("in_right is required. Specify as positional argument or set json.right.input in config.")
-    if not out_left:
-        raise ValueError("out_left is required. Specify as positional argument or set json.left.output in config.")
-    if not out_right:
-        raise ValueError("out_right is required. Specify as positional argument or set json.right.output in config.")
+    if not in_left or not in_right or not out_left or not out_right:
+        raise ValueError("Input and output JSON paths are required.")
 
-    # Update config with final values (for backward compatibility with existing code)
-    config["json"]["left"]["input"] = in_left
-    config["json"]["left"]["output"] = out_left
-    config["json"]["right"]["input"] = in_right
-    config["json"]["right"]["output"] = out_right
-    # config["csv"]["merged_bbox"] = merged_annots
-    # run_id = datetime.now().strftime("%Y%m%d_%H%M%S") # Unique ID for this run's files
+    # Using the user-provided utility function to load data
+    data_left = join_dataframe_dict(load_json_data(in_left))
+    data_right = join_dataframe_dict(load_json_data(in_right))
 
-    # merged_bbox_csv = config['csv']['merged_bbox'] # .replace(".csv", f"_{run_id}.csv")
-
-    # Stage 3: Update JSON annotations with timestamps
-    # print("\n--- Stage 3: Updating JSON Annotations with Timestamps ---")
-    left_json_ts = config['json']['left']['output'] # .replace(".json", f"_{run_id}_ts.json")
-    right_json_ts = config['json']['right']['output'] # .replace(".json", f"_{run_id}_ts.json")
-    # update_json_with_timestamp(config['json']['left']['input'], merged_bbox_csv, left_json_ts)
-    # update_json_with_timestamp(config['json']['right']['input'], merged_bbox_csv, right_json_ts)
-
-    data_left = join_dataframe_dict(load_json_data(left_json_ts))
-    data_right = join_dataframe_dict(load_json_data(right_json_ts))
-
+    # --- The rest of main is unchanged ---
     print_cluster_summary(data_left, "Initial Left")
     print_viewpoint_cluster_mapping(data_left, "left")
     print_cluster_summary(data_right, "Initial Right")
     print_viewpoint_cluster_mapping(data_right, "right")
 
-    # Stage 4: Split Cluster Verification (Iterative & Interactive & Deterministic)
     print("\n--- Stage 4: Split Cluster Verification ---")
     grouped_left_split_stage = group_annotations_by_LCA_all(data_left)
     grouped_right_split_stage = group_annotations_by_LCA_all(data_right)
 
-    # Iteratively apply consistency check for left view (ORIGINAL SIGNATURE PRESERVED)
     consistency_check_interactive_deterministic(grouped_left_split_stage, data_left, "Left", image_dir, interaction_mode, stage="split", db_path=db_path)
-    # Update data_left annotations from potentially modified grouped_left_split_stage
     data_left['annotations'] = [ann for anns in grouped_left_split_stage.values() for ann in anns]
     
-    # Iteratively apply consistency check for right view (ORIGINAL SIGNATURE PRESERVED)
     consistency_check_interactive_deterministic(grouped_right_split_stage, data_right, "Right", image_dir, interaction_mode, stage="split", db_path=db_path)
     data_right['annotations'] = [ann for anns in grouped_right_split_stage.values() for ann in anns]
 
-    left_split_file = save_json_with_stage(data_left, config['json']['left']['output'], "split_verified")
-    right_split_file = save_json_with_stage(data_right, config['json']['right']['output'], "split_verified")
+    left_split_file = save_json_with_stage(data_left, out_left, "split_verified")
+    right_split_file = save_json_with_stage(data_right, out_right, "split_verified")
     print_cluster_summary(data_left, "After Split Verification Left")
     print_cluster_summary(data_right, "After Split Verification Right")
 
-    # Stage 6: Time-Overlap Verification (Interactive & Deterministic)
-    # Note: grouped_... needs to be re-calculated as data_... might have changed (though LCA_ids not by split stage directly)
-    grouped_left_time_stage = group_annotations_by_LCA_all(data_left) # Re-group
-    grouped_right_time_stage = group_annotations_by_LCA_all(data_right) # Re-group
+    grouped_left_time_stage = group_annotations_by_LCA_all(data_left)
+    grouped_right_time_stage = group_annotations_by_LCA_all(data_right)
 
     print("\n--- Stage 6: Time-Overlap Verification ---")
     time_overlap_verification_interactive_deterministic(grouped_left_time_stage, data_left, "Left", image_dir, interaction_mode, db_path)
@@ -1117,43 +909,37 @@ def main():
     time_overlap_verification_interactive_deterministic(grouped_right_time_stage, data_right, "Right", image_dir, interaction_mode, db_path)
     data_right['annotations'] = [ann for anns in grouped_right_time_stage.values() for ann in anns]
     
-    left_time_file = save_json_with_stage(data_left, left_split_file, "time_verified", "") # Use previous as base for name
+    left_time_file = save_json_with_stage(data_left, left_split_file, "time_verified", "")
     right_time_file = save_json_with_stage(data_right, right_split_file, "time_verified", "")
     print_cluster_summary(data_left, "After Time-Overlap Left")
     print_cluster_summary(data_right, "After Time-Overlap Right")
 
-    # Stage 5: Cluster Equivalence & Final ID Assignment (Logic from Script 1)
     print("\n--- Stage 5: Cluster Equivalence and Final ID Assignment ---")
-    # Group with viewpoint suffixes for equivalence checking
     grouped_left_wv_s5 = group_annotations_by_LCA_with_viewpoint(data_left, 'left')
     grouped_right_wv_s5 = group_annotations_by_LCA_with_viewpoint(data_right, 'right')
     
-    print_viewpoint_cluster_mapping(data_left, "left") # Show current state
+    print_viewpoint_cluster_mapping(data_left, "left")
     print_viewpoint_cluster_mapping(data_right, "right")
 
-    # Iterative conflict resolution and equivalence checking (from Script 1's main loop for Stage 5)
-    max_s5_loops = 3 # Safeguard from Script 1's main
+    max_s5_loops = 3
     final_eq_sets = []
     for s5_loop_idx in range(max_s5_loops):
         print(f"  [Stage 5] Equivalence & Splitting Cycle: {s5_loop_idx + 1}")
         current_eq_sets = check_cluster_equivalence_s1(grouped_left_wv_s5, grouped_right_wv_s5)
         
-        # This function modifies grouped_X_wv and data_X['annotations'] in place
         made_splits_s5 = split_conflicting_clusters_iteratively_s1(grouped_left_wv_s5, grouped_right_wv_s5, data_left, data_right)
         
         if made_splits_s5:
             print("    Splits made in Stage 5. Re-grouping and re-checking equivalence...")
-            # Crucial: Regenerate grouped_X_wv from modified data_X
             grouped_left_wv_s5 = group_annotations_by_LCA_with_viewpoint(data_left, 'left')
             grouped_right_wv_s5 = group_annotations_by_LCA_with_viewpoint(data_right, 'right')
-            # Continue to next cycle of this Stage 5 loop
         else:
             print("    No splits made in this Stage 5 cycle. Conflict resolution stable.")
-            final_eq_sets = current_eq_sets # Use the latest stable sets
+            final_eq_sets = current_eq_sets
             break 
-    else: # If loop finished without break (max_s5_loops reached)
+    else:
         print(f"    Reached max Stage 5 conflict resolution cycles ({max_s5_loops}). Using current state.")
-        final_eq_sets = check_cluster_equivalence_s1(grouped_left_wv_s5, grouped_right_wv_s5) # Get final sets
+        final_eq_sets = check_cluster_equivalence_s1(grouped_left_wv_s5, grouped_right_wv_s5)
 
     assign_ids_after_equivalence_check_s1(data_left, data_right, final_eq_sets)
 
@@ -1168,8 +954,7 @@ def main():
     print(f"  Left: {left_final_file}")
     print(f"  Right: {right_final_file}")
 
-    # NEW: Database mode info
-    if interaction_mode == "database":
+    if interaction_mode == "database" and db_path:
         print(f"\nDatabase verification completed using: {os.path.abspath(db_path)}")
 
 if __name__ == "__main__":
