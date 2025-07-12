@@ -175,17 +175,8 @@ def save_json_with_stage(data, original_filename, stage_suffix, run_identifier="
         new_filename = f"{base}_{run_identifier}_{stage_suffix}{ext}"
     else:
         new_filename = f"{base}_{stage_suffix}{ext}"
-    
-    try:
-        # Try the original approach first
-        final_data = split_dataframe(pd.DataFrame(data))
-        save_json(final_data, new_filename)
-    except (ValueError, KeyError) as e:
-        print(f"Warning: Original DataFrame approach failed ({e}), using direct JSON save")
-        # Fallback: save directly as JSON
-        with open(new_filename, 'w') as f:
-            json.dump(data, f, indent=4)
-    
+    final_data = split_dataframe(pd.DataFrame(data["annotations"]))
+    save_json(final_data, new_filename)
     print(f"Saved file: {new_filename}")
     return new_filename
 
@@ -385,19 +376,19 @@ def pairwise_verification_interactive_deterministic(
                     x, y, w, h = ann_ref['bbox']
                     cropped = image.crop((x, y, x + w, y + h))
                     ax.imshow(cropped)
-                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nCA: {ann_ref.get('CA_score',0):.3f}")
+                    ax.set_title(f"Cls: {ann_ref['LCA_clustering_id']}\nTrkID: {ann_ref['tracking_id']}\nUUID: {ann_ref.get('uuid', 'NA')}\nCA: {ann_ref.get('CA_score',0):.3f}")
                     ax.axis('off')
                 except Exception as e: ax.text(0.5,0.5,f"Err: {e}", ha='center'); ax.axis('off')
             else: ax.text(0.5,0.5,"Img N/F", ha='center'); ax.axis('off')
         plt.tight_layout()
-        if widgets and interactive_mode == True: display(fig)
+        if widgets and interactive_mode: display(fig)
         else: plt.show(block=False) # Show non-blocking for console
     else:
         print("    (Image display skipped as image_dir is not configured)")
 
 
-    decision = get_user_decision(prompt=f"    Merge {cluster1_id} & {cluster2_id}? (Yes/No): ", interactive_mode=(interactive_mode == True))
-    if widgets and interactive_mode == True: clear_output(wait=True) # Clean up Jupyter display
+    decision = get_user_decision(prompt=f"    Merge {cluster1_id} & {cluster2_id}? (Yes/No): ", interactive_mode=interactive_mode)
+    if widgets and interactive_mode: clear_output(wait=True) # Clean up Jupyter display
 
     anchor_id, other_id = sorted([cluster1_id, cluster2_id]) # Deterministic anchor/other
 
@@ -1004,9 +995,6 @@ def main():
         description="Post process LCA outputs"
     )
     parser.add_argument(
-        "merged_annots", nargs='?', type=str, help="The full path to the annotation file, merged with timestamp."
-    )
-    parser.add_argument(
         "images", nargs='?', type=str, help="The image directory."
     )
     parser.add_argument(
@@ -1054,7 +1042,7 @@ def main():
             interaction_mode = False  # console mode
 
     # NEW: Use config values as defaults, override with command line args if provided
-    merged_annots = args.merged_annots or config.get("csv", {}).get("merged_bbox")
+    # merged_annots = args.merged_annots or config.get("csv", {}).get("merged_bbox")
     image_dir = args.images or config.get("image", {}).get("directory")
     in_left = args.in_left or config.get("json", {}).get("left", {}).get("input")
     in_right = args.in_right or config.get("json", {}).get("right", {}).get("input")
@@ -1062,8 +1050,8 @@ def main():
     out_right = args.out_right or config.get("json", {}).get("right", {}).get("output")
 
     # Validate required parameters
-    if not merged_annots:
-        raise ValueError("merged_annots is required. Specify as positional argument or set csv.merged_bbox in config.")
+    # if not merged_annots:
+    #     raise ValueError("merged_annots is required. Specify as positional argument or set csv.merged_bbox in config.")
     if not in_left:
         raise ValueError("in_left is required. Specify as positional argument or set json.left.input in config.")
     if not in_right:
@@ -1078,20 +1066,20 @@ def main():
     config["json"]["left"]["output"] = out_left
     config["json"]["right"]["input"] = in_right
     config["json"]["right"]["output"] = out_right
-    config["csv"]["merged_bbox"] = merged_annots
+    # config["csv"]["merged_bbox"] = merged_annots
     # run_id = datetime.now().strftime("%Y%m%d_%H%M%S") # Unique ID for this run's files
 
-    merged_bbox_csv = config['csv']['merged_bbox'] # .replace(".csv", f"_{run_id}.csv")
+    # merged_bbox_csv = config['csv']['merged_bbox'] # .replace(".csv", f"_{run_id}.csv")
 
     # Stage 3: Update JSON annotations with timestamps
-    print("\n--- Stage 3: Updating JSON Annotations with Timestamps ---")
+    # print("\n--- Stage 3: Updating JSON Annotations with Timestamps ---")
     left_json_ts = config['json']['left']['output'] # .replace(".json", f"_{run_id}_ts.json")
     right_json_ts = config['json']['right']['output'] # .replace(".json", f"_{run_id}_ts.json")
-    update_json_with_timestamp(config['json']['left']['input'], merged_bbox_csv, left_json_ts)
-    update_json_with_timestamp(config['json']['right']['input'], merged_bbox_csv, right_json_ts)
+    # update_json_with_timestamp(config['json']['left']['input'], merged_bbox_csv, left_json_ts)
+    # update_json_with_timestamp(config['json']['right']['input'], merged_bbox_csv, right_json_ts)
 
-    data_left = load_json_data(left_json_ts)
-    data_right = load_json_data(right_json_ts)
+    data_left = join_dataframe_dict(load_json_data(left_json_ts))
+    data_right = join_dataframe_dict(load_json_data(right_json_ts))
 
     print_cluster_summary(data_left, "Initial Left")
     print_viewpoint_cluster_mapping(data_left, "left")
