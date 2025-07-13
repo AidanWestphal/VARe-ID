@@ -183,7 +183,7 @@ def main():
 
     # Get common settings
     ca_flag = cfg['settings'].get('use_ca_score', True)
-    vp_flag = cfg['settings'].get('use_viewpoint', True)
+    vc_flag = cfg['settings'].get('use_viewpoint', True)
     selection_mode = cfg['settings'].get('selection_mode', 'many') # Default to 'many'
 
     random.seed(123456789)
@@ -192,7 +192,7 @@ def main():
 
     if selection_mode == 'one':
         print("\n=== Running the Single Annotation Selection Mode ===\n")
-        final_data = select_highest_score_per_track(data, ca_flag, vp_flag)
+        final_data = select_highest_score_per_track(data, ca_flag, vc_flag)
         print(f"\nFinal annotations: {len(final_data['annotations'])}")
         final_data = split_dataframe(pd.DataFrame(final_data['annotations']))
         save_json(final_data, final_out)
@@ -212,7 +212,7 @@ def main():
         stage1 = frame_sampling_algorithm_combined(
             data, t_sec, frame_int, pct1,
             ca_available=ca_flag,
-            viewpoint_available=vp_flag
+            viewpoint_available=vc_flag
         )
         save_json(stage1, step1_file)
         print(f"Saved Stage1 output → {step1_file}")
@@ -220,7 +220,7 @@ def main():
         print("\n=== Stage 2 ===")
         d2 = load_json(step1_file)
         print(f"Loading {len(d2['annotations'])} annotations for Stage 2")
-        grouped = group_annotations_by_tracking_id_and_viewpoint(d2, vp_flag)
+        grouped = group_annotations_by_tracking_id_and_viewpoint(d2, vc_flag)
         filtered = filter_annotations(grouped, pct2, ca_flag)
         final_data = reconstruct_annotations(d2, filtered)
         print(f"Final annotations: {len(final_data['annotations'])}")

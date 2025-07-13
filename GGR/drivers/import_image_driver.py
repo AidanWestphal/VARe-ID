@@ -1,13 +1,14 @@
 import argparse
-import json
 import subprocess
 
+from GGR.drivers.workflow_funcs import decode_config
+
 def main(args):
-    config = json.loads(args.config)
+    config = decode_config(args.config)
 
     try:
         subprocess.run(
-            f"python -m import_images {config["data_dir_in"]} {config["image_out_path"]} &> {config["import_logs"]}",
+            f'python -m GGR.algo.import.import_images {config["data_dir_in"]} {config["image_out_path"]}',
             shell=True, text=True, check=True
         )
     except Exception as e:

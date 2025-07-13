@@ -4,6 +4,7 @@ test_dataset/
 *__pycache__/
 .snakemake/
 scratch/
+GGR.egg-info/
 # Mac system
 .DS_Store
 *.pickle

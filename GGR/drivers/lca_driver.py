@@ -1,7 +1,7 @@
 import argparse
-import json
-import os
 import subprocess
+
+from GGR.drivers.workflow_funcs import decode_config
 
 def get_inputs(config):
     inputs = [config["mid_out_path"]]
@@ -24,14 +24,14 @@ def get_outputs(config):
 
 
 def main(args):
-    config = json.loads(args.config)
+    config = decode_config(args.config)
 
     input = config["fs_out_file"] if config["data_video"] else config["ia_filtered_out_file"]
     video_flag = "--video" if config["data_video"] else ""
     sv_flag = "--separate_viewpoints" if config["lca_separate_viewpoints"] else ""
     try:
         subprocess.run(
-            f"python -m lca {input} {config["mid_out_path"]} {config["lca_verifiers_probs_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_logs"]} {video_flag} {sv_flag} &> {config["lca_logs"]}",
+            f'python -m lca {input} {config["mid_out_path"]} {config["lca_verifiers_probs_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_logs"]} {video_flag} {sv_flag} &> {config["lca_logs"]}',
             shell=True, text=True, check=True
         )
     except Exception as e:

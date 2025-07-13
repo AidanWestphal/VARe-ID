@@ -24,4 +24,4 @@ dependencies:
     - lap >=0.5.12
     - pyzbar >= 0.1.9
     - pybioclip
-    - -e # INSTALLS THE GGR UTIL FUNCTIONS INCLUDED IN THE PIPELINE DIRECTLY
+    - -e . # INSTALLS THE GGR UTIL FUNCTIONS INCLUDED IN THE PIPELINE DIRECTLY

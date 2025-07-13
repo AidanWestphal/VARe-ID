@@ -1,13 +1,18 @@
 import argparse
-import json
 import subprocess
 
+from GGR.drivers.workflow_funcs import decode_config
+
+def get_inputs(config):
+    return [config["dt_video_out_path"]] if config["data_video"] else [config["dt_image_out_path"]]
+
+
 def main(args):
-    config = json.loads(args.config)
+    config = decode_config(args.config)
 
     try:
         subprocess.run(
-            f"python -m species_identifier {config["dt_out_path"]} {config["si_dir"]} {config["si_out_path"]} &> {config["si_logs"]}",
+            f'python -m species_identifier {config["dt_out_path"]} {config["si_dir"]} {config["si_out_path"]} &> {config["si_logs"]}',
             shell=True, text=True, check=True
         )
     except Exception as e:

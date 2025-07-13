@@ -6,11 +6,11 @@
 # -------- FILL OUT THIS SECTION --------
 
 # The file path (dir) to save your output to
-data_dir_out: 
+data_dir_out: "/fs/ess/PAS2136/ggr_data/results/GGR2020_subset_refactored"
 # The file path (dir) to read data from
-data_dir_in: 
+data_dir_in: "/fs/ess/PAS2136/ggr_data/image_data/GGR2020_subset"
 # True/False describing whether the data is in video format (True) or image format (False)
-data_video: 
+data_video: False
 
 # -------- END FILL OUT SECTION --------
 
@@ -29,12 +29,15 @@ import_logfile: "import.txt"
 # Detection step fields
 dt_dirname: "detector"
 dt_model: "yolov10l"
-dt_out_file: "annots.json"
 dt_logfile: "detector.txt"
 
 # Detection (gt present) fields -- FILL IN IF PROVIDING GT FILE
 dt_gt_file: ~
 dt_pre_filtering_file: ~
+
+# Detection split based on image or video (snakemake needs this split)
+dt_video_out_file: "vid_annots.json"
+dt_image_out_file: "img_annots.json"
 
 # Species identification step fields
 si_dirname: "species_identifier"
@@ -81,5 +84,5 @@ lca_out_suffix: "annots"
 # Postprocessing step fields
 post_dirname: "post"
 post_left_out_file: "post_left_annots.json"
-post_left_out_file: "post_right_annots.json"
+post_right_out_file: "post_right_annots.json"
 post_logfile: "post.txt"

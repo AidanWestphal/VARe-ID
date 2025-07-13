@@ -1,19 +1,23 @@
+import base64
 import json
 
+from GGR.drivers.lca_driver import get_inputs as get_lca_inputs
+from GGR.drivers.lca_driver import get_outputs as get_lca_outputs
 from GGR.drivers.mid_driver import get_inputs as get_mid_inputs
-from GGR.drivers.workflow_funcs import parse_config, generate_targets
+from GGR.drivers.si_driver import get_inputs as get_si_inputs
+from GGR.drivers.workflow_funcs import parse_config, generate_targets, encode_config
 
 # BUILD THE CONFIG FILE
 config = parse_config("config.yaml")
 
-# SERIALIZE CONFIG DICT AS STRING
-config_str = json.dumps(config)
+# SERIALIZE CONFIG DICT AS STRING (and add quotes to either side s.t. its passed as a param)
+config_str = encode_config(config)
 
 # WORKFLOW IS ORGANIZED BY DRIVERS
 
 rule all: 
     input:
-        generate_targets()
+        generate_targets(config)
 
 
 rule import_images:
@@ -22,7 +26,7 @@ rule import_images:
     output:
         config["image_out_path"]
     shell:
-        f"python -m import_image_driver {config_str}"
+        "python -m GGR.drivers.import_image_driver {config_str}"
 
 
 rule import_videos:
@@ -31,52 +35,52 @@ rule import_videos:
     output:
         config["video_out_path"]
     shell:
-        f"python -m video_image_driver {config_str}"
+        "python -m GGR.drivers.video_image_driver {config_str}"
 
 
 rule detect_images:
     input:
         config["image_out_path"]
     output:
-        config["dt_out_path"]
+        config["dt_image_out_path"]
     shell:
-        f"python -m dt_image_driver {config_str}"
+        "python -m GGR.drivers.dt_image_driver {config_str}"
     
 
 rule detect_videos:
     input:
         config["video_out_path"]
     output:
-        config["dt_out_path"]
+        config["dt_video_out_path"]
     shell:
-        f"python -m dt_video_driver {config_str}"
+        "python -m GGR.drivers.dt_video_driver {config_str}"
 
 
 rule species_identification:
     input:
-        config["dt_out_path"]
+        *get_si_inputs(config)
     output:
         config["si_out_path"]
     shell:
-        f"python -m si_driver {config_str}"
+        "python -m GGR.drivers.si_driver {config_str}"
 
 
 rule viewpoint_classification:
     input:
         config["si_out_path"]
     output:
-        config["vp_out_path"]
+        config["vc_out_path"]
     shell:
-        f"python -m vp_driver {config_str}"
+        "python -m GGR.drivers.vc_driver {config_str}"
 
 
 rule ia_classification:
     input:
-        config["vp_out_path"]
+        config["vc_out_path"]
     output:
         config["ia_out_path"]
     shell:
-        f"python -m iac_driver {config_str}"
+        "python -m GGR.drivers.iac_driver {config_str}"
 
 rule ia_filtering:
     input:
@@ -84,7 +88,7 @@ rule ia_filtering:
     output:
         config["ia_filtered_out_path"]
     shell:
-        f"python -m iaf_driver {config_str}"
+        "python -m GGR.drivers.iaf_driver {config_str}"
 
 
 rule frame_sampling:
@@ -93,7 +97,7 @@ rule frame_sampling:
     output:
         config["fs_out_path"]
     shell:
-        f"python -m fs_driver {config_str}"
+        "python -m GGR.drivers.fs_driver {config_str}"
 
 
 rule miew_id:
@@ -102,7 +106,7 @@ rule miew_id:
     output:
         config["mid_out_path"]
     shell:
-        f"python -m mid_driver {config_str}"
+        "python -m GGR.drivers.mid_driver {config_str}"
 
 
 rule lca:
@@ -111,4 +115,4 @@ rule lca:
     output:
         *get_lca_outputs(config)
     shell:
-        f"python -m lca {config_str}"
+        "python -m GGR.drivers.lca {config_str}"

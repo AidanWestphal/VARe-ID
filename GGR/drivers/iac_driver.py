@@ -1,13 +1,14 @@
 import argparse
-import json
 import subprocess
 
+from GGR.drivers.workflow_funcs import decode_config
+
 def main(args):
-    config = json.loads(args.config)
+    config = decode_config(args.config)
 
     try:
         subprocess.run(
-            f"python -m IA_classifier {config["vp_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]} &> {config["ia_logs"]}",
+            f'python -m IA_classifier {config["vc_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]} &> {config["ia_logs"]}',
             shell=True, text=True, check=True
         )
     except Exception as e:
