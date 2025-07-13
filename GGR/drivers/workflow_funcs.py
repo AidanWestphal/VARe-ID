@@ -17,9 +17,9 @@ def generate_targets(config):
     targets = [config["dt_out_path"], config["si_out_path"], config["vp_out_path"], config["ia_out_path"], config["ia_filtered_out_path"], config["lca_left_out_path"], config["lca_right_out_path"]]
 
     if config["data_video"]:
-        targets.append([config["video_out_path"], config["fs_out_path"], config["post_left_out_path"], config["post_right_out_path"]])
+        targets.append([config["video_out_path"], config["fs_out_path"], config["post_left_in_path"], config["post_right_in_path"]])
     else:
-        targets.append([config["image_out_path"]])
+        targets.append([config["lca_out_path"]])
 
     return targets
 
@@ -103,6 +103,8 @@ def parse_config(filepath):
     # Format is lca_dir/{prefix}_{left/right}_{suffix}.json
     post_left_in_path = os.path.join(lca_dir, f"{config["lca_out_prefix"]}_left_{config["lca_out_suffix"]}.json")
     post_right_in_path = os.path.join(lca_dir, f"{config["lca_out_prefix"]}_right_{config["lca_out_suffix"]}.json")
+    # In image mode, we expect the following output to the entire pipeline:
+    lca_out_path = os.path.join(lca_dir, f"{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json")
 
     # POST PROCESSING STEP
     post_dir = os.path.join(out_dir, config["post_dirname"])
@@ -146,6 +148,7 @@ def parse_config(filepath):
     config["post_left_in_path"] = post_left_in_path
     config["post_right_in_path"] = post_right_in_path
     config["lca_logs"] = lca_logs
+    config["lca_out_path"] = lca_out_path
     config["post_dir"] = post_dir
     config["post_left_out_path"] = post_left_out_path
     config["post_right_out_path"] = post_right_out_path

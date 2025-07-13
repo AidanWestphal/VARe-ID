@@ -1,5 +1,26 @@
 import argparse
+import os
 import subprocess
+
+def get_inputs(config):
+    inputs = [config["mid_out_path"]]
+
+    if config["data_video"]:
+        inputs.append(config["fs_out_path"])
+    else:
+        inputs.append(config["ia_filtered_out_path"])
+
+    return inputs
+
+
+def get_outputs(config):
+    if config["lca_separate_viewpoints"]:
+        outputs = [config["post_left_in_path"], config["post_right_in_path"]]
+    else:
+        outputs = [config["lca_out_path"]]
+
+    return outputs
+
 
 def main(args):
     config = args.config

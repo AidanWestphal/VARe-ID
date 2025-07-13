@@ -1,6 +1,10 @@
 import argparse
 import subprocess
 
+def get_inputs(config):
+    return [config["fs_out_path"]] if config["data_video"] else [config["ia_filtered_out_path"]]
+
+
 def main(args):
     config = args.config
     
