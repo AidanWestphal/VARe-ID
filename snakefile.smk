@@ -7,7 +7,7 @@ from GGR.drivers.workflow_funcs import parse_config, generate_targets
 config = parse_config("config.yaml")
 
 # SERIALIZE CONFIG DICT AS STRING
-config_str = json.loads(config)
+config_str = json.dumps(config)
 
 # WORKFLOW IS ORGANIZED BY DRIVERS
 
@@ -102,7 +102,7 @@ rule miew_id:
     output:
         config["mid_out_path"]
     shell:
-        f"python -m fs_driver {config_str}"
+        f"python -m mid_driver {config_str}"
 
 
 rule lca:

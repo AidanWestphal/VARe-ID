@@ -1,8 +1,9 @@
 import argparse
+import json
 import subprocess
 
 def main(args):
-    config = args.config
+    config = json.loads(args.config)
 
     try:
         subprocess.run(

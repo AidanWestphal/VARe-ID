@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import subprocess
 
@@ -23,7 +24,7 @@ def get_outputs(config):
 
 
 def main(args):
-    config = args.config
+    config = json.loads(args.config)
 
     input = config["fs_out_file"] if config["data_video"] else config["ia_filtered_out_file"]
     video_flag = "--video" if config["data_video"] else ""

@@ -1,4 +1,5 @@
 import argparse
+import json
 import subprocess
 
 def get_inputs(config):
@@ -6,7 +7,7 @@ def get_inputs(config):
 
 
 def main(args):
-    config = args.config
+    config = json.loads(args.config)
     
     input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
     try:
