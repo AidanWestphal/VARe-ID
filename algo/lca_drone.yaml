@@ -52,15 +52,12 @@ lca:
 edge_weights:
   verifier_file: tmp/zebra_baseline_prob_098.json
   prob_human_correct: 1.0
-  augmentation_names: miewid simulated_human
   num_pos_needed: 300
   num_neg_needed: 50
   scorer: kde
   classifier_thresholds:
-    miewid: 0.9
-  # weighter_thresholds:
-  #   miewid: 50
-  verifier_names: miewid simulated_human
+    miewid: auto
+  verifier_names: miewid no_human
 logging:
   log_level: INFO
   log_file: tmp/logs/whaleshark_kde.log
