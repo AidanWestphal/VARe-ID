@@ -1,7 +1,7 @@
 import argparse
-import subprocess
 
-from GGR.drivers.workflow_funcs import decode_config
+from GGR.util.io.logging import log_subprocess, setup_logging
+from GGR.util.io.workflow_funcs import decode_config
 
 def get_inputs(config):
     inputs = [config["mid_out_path"]]
@@ -29,13 +29,11 @@ def main(args):
     input = config["fs_out_file"] if config["data_video"] else config["ia_filtered_out_file"]
     video_flag = "--video" if config["data_video"] else ""
     sv_flag = "--separate_viewpoints" if config["lca_separate_viewpoints"] else ""
-    try:
-        subprocess.run(
-            f'python -m lca {input} {config["mid_out_path"]} {config["lca_verifiers_probs_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_logs"]} {video_flag} {sv_flag} &> {config["lca_logs"]}',
-            shell=True, text=True, check=True
-        )
-    except Exception as e:
-        print(e)
+
+    command = f'python -m lca {input} {config["mid_out_path"]} {config["lca_verifiers_probs_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_logs"]} {video_flag} {sv_flag}'
+
+    logger = setup_logging(config["lca_logs"])
+    log_subprocess(command, logger)
 
 
 if __name__ == "__main__":

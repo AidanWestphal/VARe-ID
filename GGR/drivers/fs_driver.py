@@ -1,18 +1,15 @@
 import argparse
-import subprocess
 
-from GGR.drivers.workflow_funcs import decode_config
+from GGR.util.io.logging import log_subprocess, setup_logging
+from GGR.util.io.workflow_funcs import decode_config
 
 def main(args):
     config = decode_config(args.config)
 
-    try:
-        subprocess.run(
-            f'python -m frame_sampling {config["ia_filtered_out_path"]} {config["fs_stage1_out_path"]} {config["fs_out_path"]} &> {config["fs_logs"]}',
-            shell=True, text=True, check=True
-        )
-    except Exception as e:
-        print(e)
+    command = f'python -m frame_sampling {config["ia_filtered_out_path"]} {config["fs_stage1_out_path"]} {config["fs_out_path"]}'
+
+    logger = setup_logging(config["fs_logs"])
+    log_subprocess(command, logger)
 
 
 if __name__ == "__main__":

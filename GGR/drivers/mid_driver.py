@@ -1,7 +1,8 @@
 import argparse
 import subprocess
 
-from GGR.drivers.workflow_funcs import decode_config
+from GGR.util.io.logging import log_subprocess, setup_logging
+from GGR.util.io.workflow_funcs import decode_config
 
 
 def get_inputs(config):
@@ -12,13 +13,11 @@ def main(args):
     config = decode_config(args.config)
     
     input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
-    try:
-        subprocess.run(
-            f'python -m miew_id {input} {config["mid_model"]} {config["mid_out_path"]} &> {config["mid_logs"]}',
-            shell=True, text=True, check=True
-        )
-    except Exception as e:
-        print(e)
+
+    command = f'python -m miew_id {input} {config["mid_model"]} {config["mid_out_path"]}'
+
+    logger = setup_logging(config["mid_logs"])
+    log_subprocess(command, logger)
 
 
 if __name__ == "__main__":

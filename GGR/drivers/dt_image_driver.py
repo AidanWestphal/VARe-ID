@@ -1,18 +1,15 @@
 import argparse
-import subprocess
 
-from GGR.drivers.workflow_funcs import decode_config
+from GGR.util.io.logging import log_subprocess, setup_logging
+from GGR.util.io.workflow_funcs import decode_config
 
 def main(args):
     config = decode_config(args.config)
 
-    try:
-        subprocess.run(
-            f'python -m image_detector {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_gt_path"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]} &> {config["dt_logs"]}',
-            shell=True, text=True, check=True
-        )
-    except Exception as e:
-        print(e)
+    command = f'python -m image_detector {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_gt_path"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]}'
+
+    logger = setup_logging(config["dt_logs"])
+    log_subprocess(command, logger)
 
 
 if __name__ == "__main__":
