@@ -2,15 +2,14 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - snakemake-minimal >=8.4.4
-  - python ==3.11
-  - opencv # Add opencv here
-  - libtiff == 4.5.1 # Explicitly state libtiff
-  - libjpeg-turbo # Explicitly state libjpeg-turbo
-  - zbar
-  - albumentations >= 2.0.4
-  - protobuf
+  - snakemake-minimal>=8.4.4
   - pip
+  - python==3.11
+  - albumentations>=2.0.4
+  - zbar
+  - conda-forge::zbar-py
+  - nvidia::cuda
+  - libtiff=4.5.1
   - pip:
     #  at the time of writing - 7. Feb 24 - pysam on bioconda will require
     #  a lower python version than snakemake, install pysam
