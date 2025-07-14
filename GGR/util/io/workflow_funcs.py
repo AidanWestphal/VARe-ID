@@ -141,6 +141,7 @@ def parse_config(filepath):
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
     lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifiers_probs"])
+    lca_subunit_logs = os.path.join(log_dir, config["lca_subunit_logfile"])
     lca_logs = os.path.join(log_dir, config["lca_logfile"])
 
     # In video mode, post expects specifically left and right viewpoints. Build the paths to these files here:
@@ -191,6 +192,7 @@ def parse_config(filepath):
     config["lca_verifiers_probs_path"] = lca_verifiers_probs_path
     config["post_left_in_path"] = post_left_in_path
     config["post_right_in_path"] = post_right_in_path
+    config["lca_subunit_logs"] = lca_subunit_logs
     config["lca_logs"] = lca_logs
     config["lca_out_path"] = lca_out_path
     config["post_dir"] = post_dir

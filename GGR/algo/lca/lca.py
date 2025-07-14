@@ -69,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("lca_dir", type=str, help="The directory to save files into.")
     parser.add_argument("output_prefix", type=str, help="The prefix for the output annotation file format.")
     parser.add_argument("output_suffix", type=str, help="The suffix for the output annotation file format.")
+    parser.add_argument("log_subunit_file", type=str, help="The path to the log file for the LCA algorithm itself.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
     parser.add_argument("--video", action="store_true", help="True if LCA should run on the video config file.")
     parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right.")
@@ -91,9 +92,11 @@ if __name__ == "__main__":
 
     # OPEN LCA INPUT CONFIG
     if args.video:
-        input_config = load_config(path_from_file(__file__, "lca_drone.yaml"))
+        input_config_name = "lca_drone.yaml"
+        input_config = load_config(path_from_file(__file__, input_config_name))
     else:
-        input_config = load_config(path_from_file(__file__, "lca_image.yaml"))
+        input_config_name = "lca_image.yaml"
+        input_config = load_config(path_from_file(__file__, input_config_name))
 
     # ADD CONFIG INFO
     input_config["data"]["images_dir"] = args.image_dir # or None
@@ -102,21 +105,18 @@ if __name__ == "__main__":
     input_config["data"]["embedding_file"] = args.embeddings
     input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
     input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
-    input_config["exp_name"] = "" # empty string means all files saved to output_path (saves to output_path/exp_name
-    input_config["logging"]["log_file"] = args.log_file # should append LCA outputs into same log file used by this script
+    input_config["logging"]["log_file"] = args.log_subunit_file # should append LCA outputs into same log file used by this script
 
 
     # WRITE CONFIG FILE INTO LCA
-    config_dir = os.path.dirname(lca_config["config_save_path"])
+    config_dir = os.path.join(lca_github_loc, lca_config["config_save_path"])
+    config_loc = os.path.join(config_dir, input_config_name)
 
-    sep = args.input_config.rfind("/")
-    config_fname = args.input_config[sep:].replace("/","")
-
-    config_loc = os.path.join(config_dir, config_fname)
     with open(config_loc, "w") as f:
         yaml.dump(input_config, f)
 
     # RUN LCA or alternative
+    print("Begin LCA Subunit...")
     if lca_alternative_clustering:
         print('run hdbscan')
         subprocess.run(["python3", f"{lca_github_loc}/lca/run_hdbscan.py", "--config", config_loc])
@@ -124,16 +124,15 @@ if __name__ == "__main__":
         print('run lca')
         subprocess.run(["python3", f"{lca_github_loc}/lca/run.py", "--config", config_loc])
 
-
     output_path = args.lca_dir
     anno_file = args.annots
 
     if args.separate_viewpoints:
         for viewpoint in input_config["data"]["viewpoint_list"]:
-            input_dir = os.path.join(output_path, args.exp_name, viewpoint)
+            input_dir = os.path.join(output_path, viewpoint)
             save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, viewpoint=viewpoint, uuid_key=input_config["data"]["id_key"])
     else:
-        input_dir = os.path.join(output_path, args.exp_name)
+        input_dir = output_path
         save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, uuid_key=input_config["data"]["id_key"])
 
     exit()

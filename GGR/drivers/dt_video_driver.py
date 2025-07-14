@@ -6,7 +6,7 @@ from GGR.util.io.workflow_funcs import decode_config
 def main(args):
     config = decode_config(args.config)
 
-    command = f'python -m GGR.algo.detection.video_detector {config["video_out_path"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_video_out_path"]}'
+    command = f'python -u -m GGR.algo.detection.video_detector {config["video_out_path"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_video_out_path"]}'
 
     logger = setup_logging(config["dt_logs"])
     log_subprocess(command, logger)

@@ -174,7 +174,7 @@ def main(args):
     """
 
     print("Loading configuration...")
-    config = load_config(path_from_file(__file__, "CA_classifier_config.yaml"))
+    config = load_config(path_from_file(__file__, "IA_classifier_config.yaml"))
 
     print("Setting up device...")
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")

@@ -25,8 +25,6 @@ rule import_images:
         directory(config["data_dir_in"])
     output:
         config["image_out_path"]
-    log:
-        config["import_logs"]
     shell:
         "python -m GGR.drivers.import_image_driver {config_str}"
 
@@ -36,8 +34,6 @@ rule import_videos:
         directory(config["data_dir_in"])
     output:
         config["video_out_path"]
-    log:
-        config["import_logs"]
     shell:
         "python -m GGR.drivers.video_image_driver {config_str}"
 
@@ -47,8 +43,6 @@ rule detect_images:
         config["image_out_path"]
     output:
         config["dt_image_out_path"]
-    log:
-        config["dt_logs"]
     shell:
         "python -m GGR.drivers.dt_image_driver {config_str}"
     
@@ -58,8 +52,6 @@ rule detect_videos:
         config["video_out_path"]
     output:
         config["dt_video_out_path"]
-    log:
-        config["dt_logs"]
     shell:
         "python -m GGR.drivers.dt_video_driver {config_str}"
 
@@ -69,8 +61,6 @@ rule species_identification:
         *get_si_inputs(config)
     output:
         config["si_out_path"]
-    log:
-        config["si_logs"]
     shell:
         "python -m GGR.drivers.si_driver {config_str}"
 
@@ -80,8 +70,6 @@ rule viewpoint_classification:
         config["si_out_path"]
     output:
         config["vc_out_path"]
-    log:
-        config["vc_logs"]
     shell:
         "python -m GGR.drivers.vc_driver {config_str}"
 
@@ -91,8 +79,6 @@ rule ia_classification:
         config["vc_out_path"]
     output:
         config["ia_out_path"]
-    log:
-        config["ia_logs"]
     shell:
         "python -m GGR.drivers.iac_driver {config_str}"
 
@@ -101,8 +87,6 @@ rule ia_filtering:
         config["ia_out_path"]
     output:
         config["ia_filtered_out_path"]
-    log:
-        config["ia_logs"]
     shell:
         "python -m GGR.drivers.iaf_driver {config_str}"
 
@@ -112,8 +96,6 @@ rule frame_sampling:
         config["ia_filtered_out_path"]
     output:
         config["fs_out_path"]
-    log:
-        config["fs_logs"]
     shell:
         "python -m GGR.drivers.fs_driver {config_str}"
 
@@ -123,8 +105,6 @@ rule miew_id:
         *get_mid_inputs(config)
     output:
         config["mid_out_path"]
-    log:
-        config["mid_logs"]
     shell:
         "python -m GGR.drivers.mid_driver {config_str}"
 
@@ -134,7 +114,5 @@ rule lca:
         *get_lca_inputs(config)
     output:
         *get_lca_outputs(config)
-    log:
-        config["lca_logs"]
     shell:
-        "python -m GGR.drivers.lca {config_str}"
+        "python -m GGR.drivers.lca_driver {config_str}"

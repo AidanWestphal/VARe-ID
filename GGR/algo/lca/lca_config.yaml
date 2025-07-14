@@ -1,7 +1,7 @@
 # CONFIG FOR lca.py SCRIPT
 
 github_lca_url: https://github.com/WildMeOrg/lca.git
-config_save_path: "lca/configs/config_GZCD.yaml"
+config_save_path: "lca/configs/"
 
 lca_alternative_clustering: False
 

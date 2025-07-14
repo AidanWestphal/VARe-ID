@@ -60,6 +60,7 @@ def convert_bbox(bbox_str):
 
 
 if __name__ == "__main__":
+    print("Loading data...")
     parser = argparse.ArgumentParser(
         description="Detect bounding boxes for database of animal images"
     )
@@ -79,6 +80,7 @@ if __name__ == "__main__":
     data = load_json(args.csv_file)
     df = join_dataframe(data)
 
+    print("Filtering data...")
     # filter out for true CA annotations
     df = df[df["annotations_census"] == True]
 
@@ -88,9 +90,11 @@ if __name__ == "__main__":
     # Make individual id column
     df["individual_id"] = 0
 
+    print("Reassigning viewpoints...")
     # Reassign all viewpoints to just left/right
     df = assign_viewpoints(df, excluded_viewpoints=["upback", "upfront"])
 
+    print("Saving data...")
     # Save data
     annotations = split_dataframe(df)
     save_json(annotations, args.eda_out)

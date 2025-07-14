@@ -6,7 +6,7 @@ from GGR.util.io.workflow_funcs import decode_config
 def main(args):
     config = decode_config(args.config)
 
-    command = f'python -m GGR.algo.ia_classification.IA_classifier {config["vc_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]}'
+    command = f'python -u -m GGR.algo.ia_classification.IA_classifier {config["vc_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]}'
 
     logger = setup_logging(config["ia_logs"])
     log_subprocess(command, logger)

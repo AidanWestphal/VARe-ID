@@ -18,7 +18,7 @@ data_video: False
 # Important directories to reference
 log_dirname: "logs"
 image_dirname: "images"
-model_dirname: "models"
+model_dirname: "GGR/models"
 
 # Import step fields
 image_out_file: "image_data.json"
@@ -54,7 +54,7 @@ ia_dirname: "ia_classifier"
 ia_model: "best_june_24_2025_IA_classifier_016.pth"
 ia_out_file: "ia_annots.json"
 ia_filtered_out_file: "ia_filtered_annots.json"
-ia_logfile: "ia_classifier.txt"
+ia_logfile: "ia_classify_and_filter.txt"
 
 # Frame sampling step fields
 fs_dirname: "frame_sampling"
@@ -74,6 +74,7 @@ mid_logfile: "miew_id.txt"
 lca_dirname: "lca"
 lca_verifiers_probs: "verifiers_probs.json"
 lca_separate_viewpoints: True
+lca_subunit_logfile: "lca_algorithm.txt"
 lca_logfile: "lca.txt"
 
 # LCA is special: its output is formatted as {prefix}_{viewpoint}_{suffix}.json (or {prefix}_{suffix}.json if not separating viewpoint).

@@ -11,7 +11,7 @@ def main(args):
     else:
         json_stage1 = ""
 
-    command = f'python -m GGR.algo.frame_sampling.frame_sampling {config["ia_filtered_out_path"]} {config["fs_out_path"]} {json_stage1}'
+    command = f'python -u -m GGR.algo.frame_sampling.frame_sampling {config["ia_filtered_out_path"]} {config["fs_out_path"]} {json_stage1}'
 
     logger = setup_logging(config["fs_logs"])
     log_subprocess(command, logger)

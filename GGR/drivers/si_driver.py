@@ -12,7 +12,7 @@ def main(args):
     input = config["dt_video_out_path"] if config["data_video"] else config["dt_image_out_path"]
 
     # python -m GGR.algo.species_identification.species_identifier /fs/ess/PAS2136/ggr_data/results/GGR2020_subset_refactored/detector/img_annots.json /fs/ess/PAS2136/ggr_data/results/GGR2020_subset_refactored/species_identifier /fs/ess/PAS2136/ggr_data/results/GGR2020_subset_refactored/species_identifier/si_annots.json
-    command = f'python -m GGR.algo.species_identification.species_identifier {input} {config["si_dir"]} {config["si_out_path"]}'
+    command = f'python -u -m GGR.algo.species_identification.species_identifier {input} {config["si_dir"]} {config["si_out_path"]}'
     logger = setup_logging(config["si_logs"])
     log_subprocess(command, logger)
 

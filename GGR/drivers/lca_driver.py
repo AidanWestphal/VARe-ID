@@ -26,11 +26,11 @@ def get_outputs(config):
 def main(args):
     config = decode_config(args.config)
 
-    input = config["fs_out_file"] if config["data_video"] else config["ia_filtered_out_file"]
+    input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
     video_flag = "--video" if config["data_video"] else ""
     sv_flag = "--separate_viewpoints" if config["lca_separate_viewpoints"] else ""
 
-    command = f'python -m GGR.algo.lca.lca {input} {config["mid_out_path"]} {config["lca_verifiers_probs_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_logs"]} {video_flag} {sv_flag}'
+    command = f'python -u -m GGR.algo.lca.lca {input} {config["mid_out_path"]} {config["lca_verifiers_probs_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_subunit_logs"]} {config["lca_logs"]} {video_flag} {sv_flag}'
 
     logger = setup_logging(config["lca_logs"])
     log_subprocess(command, logger)

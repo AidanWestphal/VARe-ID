@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 import select
 import sys
 import subprocess
@@ -39,6 +40,9 @@ def setup_logging(logfile):
 
     formatter = ConsoleFormatter()
 
+    # IF DIRS TO LOGFILE DON'T EXIST, MAKE THE PATH
+    Path(os.path.dirname(logfile)).mkdir(parents=True, exist_ok=True)
+    
     # LOGFILE
     file_handler = logging.FileHandler(logfile)
     file_handler.setFormatter(formatter)
@@ -94,10 +98,6 @@ def log_subprocess(command, logger):
                 else:
                     # IF THE LINE WAS EMPTY STRING WE ARE AT EOF
                     active_fds.remove(fd)
-
-            # FLUSH HANDLERS        
-            for handler in logger.handlers:
-                handler.flush()
 
         if process: 
             process.wait() 
