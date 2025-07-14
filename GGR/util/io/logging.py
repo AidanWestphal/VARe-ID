@@ -19,11 +19,11 @@ class ConsoleFormatter(logging.Formatter):
 
     def format(self, record):
         if record.levelno >= logging.CRITICAL:
-            self._fmt = self.FORMAT_CRITICAL
+            self._style._fmt = self.FORMAT_CRITICAL
         elif record.levelno >= logging.ERROR:
-            self._fmt = self.FORMAT_ERROR
+            self._style._fmt = self.FORMAT_ERROR
         else:
-            self._fmt = self.FORMAT_INFO
+            self._style._fmt = self.FORMAT_INFO
         
         # CALL PARENT FORMAT
         return super().format(record)

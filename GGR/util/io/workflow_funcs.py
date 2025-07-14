@@ -106,7 +106,7 @@ def parse_config(filepath):
 
     # If a GT file was provided, build it to a path, otherwise set path to none
     dt_gt_path = os.path.join(dt_dir, config["dt_gt_file"]) if config["dt_gt_file"] is not None else None
-    dt_pre_filtering_path =  os.path.join(dt_dir, config["dt_pre_filtering_file"]) if config["dt_pre_filtering_file"] is not None else None
+    dt_filtered_out_path =  os.path.join(dt_dir, config["dt_filtered_out_file"]) if config["dt_filtered_out_file"] is not None else None
 
     # SPECIES IDENTIFICATION STEP
     si_dir = os.path.join(out_dir, config["si_dirname"])
@@ -169,7 +169,7 @@ def parse_config(filepath):
     config["dt_image_out_path"] = dt_image_out_path
     config["dt_logs"] = dt_logs
     config["dt_gt_path"] = dt_gt_path
-    config["dt_pre_filtering_path"] = dt_pre_filtering_path
+    config["dt_filtered_out_path"] = dt_filtered_out_path
     config["si_dir"] = si_dir
     config["si_out_path"] = si_out_path
     config["si_logs"] = si_logs

@@ -13,6 +13,8 @@ import ultralytics
 import yaml
 from tqdm import tqdm
 
+from GGR.util.utils import path_from_file
+
 ultralytics.checks()
 import urllib.request
 from pathlib import Path
@@ -20,17 +22,9 @@ from pathlib import Path
 import pandas as pd
 from ultralytics import YOLO
 
-from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe
+from GGR.util.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe
 
 warnings.filterwarnings("ignore")
-
-
-def clone_yolo_from_github(yolo_dir, repo_url):
-    if not os.path.exists(yolo_dir) or not os.listdir(yolo_dir):
-        print(f"Cloning repository {repo_url} into {yolo_dir}...")
-        subprocess.run(["git", "clone", repo_url, yolo_dir])
-    else:
-        print(f"Directory {yolo_dir} exists and is not empty.")
 
 
 def download_model(yolo_model, yolo_url, model_dir):
@@ -148,22 +142,21 @@ def postprocess_tracking_ids(annots):
 
 
 def main(args):
-    config = load_config("algo/detector.yaml")
-
-    exp_dir = Path(args.exp_dir)
+    config = load_config(path_from_file(__file__, "detector_config.yaml"))
+    
+    dt_dir = Path(args.dt_dir)
     annots = Path(args.annot_dir)
 
     video_data = load_json(args.video_data)
 
-    os.makedirs(exp_dir, exist_ok=True)
+    os.makedirs(dt_dir, exist_ok=True)
     shutil.rmtree(annots, ignore_errors=True)
     os.makedirs(annots, exist_ok=True)
 
-    yolo_dir = os.path.join(exp_dir, config["yolo_dir"])
+    yolo_dir = os.path.join(dt_dir, config["yolo_dir"])
     github_v10_url = config["github_v10_url"]
-    shutil.rmtree(yolo_dir, ignore_errors=True)
 
-    clone_yolo_from_github(yolo_dir, github_v10_url)
+    clone_from_github(yolo_dir, github_v10_url)
 
     model_dir = os.path.join(yolo_dir, config["model_dir"])
     os.makedirs(model_dir, exist_ok=True)
@@ -184,8 +177,8 @@ def main(args):
     df = pd.DataFrame(annotations)
     annotations = split_dataframe(df)
 
-    print(f"Saving annotations to {args.annots_filtered_csv_path}...")
-    filtered_annot_json_path = os.path.join(annots, args.annots_filtered_csv_path)
+    print(f"Saving annotations to {args.out_json_path}...")
+    filtered_annot_json_path = os.path.join(annots, args.out_json_path)
     save_json(annotations, filtered_annot_json_path)
 
     print("Done!")
@@ -202,18 +195,13 @@ if __name__ == "__main__":
         "annot_dir", type=str, help="The directory to export annotations to"
     )
     parser.add_argument(
-        "exp_dir", type=str, help="The directory to export models and predictions to"
-    )
-    parser.add_argument("model_version", type=str, help="The yolo model version to use")
-    parser.add_argument(
-        "annots_csv_filename",
-        type=str,
-        help="The name of the output annotations csv file",
+        "dt_dir", type=str, help="The directory to export models and predictions to"
     )
     parser.add_argument(
-        "annots_filtered_csv_path",
-        type=str,
-        help="The name of the output filtered annotations csv file",
+        "model_version", type=str, help="The yolo model version to use"
+    )
+    parser.add_argument(
+        "out_json_path", type=str, help="The name of the output annotations json file"
     )
 
     args = parser.parse_args()

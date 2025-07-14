@@ -7,21 +7,9 @@ import yaml
 
 import pandas as pd
 
-from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
-from GGR.util.utils import get_abs_path
+from GGR.util.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe, join_dataframe_dict
+from GGR.util.utils import path_from_file
 
-
-def clone_from_github(directory, repo_url):
-    if not os.path.exists(directory) or not os.listdir(directory):
-        print(f"Cloning repository {repo_url} into {directory}...")
-        subprocess.run(["git", "clone", repo_url, directory], check=True)
-        print("Repository cloned successfully...")
-    else:
-        print("Removing dir...")
-        shutil.rmtree(directory)
-        print(f"Cloning repository {repo_url} into {directory}...")
-        subprocess.run(["git", "clone", repo_url, directory], check=True)
-        print("Repository cloned successfully...")
 
 def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, viewpoint=None, uuid_key="annot_uuid"):
     clustering_file = os.path.join(input_dir, "clustering.json")
@@ -89,11 +77,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Get abs path to current dir
-    current_dir = get_abs_path()
+    # TODO: FIX
+    current_dir = "get_abs_path()"
 
     # Config for LCA itself -- not input config to LCA
-    lca_config = load_config(os.path.join(current_dir, "lca_config.yaml"))
-
+    lca_config = load_config(path_from_file(__file__, "lca_config.yaml"))
+    
     lca_alternative_clustering = lca_config["lca_alternative_clustering"]
 
     # Save to lca dir inside lca
@@ -102,9 +91,9 @@ if __name__ == "__main__":
 
     # OPEN LCA INPUT CONFIG
     if args.video:
-        input_config = load_config(os.path.join(current_dir, "lca_drone.yaml"))
+        input_config = load_config(path_from_file(__file__, "lca_drone.yaml"))
     else:
-        input_config = load_config(os.path.join(current_dir, "lca_image.yaml"))
+        input_config = load_config(path_from_file(__file__, "lca_image.yaml"))
 
     # ADD CONFIG INFO
     input_config["data"]["images_dir"] = args.image_dir # or None

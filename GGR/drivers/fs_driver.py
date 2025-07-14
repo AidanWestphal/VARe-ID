@@ -5,8 +5,13 @@ from GGR.util.io.workflow_funcs import decode_config
 
 def main(args):
     config = decode_config(args.config)
+    
+    if config["fs_stage1_out_path"]:
+        json_stage1 = "--json_stage1 " + config["fs_stage1_out_path"]
+    else:
+        json_stage1 = ""
 
-    command = f'python -m frame_sampling {config["ia_filtered_out_path"]} {config["fs_stage1_out_path"]} {config["fs_out_path"]}'
+    command = f'python -m GGR.algo.frame_sampling.frame_sampling {config["ia_filtered_out_path"]} {config["fs_out_path"]} {json_stage1}'
 
     logger = setup_logging(config["fs_logs"])
     log_subprocess(command, logger)

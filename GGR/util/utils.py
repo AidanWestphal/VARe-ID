@@ -14,15 +14,22 @@ from GGR.util.constants import (
     ORIENTATION_270,
 )
 
-def get_abs_path():
+def path_from_file(file, relative):
     """
-    Gets the absolute path of the calling script.
+    Generates a correct path to a file from a relative path, regardless of the directory 
+    the script is executed from. This is done by building from the absolute filepath of the 
+    script itself.
 
+    Parameters:
+        file (str): The __file__ string of a file.
+        relative (str): A relative filepath.
+    
     Returns:
-        path (str): string path to the directory the calling script was located in.
+        abs_path (str): The absolute path found by following the relative filepath from the file path.
     """
 
-    return dirname(abspath(__file__))
+    return os.path.join(dirname(abspath(file)), relative)
+
 
 def parse_exif(pil_img):
     """

@@ -8,7 +8,7 @@ def main(args):
 
     flag = "--video" if config["data_video"] else ""
 
-    command = f'python -m IA_filtering {config["ia_out_path"]} {config["ia_filtered_out_path"]} {flag}'
+    command = f'python -m GGR.algo.ia_classification.IA_filtering {config["ia_out_path"]} {config["ia_filtered_out_path"]} {flag}'
 
     logger = setup_logging(config["iaf_logs"])
     log_subprocess(command, logger)

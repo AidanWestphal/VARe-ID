@@ -8,6 +8,7 @@ import pandas as pd
 import shutil
 
 from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
+from GGR.util.utils import path_from_file
 
 def group_annotations_by_tracking_id_and_subsequences(data):
     annotations = data['annotations']
@@ -166,17 +167,18 @@ def main():
         help="The full path to the ca classifier output json to use as input",
     )
     parser.add_argument(
-        "json_stage1",
-        type=str,
-        help="The full path to the output json file for stage 1 (only used in 'many' mode)",
+        "json_final", type=str, help="The full path to the output json file for final"
     )
     parser.add_argument(
-        "json_final", type=str, help="The full path to the output json file for final"
+        "--json_stage1",
+        type=str, 
+        default=None,
+        help="The full path to the output json file for stage 1 (only used in 'many' mode)",
     )
     args = parser.parse_args()
 
     # Load configuration from YAML file
-    cfg = load_config("algo/frame_sampling.yaml")
+    cfg = load_config(path_from_file(__file__, "frame_sampling.yaml"))
     in_file = args.in_json_path
     step1_file = args.json_stage1
     final_out = args.json_final
@@ -196,10 +198,7 @@ def main():
         print(f"\nFinal annotations: {len(final_data['annotations'])}")
         final_data = split_dataframe(pd.DataFrame(final_data['annotations']))
         save_json(final_data, final_out)
-        print(f"Saved final output → {final_out}")
-        # --- 2. ADD THIS LINE ---
-        shutil.copyfile(final_out, step1_file)
-        print(f"Created copy for Snakemake → {step1_file}")
+        print(f"Saved final output: {final_out}")
 
     elif selection_mode == 'many':
         print("\n=== Running the Many-Frame Sampling Mode ===\n")
@@ -214,11 +213,13 @@ def main():
             ca_available=ca_flag,
             viewpoint_available=vc_flag
         )
-        save_json(stage1, step1_file)
-        print(f"Saved Stage1 output → {step1_file}")
+        
+        if step1_file:
+            save_json(stage1, step1_file)
+            print(f"Saved Stage1 output: {step1_file}")
 
         print("\n=== Stage 2 ===")
-        d2 = load_json(step1_file)
+        d2 = stage1
         print(f"Loading {len(d2['annotations'])} annotations for Stage 2")
         grouped = group_annotations_by_tracking_id_and_viewpoint(d2, vc_flag)
         filtered = filter_annotations(grouped, pct2, ca_flag)

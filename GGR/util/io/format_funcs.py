@@ -1,5 +1,7 @@
 import json
 import os
+import shutil
+import subprocess
 import yaml
 
 import pandas as pd
@@ -17,7 +19,8 @@ ANNOTATION_COLNAMES = [
     "annotations_census",
     "CA_score",
     "category_id",
-    "LCA_clustering_id"
+    "LCA_clustering_id",
+    "gt_iou",
 ]
 
 # COLUMNS TO BE KEPT IN CATEGORIES (as found in annotations)
@@ -46,6 +49,16 @@ IMAGE_COLNAMES = [
 IMAGE_COL_RENAMES = {
     "image_uuid": "uuid"
 }
+
+
+def clone_from_github(dir, repo_url):
+    '''
+    Clone from github into a repository. Clears the folder first s.t. the 
+    newest version is installed (if you had a prior version).
+    '''
+    shutil.rmtree(dir, ignore_errors=True)
+    print(f"Cloning repository {repo_url} into {dir}...")
+    subprocess.run(["git", "clone", repo_url, dir])
 
 
 def load_config(file_path):

@@ -18,6 +18,7 @@ from torchvision.models import resnet50
 from torchvision.ops import nms
 
 from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+from GGR.util.utils import path_from_file
 
 
 def xywh_to_xyxy(bbox: list):
@@ -173,7 +174,7 @@ def main(args):
     """
 
     print("Loading configuration...")
-    config = load_config("algo/CA_classifier.yaml")
+    config = load_config(path_from_file(__file__, "CA_classifier.yaml"))
 
     print("Setting up device...")
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")

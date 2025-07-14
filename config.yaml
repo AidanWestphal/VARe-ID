@@ -33,7 +33,7 @@ dt_logfile: "detector.txt"
 
 # Detection (gt present) fields -- FILL IN IF PROVIDING GT FILE
 dt_gt_file: ~
-dt_pre_filtering_file: ~
+dt_filtered_out_file: ~
 
 # Detection split based on image or video (snakemake needs this split)
 dt_video_out_file: "vid_annots.json"

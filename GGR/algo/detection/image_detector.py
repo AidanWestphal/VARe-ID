@@ -2,6 +2,7 @@ import argparse
 import os
 import shutil
 import subprocess
+import sys
 import uuid
 import warnings
 import ultralytics
@@ -12,18 +13,11 @@ from pathlib import Path
 import pandas as pd
 from ultralytics import YOLO
 
-from GGR.util.io.format_funcs import load_config, load_json, load_dataframe, save_json, split_dataframe
+from GGR.util.io.format_funcs import clone_from_github, load_config, load_json, load_dataframe, save_json, split_dataframe
+from GGR.util.utils import path_from_file
 
 ultralytics.checks()
 warnings.filterwarnings("ignore")
-
-
-def clone_yolo_from_github(yolo_dir, repo_url):
-    if not os.path.exists(yolo_dir) or not os.listdir(yolo_dir):
-        print(f"Cloning repository {repo_url} into {yolo_dir}...")
-        subprocess.run(["git", "clone", repo_url, yolo_dir])
-    else:
-        print(f"Directory {yolo_dir} exists and is not empty.")
 
 
 def download_model(yolo_model, yolo_url, model_dir):
@@ -125,85 +119,6 @@ def calculate_iou(box1: list, box2: list):
     return iou
 
 
-def filtration(predicted_df, original_df, iou_thresh=0.50):
-    pred_df = predicted_df
-
-    filtered_annotations = []
-
-    for index, row in pred_df.iterrows():
-
-        x0, y0, w, h = row["bbox"]
-        pred_bbox = [x0, y0, x0 + w, y0 + h]
-
-        image_uuid = row["image_uuid"]
-        if "image_path" in row.keys():
-            image_fname = row["image_path"]
-        else:
-            image_fname = row["image_fname"]
-
-        image_df = original_df[original_df["image_uuid"] == row["image_uuid"]]
-
-        print(f"Filtering annotations: ({index + 1}/{len(pred_df)})", end="")
-        if index < len(pred_df) - 1:
-            print("\r", end="")
-
-        keep = False
-
-        for _, org_row in image_df.iterrows():
-            org_bbox_x0 = org_row["bbox"][0]
-            org_bbox_y0 = org_row["bbox"][1]
-            org_bbox_x1 = org_row["bbox"][2] + org_bbox_x0
-            org_bbox_y1 = org_row["bbox"][3] + org_bbox_y0
-
-            org_bbox = [org_bbox_x0, org_bbox_y0, org_bbox_x1, org_bbox_y1]
-
-            if calculate_iou(pred_bbox, org_bbox) >= iou_thresh:
-                keep = True
-                species = org_row["annot_species"]
-                ca = org_row["annot_census"]
-                viewpoint = org_row["viewpoint"]
-                break
-
-        if keep:
-            annotation = row.to_dict()
-            annotation["annot_species"] = species
-            annotation["bbox_gt"] = [int(coord) for coord in org_bbox]
-            annotation["bbox_pred"] = [int(coord) for coord in pred_bbox]
-            annotation["bbox_pred"] = [x0, y0, w, h]
-            annotation["viewpoint"] = viewpoint
-            annotation["annot_census"] = ca
-            annotation["image_uuid"] = image_uuid
-            annotation["image_fname"] = image_fname
-            filtered_annotations.append(annotation)
-
-    filtered_annotations = [
-        {
-            "annot_uuid": annotation["annot_uuid"],
-            "image_uuid": annotation["image_uuid"],
-            "bbox_pred_score": annotation["bbox_pred_score"],
-            "category_id": annotation["category_id"],
-            "annot_species": (
-                "neither"
-                if annotation["annot_species"] not in ["zebra_grevys", "zebra_plains"]
-                else annotation["annot_species"]
-            ),
-            "annot_census": annotation["annot_census"],
-            "bbox_gt": annotation["bbox_gt"],
-            "bbox_pred": annotation["bbox_pred"],
-            "bbox_x": annotation["bbox_pred"],
-            "viewpoint_gt": annotation["viewpoint"],
-            "image_fname": annotation["image_fname"],
-            "timestamp": annotation["timestamp"],
-        }
-        for annotation in filtered_annotations
-    ]
-
-    print(
-        f", done.\nFiltered annotations: ({len(filtered_annotations)}/{len(pred_df)} total annotations)"
-    )
-    filtered_annotations_dict = {"annotations": filtered_annotations}
-    return filtered_annotations_dict
-
 def compare(predicted_df, original_df):
     pred_df = predicted_df
 
@@ -213,12 +128,6 @@ def compare(predicted_df, original_df):
 
         x0, y0, w, h = row["bbox"]
         pred_bbox = [x0, y0, x0 + w, y0 + h]
-
-        image_uuid = row["image_uuid"]
-        if "image_path" in row.keys():
-            image_fname = row["image_path"]
-        else:
-            image_fname = row["image_fname"]
 
         image_df = original_df[original_df["image_uuid"] == row["image_uuid"]]
 
@@ -237,13 +146,10 @@ def compare(predicted_df, original_df):
             iou = calculate_iou(pred_bbox, org_bbox)
             if iou >= max_iou:
                 max_iou = iou
-
         
         annotation = row.to_dict()
         annotation["gt_iou"] = max_iou
         compared_annotations.append(annotation)
-
-    
 
     print(
         f", done.\nCompared annotations: ({len(compared_annotations)}/{len(pred_df)} total annotations)"
@@ -276,23 +182,21 @@ def main(args):
             Saving annotations to CSV: temp/annots/filtered_annots.csv
     """
     # Loading Configuration File ...
-    config = load_config("algo/detector.yaml")
+    config = load_config(path_from_file(__file__, "detector_config.yaml"))
 
-    annotations_csv_fullpath = args.original_csv_path
-    exp_dir = Path(args.exp_dir)
+    dt_dir = Path(args.dt_dir)
     annots = Path(args.annot_dir)
 
     image_data = load_json(args.image_data)
 
-    os.makedirs(exp_dir, exist_ok=True)
+    os.makedirs(dt_dir, exist_ok=True)
     shutil.rmtree(annots, ignore_errors=True)
     os.makedirs(annots, exist_ok=True)
 
-    yolo_dir = os.path.join(exp_dir, config["yolo_dir"])
+    yolo_dir = os.path.join(dt_dir, config["yolo_dir"])
     github_v10_url = config["github_v10_url"]
-    shutil.rmtree(yolo_dir, ignore_errors=True)
 
-    clone_yolo_from_github(yolo_dir, github_v10_url)
+    clone_from_github(yolo_dir, github_v10_url)
 
     model_dir = os.path.join(yolo_dir, config["model_dir"])
     os.makedirs(model_dir, exist_ok=True)
@@ -306,62 +210,50 @@ def main(args):
     df = pd.DataFrame(predictions)
     predictions = split_dataframe(df)
 
-    pred_json_name = args.annots_csv_path
-    annot_json_path = os.path.join(annots, pred_json_name)
-    print("Saving annotations to JSON:", annot_json_path)
-    save_json(predictions, annot_json_path)
+    # SAVE ALL DATA 
+    non_filtered_pred_json_name = args.out_json_path
 
-    print("Loading ground truth annotations...")
-    base_df = load_dataframe(annotations_csv_fullpath)
+    non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
+    print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
+    save_json(predictions, non_filtered_annot_json_path)
 
-    if base_df is not None:
+    # FILTER PENDING PRESENCE OF GT DATA
+    if args.gt_path and args.gt_filtered_annots:
+        print("Ground truth data and save path detected.")
+        
+        print("Loading ground truth annotations...")
+        base_df = load_dataframe(args.gt_path)
+
         pred_df = df
         base_df = pd.DataFrame(base_df)
 
         compared_annotations = compare(pred_df, base_df)
-        # print(predictions.keys())
+
         compared_dict = predictions.copy()
         compared_dict["annotations"] = compared_annotations["annotations"]
 
-        compared_pred_json_name = args.annots_filtered_csv_path
+        compared_pred_json_name = args.gt_filtered_annots
 
+        print("Saving filtered ground truth annotations...")
         compared_annot_json_path = os.path.join(annots, compared_pred_json_name)
         save_json(compared_dict, compared_annot_json_path)
-    else:
-        print("No ground truth annotations detected. Skipped filtering.")
-        non_filtered_pred_json_name = args.annots_filtered_csv_path
 
-        non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
-        print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
-        save_json(predictions, non_filtered_annot_json_path)
+    elif not args.gt_path and not args.gt_filtered_annots:
+        print("No ground truth annotations detected. Skipped filtering.")
+    else:
+        print("Either a ground truth file or a path to save filtered annotations was provided, but not the other.", file=sys.stderr)
 
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(
-        description="Detect bounding boxes for database of animal images"
-    )
+    parser = argparse.ArgumentParser(description="Detect bounding boxes for database of animal images")
     parser.add_argument("image_data", type=str, help="The image metadata file")
-    parser.add_argument(
-        "annot_dir", type=str, help="The directory to export annotations to"
-    )
-    parser.add_argument(
-        "exp_dir", type=str, help="The directory to export models and predictions to"
-    )
-    parser.add_argument(
-        "original_csv_path", type=str, help="The full path to the ground truth csv"
-    )
+    parser.add_argument("annot_dir", type=str, help="The directory to export annotations to")
+    parser.add_argument("dt_dir", type=str, help="The directory to export models and predictions to")
     parser.add_argument("model_version", type=str, help="The yolo model version to use")
-    parser.add_argument(
-        "annots_csv_path",
-        type=str,
-        help="The name of the output annotations csv file",
-    )
-    parser.add_argument(
-        "annots_filtered_csv_path",
-        type=str,
-        help="The name of the output filtered annotations csv file",
-    )
+    parser.add_argument("out_json_path", type=str, help="The name of the output annotations json file")
+    parser.add_argument("--gt_path", type=str, default=None, help="The full path to the ground truth file.")
+    parser.add_argument("--gt_filtered_annots", type=str, default=None, help="The name of the output annots filted by gt data.")
 
     args = parser.parse_args()
 

@@ -10,7 +10,7 @@ def get_inputs(config):
 def main(args):
     config = decode_config(args.config)
 
-    command = f'python -m species_identifier {config["dt_out_path"]} {config["si_dir"]} {config["si_out_path"]}'
+    command = f'python -m GGR.algo.species_identification.species_identifier {config["dt_out_path"]} {config["si_dir"]} {config["si_out_path"]}'
 
     logger = setup_logging(config["si_logs"])
     log_subprocess(command, logger)

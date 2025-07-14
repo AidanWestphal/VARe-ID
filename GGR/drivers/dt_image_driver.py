@@ -5,9 +5,20 @@ from GGR.util.io.workflow_funcs import decode_config
 
 def main(args):
     config = decode_config(args.config)
+    
+    # CHECK FOR "NONE" GT FIELDS AND PROPERLY BUILD THOSE TERMS IN COMMAND
+    if config["dt_filtered_out_path"]:
+        gt_filtered_annots = "--gt_filtered_annots " + config["dt_filtered_out_path"]
+    else:
+        gt_filtered_annots = ""
 
-    command = f'python -m image_detector {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_gt_path"]} {config["dt_model"]} {config["dt_pre_filtering_path"]} {config["dt_out_path"]}'
+    if config["dt_gt_path"]:
+        gt_path = "--gt_path " + config["dt_gt_path"]
+    else:
+        gt_path = ""
 
+    command = f'python -m GGR.algo.detection.image_detector {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_image_out_path"]} {gt_filtered_annots} {gt_path}'
+    print(command)
     logger = setup_logging(config["dt_logs"])
     log_subprocess(command, logger)
 

@@ -15,19 +15,12 @@ import yaml
 from tqdm import tqdm
 from bioclip import CustomLabelsClassifier
 
+from GGR.util.utils import path_from_file
+
 warnings.filterwarnings("ignore")
 from PIL import Image
 
-from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
-
-
-def clone_pyBioCLIP_from_github(directory, repo_url):
-    if not os.path.exists(directory) or not os.listdir(directory):
-        print(f"Cloning repository {repo_url} into {directory}...")
-        subprocess.run(["git", "clone", repo_url, directory], check=True)
-        print("Repository cloned successfully...")
-    else:
-        print("Repository already cloned...")
+from GGR.util.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def install_pyBioCLIP_from_directory(directory):
@@ -133,7 +126,7 @@ def main(args):
     """
 
     # Loading Configuration File ...
-    config = load_config("algo/species_identifier.yaml")
+    config = load_config(path_from_file(__file__, "species_identifier.yaml"))
 
     if os.path.exists(args.si_dir):
         print("Removing Previous Instance of Experiment")
@@ -146,7 +139,7 @@ def main(args):
     pyBioCLIP_url = config["github_bioclip_url"]
 
     print("Cloning & Installing pyBioCLIP ...")
-    clone_pyBioCLIP_from_github(bioCLIP_dir, pyBioCLIP_url)
+    clone_from_github(bioCLIP_dir, pyBioCLIP_url)
     install_pyBioCLIP_from_directory(bioCLIP_dir)
 
     print("pyBioCLIP Installation Completed ....")
