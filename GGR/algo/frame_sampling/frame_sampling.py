@@ -178,7 +178,7 @@ def main():
     args = parser.parse_args()
 
     # Load configuration from YAML file
-    cfg = load_config(path_from_file(__file__, "frame_sampling.yaml"))
+    cfg = load_config(path_from_file(__file__, "frame_sampling_config.yaml"))
     in_file = args.in_json_path
     step1_file = args.json_stage1
     final_out = args.json_final

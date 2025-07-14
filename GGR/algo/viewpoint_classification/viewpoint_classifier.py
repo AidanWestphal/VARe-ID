@@ -18,7 +18,7 @@ from GGR.util.io.format_funcs import load_config, load_json, save_json, split_da
 from GGR.util.utils import path_from_file
 
 # Load configuration
-config = load_config(path_from_file(__file__, "viewpoint_classifier.yaml"))
+config = load_config(path_from_file(__file__, "viewpoint_classifier_config.yaml"))
 
 class ClassifierDataset(Dataset):
     def __init__(self, df, transforms=None, output_label=False):

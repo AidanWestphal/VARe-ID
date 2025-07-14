@@ -18,6 +18,7 @@ from torch.utils.data import Dataset
 
 from transformers import AutoModel
 
+from GGR.util.utils import path_from_file
 from algo.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 class MiewIDDataset(Dataset):
@@ -248,7 +249,7 @@ if __name__ == "__main__":
     data = load_json(args.in_csv_path)
     # Joining is not necessary here, but done for consistency
     df = join_dataframe(data)
-    config = load_config("algo/miew_id.yaml")
+    config = load_config(path_from_file(__file__, "miew_id_config.yaml"))
 
     print(f"Downloading model {args.model_url}...")
     device = torch.device(config["device"])
