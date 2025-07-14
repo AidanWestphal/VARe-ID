@@ -17,8 +17,8 @@ def main(args):
     else:
         gt_path = ""
 
-    command = f'python -m GGR.algo.detection.image_detector {config["image_out_path"]} {config["annot_dir"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_image_out_path"]} {gt_filtered_annots} {gt_path}'
-    print(command)
+    command = f'python -m GGR.algo.detection.image_detector {config["image_out_path"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_image_out_path"]} {gt_filtered_annots} {gt_path}'
+
     logger = setup_logging(config["dt_logs"])
     log_subprocess(command, logger)
 

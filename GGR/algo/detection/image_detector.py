@@ -185,13 +185,10 @@ def main(args):
     config = load_config(path_from_file(__file__, "detector_config.yaml"))
 
     dt_dir = Path(args.dt_dir)
-    annots = Path(args.annot_dir)
 
     image_data = load_json(args.image_data)
 
     os.makedirs(dt_dir, exist_ok=True)
-    shutil.rmtree(annots, ignore_errors=True)
-    os.makedirs(annots, exist_ok=True)
 
     yolo_dir = os.path.join(dt_dir, config["yolo_dir"])
     github_v10_url = config["github_v10_url"]
@@ -213,7 +210,7 @@ def main(args):
     # SAVE ALL DATA 
     non_filtered_pred_json_name = args.out_json_path
 
-    non_filtered_annot_json_path = os.path.join(annots, non_filtered_pred_json_name)
+    non_filtered_annot_json_path = os.path.join(dt_dir, non_filtered_pred_json_name)
     print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
     save_json(predictions, non_filtered_annot_json_path)
 
@@ -235,7 +232,7 @@ def main(args):
         compared_pred_json_name = args.gt_filtered_annots
 
         print("Saving filtered ground truth annotations...")
-        compared_annot_json_path = os.path.join(annots, compared_pred_json_name)
+        compared_annot_json_path = os.path.join(dt_dir, compared_pred_json_name)
         save_json(compared_dict, compared_annot_json_path)
 
     elif not args.gt_path and not args.gt_filtered_annots:
@@ -248,8 +245,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Detect bounding boxes for database of animal images")
     parser.add_argument("image_data", type=str, help="The image metadata file")
-    parser.add_argument("annot_dir", type=str, help="The directory to export annotations to")
-    parser.add_argument("dt_dir", type=str, help="The directory to export models and predictions to")
+    parser.add_argument("dt_dir", type=str, help="The directory to export models and annots to")
     parser.add_argument("model_version", type=str, help="The yolo model version to use")
     parser.add_argument("out_json_path", type=str, help="The name of the output annotations json file")
     parser.add_argument("--gt_path", type=str, default=None, help="The full path to the ground truth file.")

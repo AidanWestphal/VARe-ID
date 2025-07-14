@@ -18,7 +18,6 @@ data_video: False
 # Important directories to reference
 log_dirname: "logs"
 image_dirname: "images"
-annot_dirname: "annots"
 model_dirname: "models"
 
 # Import step fields

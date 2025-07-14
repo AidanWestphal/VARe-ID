@@ -145,13 +145,10 @@ def main(args):
     config = load_config(path_from_file(__file__, "detector_config.yaml"))
     
     dt_dir = Path(args.dt_dir)
-    annots = Path(args.annot_dir)
 
     video_data = load_json(args.video_data)
 
     os.makedirs(dt_dir, exist_ok=True)
-    shutil.rmtree(annots, ignore_errors=True)
-    os.makedirs(annots, exist_ok=True)
 
     yolo_dir = os.path.join(dt_dir, config["yolo_dir"])
     github_v10_url = config["github_v10_url"]
@@ -178,7 +175,7 @@ def main(args):
     annotations = split_dataframe(df)
 
     print(f"Saving annotations to {args.out_json_path}...")
-    filtered_annot_json_path = os.path.join(annots, args.out_json_path)
+    filtered_annot_json_path = os.path.join(dt_dir, args.out_json_path)
     save_json(annotations, filtered_annot_json_path)
 
     print("Done!")
@@ -192,10 +189,7 @@ if __name__ == "__main__":
         "video_data", type=str, help="The json file with frame information stored"
     )
     parser.add_argument(
-        "annot_dir", type=str, help="The directory to export annotations to"
-    )
-    parser.add_argument(
-        "dt_dir", type=str, help="The directory to export models and predictions to"
+        "dt_dir", type=str, help="The directory to export models and annots to"
     )
     parser.add_argument(
         "model_version", type=str, help="The yolo model version to use"

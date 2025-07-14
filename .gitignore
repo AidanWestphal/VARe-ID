@@ -16,6 +16,7 @@ test_dataset/
 ./*.out
 algo/lca_run_*.sh
 
+slurm-*.out
 
 D1/
 D2/

@@ -20,31 +20,7 @@ from GGR.util.utils import path_from_file
 warnings.filterwarnings("ignore")
 from PIL import Image
 
-from GGR.util.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe, join_dataframe
-
-
-def install_pyBioCLIP_from_directory(directory):
-    try:
-        print(f"Installing package from {directory}...")
-        subprocess.run([sys.executable, "-m", "pip", "install", directory], check=True)
-        print("Package installed successfully...")
-    except subprocess.CalledProcessError as e:
-        print(f"Error installing package from {directory}: {e}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-
-
-def get_bioCLIP(url, target_dir):
-    try:
-        result = subprocess.run(
-            ["pip", "install", f"git+{url}", "--target", target_dir],
-            capture_output=True,
-            check=True,
-        )
-        print(f"Successfully installed from {url} to {target_dir}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error installing from {url} to {target_dir}:")
-        print(e.stderr.decode("utf-8"))
+from GGR.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def run_pyBioclip(bioclip_classifier, df):
@@ -126,7 +102,7 @@ def main(args):
     """
 
     # Loading Configuration File ...
-    config = load_config(path_from_file(__file__, "species_identifier.yaml"))
+    config = load_config(path_from_file(__file__, "species_identifier_config.yaml"))
 
     if os.path.exists(args.si_dir):
         print("Removing Previous Instance of Experiment")
@@ -134,15 +110,6 @@ def main(args):
 
     print("Creating Experiment Directory ...")
     os.makedirs(args.si_dir, exist_ok=True)
-
-    bioCLIP_dir = os.path.join(args.si_dir, config["bioclip_dirname"])
-    pyBioCLIP_url = config["github_bioclip_url"]
-
-    print("Cloning & Installing pyBioCLIP ...")
-    clone_from_github(bioCLIP_dir, pyBioCLIP_url)
-    install_pyBioCLIP_from_directory(bioCLIP_dir)
-
-    print("pyBioCLIP Installation Completed ....")
 
     print("Running pyBioCLIP ...")
     labels = config["custom_labels"]

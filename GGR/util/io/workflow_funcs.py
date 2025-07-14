@@ -90,7 +90,6 @@ def parse_config(filepath):
 
     # MAJOR OUTPUT DIRECTORIES
     image_dir = os.path.join(out_dir, config["image_dirname"])
-    annot_dir = os.path.join(out_dir, config["annot_dirname"])
     log_dir = os.path.join(out_dir, config["log_dirname"])
 
     # IMPORT STEP
@@ -159,7 +158,6 @@ def parse_config(filepath):
 
     # REINSERT ALL NEWLY-BUILT PATHS INTO CONFIG DICTIONARY
     config["image_dir"] = image_dir
-    config["annot_dir"] = annot_dir
     config["log_dir"] = log_dir
     config["image_out_path"] = image_out_path
     config["video_out_path"] = video_out_path

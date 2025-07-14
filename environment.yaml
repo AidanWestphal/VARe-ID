@@ -4,8 +4,12 @@ channels:
 dependencies:
   - snakemake-minimal >=8.4.4
   - python ==3.11
+  - opencv # Add opencv here
+  - libtiff == 4.5.1 # Explicitly state libtiff
+  - libjpeg-turbo # Explicitly state libjpeg-turbo
   - zbar
   - albumentations >= 2.0.4
+  - protobuf
   - pip
   - pip:
     #  at the time of writing - 7. Feb 24 - pysam on bioconda will require
@@ -23,5 +27,5 @@ dependencies:
     - transformers ==4.49.0
     - lap >=0.5.12
     - pyzbar >= 0.1.9
-    - pybioclip
-    - -e . # INSTALLS THE GGR UTIL FUNCTIONS INCLUDED IN THE PIPELINE DIRECTLY
+    - git+https://github.com/AidanWestphal/pybioclip
+    - -e . # INSTALLS GGR ITSELF AS A MODULE IN EDIT MODE
