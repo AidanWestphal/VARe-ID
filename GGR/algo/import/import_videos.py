@@ -2,6 +2,7 @@ import argparse
 import yaml
 
 from GGR.util.io.con_funcs import import_video_folder
+from GGR.util.utils import path_from_file
 
 def load_config(config_file_path):
     with open(config_file_path, "r") as file:
@@ -17,7 +18,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print('Importing videos')
 
-    config = load_config("algo/detector.yaml")
+    config = load_config(path_from_file(__file__, "../detection/detector_config.yaml"))
 
     sep_idx = args.out_path.rfind("/")
     dir_out = args.out_path[:sep_idx]

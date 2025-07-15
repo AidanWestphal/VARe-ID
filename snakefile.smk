@@ -35,7 +35,7 @@ rule import_videos:
     output:
         config["video_out_path"]
     shell:
-        "python -m GGR.drivers.video_image_driver {config_str}"
+        "python -m GGR.drivers.import_video_driver {config_str}"
 
 
 rule detect_images:

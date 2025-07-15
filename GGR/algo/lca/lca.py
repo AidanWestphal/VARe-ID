@@ -65,21 +65,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run LCA clustering")
     parser.add_argument("annots", type=str, help="The path to the annotation file.")
     parser.add_argument("embeddings", type=str, help="The path to the embeddings file.")
-    parser.add_argument("verifiers_probs", type=str, help="The path to the verifier probabilities.")
+    #parser.add_argument("verifiers_probs", type=str, help="The path to the verifier probabilities.")
     parser.add_argument("lca_dir", type=str, help="The directory to save files into.")
     parser.add_argument("output_prefix", type=str, help="The prefix for the output annotation file format.")
     parser.add_argument("output_suffix", type=str, help="The suffix for the output annotation file format.")
     parser.add_argument("log_subunit_file", type=str, help="The path to the log file for the LCA algorithm itself.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
-    parser.add_argument("--video", action="store_true", help="True if LCA should run on the video config file.")
+    parser.add_argument("--video", action="store_true", help="True if LCA should run on the video (drone) config file.")
     parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right.")
-    parser.add_argument("--image_dir", type=str, default=None, help="The path to the image directory. Optional, only required if input data doesn't have an image_path field.")
 
     args = parser.parse_args()
-
-    # Get abs path to current dir
-    # TODO: FIX
-    current_dir = "get_abs_path()"
 
     # Config for LCA itself -- not input config to LCA
     lca_config = load_config(path_from_file(__file__, "lca_config.yaml"))
@@ -99,12 +94,11 @@ if __name__ == "__main__":
         input_config = load_config(path_from_file(__file__, input_config_name))
 
     # ADD CONFIG INFO
-    input_config["data"]["images_dir"] = args.image_dir # or None
     input_config["data"]["output_path"] = args.lca_dir
     input_config["data"]["annotation_file"] = args.annots
     input_config["data"]["embedding_file"] = args.embeddings
     input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
-    input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
+    #input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
     input_config["logging"]["log_file"] = args.log_subunit_file # should append LCA outputs into same log file used by this script
 
 
