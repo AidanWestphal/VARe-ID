@@ -68,22 +68,23 @@ def generate_targets(config):
     return targets
 
 
-def parse_config(filepath):
+def build_config(config):
     '''
-    Parses the general config.yaml file and builds all important fields used in the pipeline.
+    Builds all important fields from the config.yaml config dictionary.
 
-    This function reads the config file (as described in config.yaml) as a dictionary, builds 
-    all necessary paths, and returns the dictionary with these new paths saved into it.
+    The function takes the loaded form of config.yaml (it MUST have at least the fields 
+    defined here!), builds all necessary paths, and returns the dictionary with these new 
+    paths saved into it.
+
+    The function modifies the provided dictionary.
 
     Parameters:
-        filepath (str): The path to config.yaml in the root directory.
+        config (dict): The dictionary form of config.yaml.
 
     Returns:
-        config (dict): The dictionary format of config.yaml with all important paths built.
+        config (dict): A reference to the same dictionary as before, with all fields necessary for the pipeline built.
     '''
-
-    config = load_config(filepath)
-
+    
     # MAJOR BUILDER FIELDS FOR ALL STEPS IN PIPELINE
     model_dir = config["model_dirname"]
     out_dir = config["data_dir_out"]
