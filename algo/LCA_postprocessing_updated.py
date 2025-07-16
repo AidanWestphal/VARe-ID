@@ -470,26 +470,36 @@ def main():
     print_viewpoint_cluster_mapping(data_left, "left")
     print_viewpoint_cluster_mapping(data_right, "right")
 
+    # --- STAGE 1 ---
+    print("\n\n" + "="*50 + "\nSTAGE 1: TID SPLIT VERIFICATION\n" + "="*50)
     grouped_left = group_annotations_by_lca(data_left)
     grouped_right = group_annotations_by_lca(data_right)
-
-    print("\n\n" + "="*50 + "\nSTAGE 1: TID SPLIT VERIFICATION\n" + "="*50)
     tid_split_verification_interactive(grouped_left, data_left, "Left", image_dir, interactive_mode)
     tid_split_verification_interactive(grouped_right, data_right, "Right", image_dir, interactive_mode)
+    data_left['annotations'] = [ann for L in grouped_left.values() for ann in L]
+    data_right['annotations'] = [ann for L in grouped_right.values() for ann in L]
+    save_json_with_stage(data_left, args.out_left, "split_verified")
+    save_json_with_stage(data_right, args.out_right, "split_verified")
 
+    # --- STAGE 2 ---
     print("\n\n" + "="*50 + "\nSTAGE 2: TIME-OVERLAP VERIFICATION\n" + "="*50)
     time_overlap_verification_interactive(grouped_left, data_left, "Left", image_dir, interactive_mode)
     time_overlap_verification_interactive(grouped_right, data_right, "Right", image_dir, interactive_mode)
+    data_left['annotations'] = [ann for L in grouped_left.values() for ann in L]
+    data_right['annotations'] = [ann for L in grouped_right.values() for ann in L]
+    save_json_with_stage(data_left, args.out_left, "time_verified")
+    save_json_with_stage(data_right, args.out_right, "time_verified")
 
+    # --- STAGE 3 ---
     print("\n\n" + "="*50 + "\nSTAGE 3: UNLINKED CLUSTER VERIFICATION\n" + "="*50)
     unlinked_cluster_verification_interactive(grouped_left, data_left, "Left", image_dir, interactive_mode)
     unlinked_cluster_verification_interactive(grouped_right, data_right, "Right", image_dir, interactive_mode)
-
     data_left['annotations'] = [ann for L in grouped_left.values() for ann in L]
     data_right['annotations'] = [ann for L in grouped_right.values() for ann in L]
     save_json_with_stage(data_left, args.out_left, "pre_equivalence")
     save_json_with_stage(data_right, args.out_right, "pre_equivalence")
     
+    # --- STAGE 5 ---
     print("\n\n" + "="*50 + "\nSTAGE 5: CROSS-VIEW EQUIVALENCE & FINAL ID ASSIGNMENT\n" + "="*50)
     max_loops = 5
     for i in range(max_loops):
@@ -514,14 +524,12 @@ def main():
         else:
              print("  No one-to-many conflicts found based on numeric TIDs.")
 
-        # Rebuild all data structures after potential splits
         data_left['annotations'] = [ann for k, L in grouped_all_wv.items() if k.endswith('_left') for ann in L]
         data_right['annotations'] = [ann for k, L in grouped_all_wv.items() if k.endswith('_right') for ann in L]
         grouped_left_wv = group_annotations_by_lca_with_viewpoint(data_left, 'left')
         grouped_right_wv = group_annotations_by_lca_with_viewpoint(data_right, 'right')
         grouped_all_wv = {**grouped_left_wv, **grouped_right_wv}
         
-        # Pass the up-to-date all_grouped_wv to the leftover handler
         if handle_split_leftovers_interactive(grouped_left_wv, grouped_all_wv, image_dir, interactive_mode): made_change_in_cycle = True
         if handle_split_leftovers_interactive(grouped_right_wv, grouped_all_wv, image_dir, interactive_mode): made_change_in_cycle = True
         
@@ -529,18 +537,17 @@ def main():
             print("\n--- System is stable. No more splits or merges needed. ---")
             break
         else:
-            # Rebuild from the potentially modified all_grouped_wv
             data_left['annotations'] = [ann for k, L in grouped_all_wv.items() if k.endswith('_left') for ann in L]
             data_right['annotations'] = [ann for k, L in grouped_all_wv.items() if k.endswith('_right') for ann in L]
             print("  Changes were made in this cycle. Restarting...")
     else:
         print("\n--- Max reconciliation loops reached. Proceeding with current state. ---")
 
-    # Final assignment and summary
     final_grouped_left_wv = group_annotations_by_lca_with_viewpoint(data_left, 'left')
     final_grouped_right_wv = group_annotations_by_lca_with_viewpoint(data_right, 'right')
     assign_final_ids(final_grouped_left_wv, final_grouped_right_wv, data_left, data_right)
 
+    # --- FINAL RESULTS ---
     print("\n\n" + "="*50 + "\nFINAL RESULTS\n" + "="*50)
     save_json_with_stage(data_left, args.out_left, "final", final=True)
     save_json_with_stage(data_right, args.out_right, "final", final=True)
@@ -559,6 +566,3 @@ def main():
         print(f"Final ID {fid}:")
         print(f"  Left Clusters:  {sorted(list(final_summary[fid]['left'])) if final_summary[fid]['left'] else 'None'}")
         print(f"  Right Clusters: {sorted(list(final_summary[fid]['right'])) if final_summary[fid]['right'] else 'None'}")
-
-if __name__ == "__main__":
-    main()
