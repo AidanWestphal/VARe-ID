@@ -349,6 +349,13 @@ def split_conflicting_cluster(parent_key, targets, grouped_all_wv, all_lca_ids_i
     moved_ann_uuids = set()
 
     for target_key in sorted(list(targets)):
+        # --- THIS IS THE FIX ---
+        # Check if the target cluster still exists before trying to access it.
+        if target_key not in grouped_all_wv:
+            print(f"      -> Skipping target {target_key} as it was already removed in this cycle.")
+            continue
+        # -----------------------
+
         target_numeric_tids = {ann['tracking_id'] for ann in grouped_all_wv[target_key] if str(ann['tracking_id']).isdigit()}
         anns_for_this_split = [ann for ann in parent_anns if ann['tracking_id'] in target_numeric_tids and ann['uuid'] not in moved_ann_uuids]
         
@@ -566,3 +573,6 @@ def main():
         print(f"Final ID {fid}:")
         print(f"  Left Clusters:  {sorted(list(final_summary[fid]['left'])) if final_summary[fid]['left'] else 'None'}")
         print(f"  Right Clusters: {sorted(list(final_summary[fid]['right'])) if final_summary[fid]['right'] else 'None'}")
+
+if __name__ == "__main__":
+    main()
