@@ -9,7 +9,7 @@ from GGR.util.io.workflow_funcs import build_config, generate_targets, encode_co
 from GGR.util.utils import path_from_file
 
 # Default configfile, can supply alternative with --configfile
-configfile: path_from_file(__file__, "config.yaml")
+configfile: "config.yaml"
 
 # BUILD THE CONFIG FILE
 config = build_config(config)

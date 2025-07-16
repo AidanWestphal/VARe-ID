@@ -8,15 +8,14 @@ import subprocess
 
 class ConsoleFormatter(logging.Formatter):
     '''
-    A custom formatter for console output.
-    Critical messages have a header of [CRITICAL].
-    Error messages have a header of [ERROR].
-    All other messages have no header.
+    A custom formatter for console output. Channels stdout and stderr are 
+    prefixed with <stdout> or <stderr>. Any critical messages (such as error codes) 
+    are prefixed as <critical>.
     '''
 
-    FORMAT_INFO = "%(message)s"
-    FORMAT_ERROR = "[ERROR] %(message)s"
-    FORMAT_CRITICAL = "[CRITICAL] %(message)s"
+    FORMAT_INFO = "<stdout> %(message)s"
+    FORMAT_ERROR = "<stderr> %(message)s"
+    FORMAT_CRITICAL = "<critical> %(message)s"
 
     def format(self, record):
         if record.levelno >= logging.CRITICAL:
@@ -30,7 +29,7 @@ class ConsoleFormatter(logging.Formatter):
         return super().format(record)
 
 
-def setup_logging(logfile):
+def setup_logging(logfile, reset_logfile=True):
     '''
     Configurates a logger with the the proper formatting for the pipeline.
     '''
@@ -42,6 +41,11 @@ def setup_logging(logfile):
 
     # IF DIRS TO LOGFILE DON'T EXIST, MAKE THE PATH
     Path(os.path.dirname(logfile)).mkdir(parents=True, exist_ok=True)
+
+    # DELETE LOGFILE IF IT IS BEING RESET (default behavior)
+    if reset_logfile:
+        if os.path.exists(logfile):
+            os.remove(logfile)
     
     # LOGFILE
     file_handler = logging.FileHandler(logfile)

@@ -15,7 +15,8 @@ def main(args):
 
     command = f'python -u -m GGR.algo.ia_classification.IA_filtering {config["ia_out_path"]} {config["ia_filtered_out_path"]} {flag}'
 
-    logger = setup_logging(config["ia_logs"])
+    # Do not reset the logfile, build off of ia_logs
+    logger = setup_logging(config["ia_logs"], reset_logfile=False)
     log_subprocess(command, logger)
 
 
