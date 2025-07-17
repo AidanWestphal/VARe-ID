@@ -107,20 +107,22 @@ def fetch_pair():
     """Atomically fetch and reserve a pair from the database"""
     result = get_next_pair_atomic(db_path=db_path)
     if result:
-        pair_id, img1_path, img2_path, bbox1, bbox2 = result
+        pair_id, img1_path, img2_path, bbox1, bbox2, cluster1, cluster2 = result
         return {
             "id": pair_id,
             "image1": img1_path,
             "image2": img2_path,
             "bbox1": bbox1,
-            "bbox2": bbox2
+            "bbox2": bbox2,
+            "cluster1": cluster1,
+            "cluster2": cluster2
         }
     return None
 
 
 def clear_images():
     """Return empty images to clear the display"""
-    return None, None, "Loading new images..."
+    return None, None, "Loading new images...", "", "", True
 
 
 def load_next_pair():
@@ -151,15 +153,56 @@ def load_next_pair():
                      f"Available: {stats['awaiting']} | "
                      f"Active instances: {stats['active_instances']} | "
                      f"Instance: {INSTANCE_IDENTIFIER}")
-        return cropped_img1, cropped_img2, status_msg
+        return cropped_img1, cropped_img2, status_msg, f"**Cluster ID: {current_pair['cluster1']}**", f"**Cluster ID: {current_pair['cluster2']}**", False
+
     else:
-        current_pair = {"id": None, "image1": None, "image2": None, "bbox1": None, "bbox2": None}
+        current_pair = {"id": None, "image1": None, "image2": None, "bbox1": None, "bbox2": None, "cluster1": None, "cluster2": None}
         stats = get_instance_stats(db_path)
         status_msg = (f"No pairs available | "
                      f"Awaiting: {stats['awaiting']} | "
                      f"In progress: {stats['in_progress']} | "
                      f"Checked: {stats['checked']}")
-        return None, None, status_msg
+        
+        return None, None, status_msg, None, None, True
+
+
+def refresh_and_load():
+    """Simple function: check for pairs and load if available"""
+    global current_pair
+    stats = get_instance_stats(db_path)
+
+    if current_pair.get("id") is None and stats['awaiting'] > 0:
+        return load_next_pair()
+
+    if current_pair.get("id"):
+        cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
+        cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
+        cluster1 = f"**Cluster ID: {current_pair['cluster1']}**"
+        cluster2 = f"**Cluster ID: {current_pair['cluster2']}**"
+        status_msg = (f"Working on pair {current_pair['id']} | "
+                      f"Available: {stats['awaiting']} | "
+                      f"Active instances: {stats['active_instances']} | "
+                      f"Instance: {INSTANCE_IDENTIFIER}")
+        return cropped_img1, cropped_img2, status_msg, cluster1, cluster2, False
+    else:
+        status_msg = (f"No active pair | "
+                      f"Available: {stats['awaiting']} | "
+                      f"In progress: {stats['in_progress']} | "
+                      f"Checked: {stats['checked']} | "
+                      f"Instance: {INSTANCE_IDENTIFIER}")
+        return None, None, status_msg, "", "", stats['awaiting'] == 0
+
+
+def timer_check():
+    """Timer only calls refresh when specific conditions met"""
+    # Only refresh if: no pair loaded AND pairs might be available
+    if current_pair.get("id") is None:
+        stats = get_instance_stats(db_path)
+        if stats['awaiting'] > 0:
+            return refresh_and_load()
+    
+    # Otherwise do nothing
+    return gr.skip(), gr.skip(), gr.skip(), gr.skip(), gr.skip(), gr.skip()
 
 
 def submit_decision(label):
@@ -249,12 +292,12 @@ def go_back_load():
                 cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
                 
                 status_msg = f"Returned to previous pair {current_pair['id']}"
-                return cropped_img1, cropped_img2, status_msg
+                return cropped_img1, cropped_img2, status_msg, f"**Cluster ID: {current_pair['cluster1']}**", f"**Cluster ID: {current_pair['cluster2']}**", False
         
         # If we couldn't get the previous pair, get a new one
         status_msg = "Previous pair no longer available, loading new pair..."
         next_result = load_next_pair()
-        return next_result[0], next_result[1], status_msg
+        return next_result[0], next_result[1], status_msg, next_result[3], next_result[4], next_result[5]
     else:
         # No history available
         stats = get_instance_stats(db_path)
@@ -266,37 +309,9 @@ def go_back_load():
             cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
             cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
             
-            return cropped_img1, cropped_img2, status_msg
+            return cropped_img1, cropped_img2, status_msg, f"**Cluster ID: {current_pair['cluster1']}**", f"**Cluster ID: {current_pair['cluster2']}**", False
         else:
-            return None, None, status_msg
-
-
-def get_status_update():
-    """Get current status and load pair if needed"""
-    global current_pair
-    stats = get_instance_stats(db_path)
-    
-    # If no current pair and pairs are available, try to load one
-    if current_pair.get("id") is None and stats['awaiting'] > 0:
-        return load_next_pair()
-    
-    # Otherwise just update status
-    if current_pair.get("id"):
-        status_msg = (f"Working on pair {current_pair['id']} | "
-                     f"Available: {stats['awaiting']} | "
-                     f"Active instances: {stats['active_instances']} | "
-                     f"Instance: {INSTANCE_IDENTIFIER}")
-        
-        # Return current images with updated status
-        cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
-        cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
-        return cropped_img1, cropped_img2, status_msg
-    else:
-        status_msg = (f"No active pair | "
-                     f"Available: {stats['awaiting']} | "
-                     f"In progress: {stats['in_progress']} | "
-                     f"Instance: {INSTANCE_IDENTIFIER}")
-        return None, None, status_msg
+            return None, None, status_msg, "", "", True
 
 
 def cleanup_on_exit():
@@ -313,14 +328,20 @@ atexit.register(cleanup_on_exit)
 # Create the Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("## ID Verification Interface")
+    all_done_flag = gr.State(value=False)
     
     # Status message
     status = gr.Textbox(label="Status", value="Loading...", interactive=False)
     
     with gr.Row():
-        img1 = gr.Image(label="Image 1", type="filepath", show_label=False)
-        img2 = gr.Image(label="Image 2", type="filepath", show_label=False)
-    
+        with gr.Column():
+            cluster1_label = gr.Markdown("**Cluster ID: ?**", elem_id="cluster1")
+            img1 = gr.Image(label="Image 1", type="filepath", show_label=False)
+        with gr.Column():
+            cluster2_label = gr.Markdown("**Cluster ID: ?**", elem_id="cluster2")
+            img2 = gr.Image(label="Image 2", type="filepath", show_label=False)
+
+        
     with gr.Row():
         btn_back = gr.Button("⬅ Back")
         btn_yes = gr.Button("Same")
@@ -328,69 +349,57 @@ with gr.Blocks() as demo:
         btn_cant_tell = gr.Button("Can't tell")
         btn_refresh_status = gr.Button("🔄 Refresh Status")
     
-    # Keyboard shortcuts
-    gr.HTML("""
-    <script>
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'b' || e.key === 'B') {
-                document.querySelector('button:nth-of-type(1)').click(); // Back
-            } else if (e.key === 's' || e.key === 'S' || e.key === 'y' || e.key === 'Y') {
-                document.querySelector('button:nth-of-type(2)').click(); // Same/Yes
-            } else if (e.key === 'd' || e.key === 'D' || e.key === 'n' || e.key === 'N') {
-                document.querySelector('button:nth-of-type(3)').click(); // Different/No
-            } else if (e.key === 'c' || e.key === 'C') {
-                document.querySelector('button:nth-of-type(4)').click(); // Can't tell
-            } else if (e.key === 'r' || e.key === 'R') {
-                document.querySelector('button:nth-of-type(5)').click(); // Refresh
-            }
-        });
-    </script>
-    """)
+    # Simple timer - only refreshes when no pair loaded and pairs available
+    timer = gr.Timer(value=1, active=True)
+    timer.tick(
+        fn=timer_check,
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
+    )
     
     # Two-step update process for decisions
     btn_yes.click(
-        lambda: submit_decision("correct"), 
-        outputs=[img1, img2, status]
+        lambda *args: submit_decision("correct"), 
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     ).then(
-        load_after_decision,
-        outputs=[img1, img2, status]
+        lambda *args: load_after_decision(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     )
     
     btn_no.click(
-        lambda: submit_decision("incorrect"), 
-        outputs=[img1, img2, status]
+        lambda *args: submit_decision("incorrect"), 
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     ).then(
-        load_after_decision,
-        outputs=[img1, img2, status]
+        lambda *args: load_after_decision(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     )
     
     btn_cant_tell.click(
-        lambda: submit_decision("cant_tell"), 
-        outputs=[img1, img2, status]
+        lambda *args: submit_decision("cant_tell"), 
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     ).then(
-        load_after_decision,
-        outputs=[img1, img2, status]
+        lambda *args: load_after_decision(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     )
     
     # Two-step update process for back button
     btn_back.click(
-        go_back_clear,
-        outputs=[img1, img2, status]
+        lambda *args: go_back_clear(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     ).then(
-        go_back_load,
-        outputs=[img1, img2, status]
+        lambda *args: go_back_load(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     )
     
-    # Refresh status button
+    # Refresh status button - calls same function as timer
     btn_refresh_status.click(
-        get_status_update,
-        outputs=[img1, img2, status]
+        lambda *args: refresh_and_load(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     )
     
     # Load initial pair on startup
     demo.load(
-        load_next_pair,
-        outputs=[img1, img2, status]
+        lambda *args: load_next_pair(),
+        outputs=[img1, img2, status, cluster1_label, cluster2_label, all_done_flag]
     )
 
 if __name__ == "__main__":

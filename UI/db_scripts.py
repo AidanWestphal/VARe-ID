@@ -25,9 +25,11 @@ def init_db(db_path="./zebra_verification.db"):
         uuid1 TEXT,
         image1_path TEXT,
         bbox1 TEXT,
+        cluster1 TEXT,
         uuid2 TEXT,
         image2_path TEXT,
         bbox2 TEXT,
+        cluster2 TEXT,
         status TEXT CHECK(status IN ('awaiting', 'in_progress', 'checked', 'sent')) DEFAULT 'awaiting',
         decision TEXT CHECK(decision IN ('none', 'correct', 'incorrect', 'cant_tell')) DEFAULT 'none',
         started_at TIMESTAMP,
@@ -48,8 +50,8 @@ def add_image_pairs(pairs, db_path="./zebra_verification.db"):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.executemany("""
-        INSERT OR IGNORE INTO image_verification (id, uuid1, image1_path, bbox1, uuid2, image2_path, bbox2, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'awaiting')
+        INSERT OR IGNORE INTO image_verification (id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting')
     """, pairs)
     inserted_count = cursor.rowcount
     conn.commit()
@@ -59,9 +61,9 @@ def add_image_pairs(pairs, db_path="./zebra_verification.db"):
     return inserted_count
 
 
-def add_image_pair(id, uuid1, image1_path, bbox1, uuid2, image2_path, bbox2, db_path="./zebra_verification.db"):
+def add_image_pair(id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, db_path="./zebra_verification.db"):
     """Add a single image pair - calls batch function with one item"""
-    return add_image_pairs([(id, uuid1, image1_path, bbox1, uuid2, image2_path, bbox2)], db_path)
+    return add_image_pairs([(id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2)], db_path)
 
 
 def get_decisions(pair_ids, db_path="./zebra_verification.db"):
@@ -198,7 +200,7 @@ def get_next_pair_atomic(db_path="./zebra_verification.db"):
     try:
         # Find the next available pair
         cursor.execute("""
-            SELECT id, image1_path, image2_path, bbox1, bbox2 FROM image_verification
+            SELECT id, image1_path, image2_path, bbox1, bbox2, cluster1, cluster2 FROM image_verification
             WHERE status = 'awaiting'
             ORDER BY id ASC LIMIT 1
         """)
