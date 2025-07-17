@@ -1,87 +1,108 @@
-# Imageomics-Species-ReID
-Service supporting reidentification with machine learning for various animal species based on Wildbook's Image Analysis (WBIA) by WildMe
-## Requirements
-- Python 3.11
-- Python dependencies listed in [environment.yaml](environment.yaml)
-## Setup on Windows
-- Install a Conda-based Python 3 distribution
-- Install Windows Subsystem for Linux with `wsl --install` or visit [Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install) for further instructions
-- Activate WSL with `wsl` and navigate to the desired directory
-- Install Mambaforge:
-```
-curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh -o Mambaforge-Linux-x86_64.sh
-bash Mambaforge-Linux-x86_64.sh
-```
-- When you are asked the following question, answer with **yes**:
-```
-Do you wish the installer to prepend the install location to PATH ...? [yes|no]
-```
-- Clone the repository:
-```
-git clone https://github.com/Ziesski/GGR.git
-cd GGR
-```
-- Install snakemake and other dependencies within an isolated environment (smk_pipeline can be replaced with an alternative name):
-```
-conda activate base
-mamba env create --name smk_pipeline --file environment.yaml
-conda activate smk_pipeline
-```
-## Required Files
-Add the directory to the input images in the root of the repository.
+# Video-Based Animal Re-Identification from Multiview Spatio-Temporal Track Clustering
 
-```
-mkdir test_dataset
-```
-Insert the ca classifier and viewpoint classifier models into the `test_dataset` directory and mark it in `config.yaml`.
+This work is a modular software pipeline and end-to-end workflow for video-based animal re-identification that clusters multiview spatio-temporal tracks to assign consistent individual IDs with minimal human review. From raw video, we detect and track animals, score and select informative left/right views, compute embeddings, cluster annotations/embeddings by viewpoint, and then link clusters across time and disparate views using spatio-temporal track continuity plus automated consistency checks to resolve ambiguities; preliminary experiments show the approach can reach near-perfect identification accuracy with very little manual verification. This workflow is designed to be generalizable across different species. Currently, the trained models support Grevy's and Plains Zebras but it will be expanded to work with variety of other animal species.
 
-Inser the lca verifier probs into the `test_dataset` directory and mark it in `config.yaml`.
+### Tags: 
+- Software
+- CI4AI
+- Animal-Ecology
 
-Add ground truth annotations to `test_dataset` if you want to filter animal detections.
+---
 
-You can adjust src paths in `config.yaml`
+### License
+- MIT [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-```
-GGR 
-│ # additional files
-├── test_dataset
-│   ├── your_viewpoint_classifier.pth
-│   ├── your_ca_classifier.pth
-│   ├── your_verifiers_probs.json
-│   └── intermediate/output folders and files
-├── images
-│ # repository files
-└── ...
-```
+---
+  
+## References
 
-## Alternative Setup
-- Clone the repository:
-```
-git clone https://github.com/Ziesski/GGR.git
-```
-- Full and alternative instructions for installing snakemake can be found in the snakemake documentation ([Installation](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html) | [Setup](https://snakemake.readthedocs.io/en/stable/tutorial/setup.html))
-## Execution
-- Activate WSL with `wsl` and base conda environment with `conda activate base` if not active
-- Activate snakemake environment (smk_pipeline can be replaced with an alternative name):
-```
-conda activate smk_pipeline
-```
-- Run the pipeline:
-```
-snakemake -s snakefile.smk --cores 1
-```
-Final results will appear in `test_dataset/output` and intermediate results will appear in labeled folders in `test_dataset` accordingly.
+### Links to related resources (libraries, tools, etc.) or external documentation
+* [YOLOv10](https://github.com/THU-MIG/yolov10)
+* [BioCLIP](https://github.com/Imageomics/bioclip)
+* [MiewID](https://github.com/WildMeOrg/wbia-plugin-miew-id)
+* [LCA](https://github.com/WildMeOrg/lca)
 
-## GGR-Specific Functions
-- Additional script `extrapolate_ggr_gps.py` extrapolates from existing GPS data to fill in for missing GPS data for images from other cameras.
-- Run in same environment by providing input and output image data .json paths:
-```
-python extrapolate_ggr_gps.py test_dataset/image_data.json test_dataset/image_data_complete.json
-```
-## Tools
-[YOLO](https://github.com/THU-MIG/yolov10.git)
-[BioCLIP](https://github.com/Imageomics/pybioclip)
+---
 
-## Future Tasks
-- Implement threading for image parameter computation and validity checking if image import is too slow.
-- Set up pipeline within IDEA cluster and perform larger tests.
+### Definitions of key terms and concepts
+
+Here are the key terms and concepts related to this work:
+
+
+#### Core Concepts 🐾
+
+* **Animal Re-Identification (re-id)**: The process of determining if an animal has been seen before by matching it against a database of images with known identity labels. The paper addresses this problem in the context of long video sequences.
+* **Multiview Spatio-Temporal Track Clustering**: A novel framework introduced for animal re-identification. It works by clustering tracked animal detections from different viewpoints (multiview) and across time (spatio-temporal) to correctly identify individuals.
+* **Identifiable Annotation (IA)**: An annotation, or detected animal image, that contains sufficient distinguishing information for reliable individual identification. For Grévy's zebras, an IA must show both the hip and chevron patterns on either the left or right side.
+* **Human-in-the-loop**: The involvement of human decisions to confirm animal identities when the automated system is uncertain or to correct algorithmic errors.
+
+---
+#### Pipeline Stages & Algorithms ⚙️
+
+* **Detection and Tracking**: The initial stage where animals are detected in video frames and their movement is tracked across those frames. This work uses YOLOv10 for this task.
+* **Viewpoint Classification**: This module categorizes the orientation of an animal into discrete labels like "left," "right," "top," "front," and "back". A fine-tuned EfficientNet B4 model performs this classification.
+* **IA Classification**: A process that classifies if the annotation is an IA or not.
+* **Frame Selection**: A procedure to select a smaller, representative subset of Identifiable Annotations from each track for the matching process, primarily to reduce computation in downstream stages.
+* **Embeddings Extraction**: This work uses the MiewID algorithm for this. Embeddings from the same individual at a similar viewpoint are close together in the feature space, while those from different individuals or viewpoints are distant.
+* **Local Clusters and Alternatives (LCA) Algorithm**: The core algorithm of the framework that first clusters left-side and right-side IAs separately.
+* **Tracking-based ID Procedure**: The final step in the pipeline that processes the output clusters from the LCA algorithm. It involves consistency checks, requesting human verification for ambiguous cases, and assigning the final individual IDs to each track.
+
+---
+   
+## Acknowledgements
+
+* **National Science Foundation (NSF)** funded AI institute for Intelligent Cyberinfrastructure with Computational Learning in the Environment (ICICLE) (OAC 2112606).
+* **Imageomics Institute (A New Frontier of Biological Information Powered by Knowledge-Guided Machine Learning)** is funded by the US National Science Foundation's Harnessing the Data Revolution (HDR) program under Award (OAC 2118240).
+
+
+---
+
+# Tutorials
+
+
+### High-level Introduction
+### Prerequisites (e.g. software requirements, configurations)
+### A sequence of steps that guide users through accomplishing a goal
+### Visual aids such as screenshots or GIFs, if necessary, to clarify complex steps
+### End results, showcasing the outcome of following the tutorial.
+
+
+
+---
+
+# How-To Guides
+
+### Problem Description 
+- Problem description: A brief overview of the task or issue at hand.
+
+### Instructions
+- Step-by-step instructions on how to complete the task. [Let us include how to run entire pipeline and also separate components guiding detailed steps]
+
+### Variations and Advanced Tips
+- Potential variations or advanced tips to enhance the process.
+
+### Troubleshooting
+- Troubleshooting advice for common pitfalls.
+
+### Code snippets, commands or configuration examples
+- Relevant code snippets, commands, or configuration examples.
+
+
+---
+
+# Explanation
+
+### High-level Overview
+- High-level overview of core concepts and principles.
+
+### Explanation of Working of the System
+- Explanations of how the system works and why certain design patterns or approaches were chosen.
+
+### Visualizations
+- Diagrams, flowcharts, or illustrations to visualize key concepts.
+
+### Background Information
+- Background information to help users grasp the context of the project’s design and architecture.
+
+### Readings and Resources
+- Suggested readings or resources for further exploration.
