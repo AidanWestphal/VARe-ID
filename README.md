@@ -96,4 +96,7 @@ This work is a modular software pipeline and end-to-end workflow for video-based
 
 * **National Science Foundation (NSF)** funded AI institute for Intelligent Cyberinfrastructure with Computational Learning in the Environment (ICICLE) (OAC 2112606).
 * **Imageomics Institute (A New Frontier of Biological Information Powered by Knowledge-Guided Machine Learning)** is funded by the US National Science Foundation's Harnessing the Data Revolution (HDR) program under Award (OAC 2118240).
+* Support from **Rensselaer Polytechnic Institute (RPI)**.
+* Support from **Finnish Cultural Foundation**.
 * Resources from **Ohio Supercomputer Center** made it possible to train and test algorithmic components.
+
