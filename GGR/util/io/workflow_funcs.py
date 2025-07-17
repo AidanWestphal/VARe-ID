@@ -2,9 +2,6 @@ import base64
 import json
 import os
 
-from GGR.util.io.format_funcs import load_config
-
-
 def decode_config(code):
     '''
     Decodes a config dictionary from str.

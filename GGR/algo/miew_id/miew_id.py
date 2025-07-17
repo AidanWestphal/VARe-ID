@@ -21,6 +21,8 @@ from transformers import AutoModel
 from GGR.util.utils import path_from_file
 from GGR.util.io.format_funcs import load_config, load_json, join_dataframe
 
+config = load_config(path_from_file(__file__, "miew_id_config.yaml"))
+
 class MiewIDDataset(Dataset):
     def __init__(self, df, transforms=None):
         super().__init__()
@@ -48,7 +50,7 @@ class MiewIDDataset(Dataset):
         # print(f'Shape of the input image: {img.shape}')    # Print the shape of the image
 
         # if dataset is "left", flip before any other transforms
-        if "left" in row["viewpoint"]:
+        if config["flip"] and "left" in row["viewpoint"]:
             img = cv2.flip(img, 1)
 
         if self.transforms:
@@ -259,7 +261,6 @@ if __name__ == "__main__":
     data = load_json(args.in_csv_path)
     # Joining is not necessary here, but done for consistency
     df = join_dataframe(data)
-    config = load_config(path_from_file(__file__, "miew_id_config.yaml"))
 
     print(f"Downloading model {args.model_url}...")
     device = torch.device(config["device"])
