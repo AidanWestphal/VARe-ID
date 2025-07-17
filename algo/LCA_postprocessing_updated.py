@@ -8,6 +8,7 @@ import csv
 import re
 import ast
 import json
+import sqlite3
 from collections import defaultdict
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
@@ -30,7 +31,13 @@ except ImportError:
     widgets = None
     print("ipywidgets not available; falling back to console input for interactive decisions.")
 
-
+# Try to import database functions (NEW - for database mode)
+try:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from UI.db_scripts import init_db, add_image_pair, get_decisions, check_pair_exists
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
 
 # -------------------------
 # HELPER FUNCTIONS
@@ -59,12 +66,94 @@ def get_user_decision(prompt="Merge clusters? (Yes/No): ", interactive_mode=True
             elif decision_input.startswith("n"): return "No"
             print("Invalid input. Please enter Yes or No.")
 
+# NEW: Database Helper Functions (only for database mode)
+def wait_for_database_decisions(db_path, pair_ids, check_interval=5):
+    """Wait for specific pairs to be completed"""
+    if not pair_ids:
+        return
+    
+    print(f"\nWaiting for {len(pair_ids)} verification decisions...")
+    print("Please complete verification tasks in the UI...")
+    
+    while True:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        placeholders = ','.join('?' * len(pair_ids))
+        cursor.execute(f"""
+            SELECT COUNT(*) FROM image_verification
+            WHERE id IN ({placeholders}) AND status IN ('awaiting', 'in_progress')
+        """, pair_ids)
+        pending = cursor.fetchone()[0]
+        conn.close()
+        
+        if pending == 0:
+            break
+            
+        print(f"Pending tasks: {pending}/{len(pair_ids)} - Checking again in {check_interval} seconds...")
+        time.sleep(check_interval)
+    
+    print(f"All verification tasks completed!")
+
+def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path):
+    """Submit a pair to database, returns pair_id or existing decision"""
+    # Order UUIDs to create consistent ID
+    uuid1 = best_ann1['uuid']
+    uuid2 = best_ann2['uuid']
+    if uuid1 > uuid2:
+        uuid1, uuid2 = uuid2, uuid1
+        best_ann1, best_ann2 = best_ann2, best_ann1
+
+    unique_id = f"{uuid1}_{uuid2}"
+
+    # Check if this pair already exists
+    exists, status, decision = check_pair_exists(uuid1, uuid2, db_path)
+    
+    if exists:
+        if status in ['checked', 'sent'] and decision != 'none':
+            return {'pair_id': unique_id, 'decision': decision}
+        else:
+            return {'pair_id': unique_id, 'decision': None}
+
+    # Get image paths from annotation's image_path field
+    image_path1 = best_ann1.get('image_path')
+    image_path2 = best_ann2.get('image_path')
+
+    # Extract bounding boxes
+    bbox1 = None
+    bbox2 = None
+    if "bbox" in best_ann1 and best_ann1["bbox"]:
+        x, y, w, h = best_ann1["bbox"]
+        bbox1 = json.dumps([x, y, x + w, y + h])
+    if "bbox" in best_ann2 and best_ann2["bbox"]:
+        x, y, w, h = best_ann2["bbox"]
+        bbox2 = json.dumps([x, y, x + w, y + h])
+
+    # Add to database
+    add_image_pair(
+        unique_id,
+        uuid1,
+        image_path1 or "NO_IMAGE",
+        bbox1,
+        uuid2,
+        image_path2 or "NO_IMAGE",
+        bbox2,
+        db_path
+    )
+    
+    return {'pair_id': unique_id, 'decision': None}
+
 def save_json_with_stage(data, original_filename, stage_suffix, final=False):
     base, ext = os.path.splitext(original_filename)
     new_filename = f"{base}{ext}" if final else f"{base}_{stage_suffix}{ext}"
-    df = pd.DataFrame(data["annotations"])
-    final_data_to_save = split_dataframe(df)
-    save_json(final_data_to_save, new_filename)
+    try:
+        df = pd.DataFrame(data["annotations"])
+        final_data_to_save = split_dataframe(df)
+        save_json(final_data_to_save, new_filename)
+    except (ValueError, KeyError) as e:
+        print(f"Warning: DataFrame approach failed ({e}), using direct JSON save")
+        with open(new_filename, 'w') as f:
+            json.dump(data, f, indent=4)
     print(f"Saved file: {new_filename}")
     return new_filename
 
@@ -111,7 +200,7 @@ def group_annotations_by_lca(data):
             grouped[lca_id].append(ann)
     return grouped
 
-def pairwise_verification_interactive(grouped_annotations, c1_id, c2_id, image_dir, interactive_mode, stage):
+def pairwise_verification_interactive(grouped_annotations, c1_id, c2_id, image_dir, interactive_mode, stage, db_path=None):
     if (c1_id not in grouped_annotations or c2_id not in grouped_annotations or
             not grouped_annotations[c1_id] or not grouped_annotations[c2_id]):
         return False
@@ -119,6 +208,10 @@ def pairwise_verification_interactive(grouped_annotations, c1_id, c2_id, image_d
     best_ann1 = get_cluster_best_ann_for_display(grouped_annotations[c1_id])
     best_ann2 = get_cluster_best_ann_for_display(grouped_annotations[c2_id])
     if not best_ann1 or not best_ann2: return False
+
+    # NEW: Check if we're in database mode
+    if interactive_mode == "database":
+        return submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path)
 
     print(f"\n[Stage: {stage.capitalize()}] User Verification: Clusters '{c1_id}' vs '{c2_id}'")
     # This check is now only a fallback; primary path is file_path from annotation
@@ -143,10 +236,10 @@ def pairwise_verification_interactive(grouped_annotations, c1_id, c2_id, image_d
             else:
                 ax.text(0.5, 0.5, "Image N/A", ha='center'); ax.axis('off')
         plt.tight_layout()
-        if widgets and interactive_mode: display(fig)
+        if widgets and interactive_mode == True: display(fig)
         else: plt.show(block=False)
 
-    decision = get_user_decision(f"    Merge {c1_id} & {c2_id}? (Yes/No): ", interactive_mode)
+    decision = get_user_decision(f"    Merge {c1_id} & {c2_id}? (Yes/No): ", interactive_mode == True)
     anchor_id, other_id = sorted([c1_id, c2_id])
     if decision == "Yes":
         print(f"    User chose to MERGE.")
@@ -161,7 +254,7 @@ def pairwise_verification_interactive(grouped_annotations, c1_id, c2_id, image_d
 # -------------------------
 # STAGE 1: TID SPLIT VERIFICATION
 # -------------------------
-def tid_split_verification_interactive(grouped_ann, data_view, viewpoint, image_dir, interactive):
+def tid_split_verification_interactive(grouped_ann, data_view, viewpoint, image_dir, interactive, db_path=None):
     print(f"\n--- Verifying TID Splits for {viewpoint} Viewpoint ---")
     while True:
         tid_to_lca_map = defaultdict(set)
@@ -172,19 +265,80 @@ def tid_split_verification_interactive(grouped_ann, data_view, viewpoint, image_
         if not conflicts:
             print(f"  No TID splits found in {viewpoint}. Viewpoint is stable."); break
         
-        changed_this_pass = False
-        for tid, lca_set in sorted(conflicts.items(), key=lambda item: str(item[0])):
-            print(f"  Conflict found: TID {tid} exists in clusters {lca_set}")
-            for c1, c2 in itertools.combinations(sorted(lca_set), 2):
-                if pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="split"):
-                    changed_this_pass = True; break
-            if changed_this_pass: break
-        
-        if not changed_this_pass:
-            print(f"  No more merges/renames needed for {viewpoint}. Viewpoint is stable."); break
+        # NEW: Database mode batch processing
+        if interactive == "database":
+            pairs_to_decide = set()
+            pair_info = {}
+            
+            # Collect all pairs
+            for tid, lca_set in sorted(conflicts.items(), key=lambda item: str(item[0])):
+                print(f"  Conflict found: TID {tid} exists in clusters {lca_set}")
+                for c1, c2 in itertools.combinations(sorted(lca_set), 2):
+                    result = pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="split", db_path=db_path)
+                    
+                    if isinstance(result, dict):
+                        if result['decision'] is not None:
+                            # Apply existing decision immediately
+                            anchor_id, other_id = sorted([c1, c2])
+                            if result['decision'] == 'correct':
+                                _update_cluster_merge_deterministic(grouped_ann, other_id, anchor_id)
+                                data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+                                break
+                            elif result['decision'] == 'incorrect':
+                                _update_split_no_merge_deterministic(grouped_ann, anchor_id, other_id)
+                        else:
+                            # Need to wait for decision
+                            pairs_to_decide.add(result['pair_id'])
+                            pair_info[result['pair_id']] = (c1, c2)
+                else:
+                    continue
+                break
+            pairs_to_decide = list(pairs_to_decide)
+            # Wait for all decisions and process them
+            if pairs_to_decide:
+                wait_for_database_decisions(db_path, pairs_to_decide)
+                decisions = get_decisions(pairs_to_decide, db_path)
+                
+                changed_this_pass = False
+                for pair_id in pairs_to_decide:
+                    if pair_id in decisions and pair_id in pair_info:
+                        decision = decisions[pair_id]
+                        c1, c2 = pair_info[pair_id]
+                        anchor_id, other_id = sorted([c1, c2])
+                        
+                        if decision == 'correct':
+                            if other_id in grouped_ann and anchor_id in grouped_ann:
+                                _update_cluster_merge_deterministic(grouped_ann, other_id, anchor_id)
+                                changed_this_pass = True
+                                break
+                        elif decision == 'incorrect':
+                            if anchor_id in grouped_ann and other_id in grouped_ann:
+                                _update_split_no_merge_deterministic(grouped_ann, anchor_id, other_id)
+                
+                if changed_this_pass:
+                    data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+                    continue
+                else:
+                    print(f"  No merges made in this pass for {viewpoint}. Viewpoint is stable.")
+                    break
+            else:
+                print(f"  No new pairs to decide for {viewpoint}. Viewpoint is stable.")
+                break
         else:
-            print(f"  Change occurred. Re-evaluating {viewpoint} for stability...")
-            data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+            # Original interactive processing
+            changed_this_pass = False
+            for tid, lca_set in sorted(conflicts.items(), key=lambda item: str(item[0])):
+                print(f"  Conflict found: TID {tid} exists in clusters {lca_set}")
+                for c1, c2 in itertools.combinations(sorted(lca_set), 2):
+                    if pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="split", db_path=db_path):
+                        changed_this_pass = True; break
+                if changed_this_pass: break
+            
+            if not changed_this_pass:
+                print(f"  No more merges/renames needed for {viewpoint}. Viewpoint is stable."); break
+            else:
+                print(f"  Change occurred. Re-evaluating {viewpoint} for stability...")
+                data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
 
 # -------------------------
 # STAGE 2: TIME-OVERLAP VERIFICATION
@@ -225,7 +379,7 @@ def find_clusters_with_no_time_overlap(grouped_annotations):
                 non_overlapping_pairs.append((id1, id2))
     return non_overlapping_pairs
 
-def time_overlap_verification_interactive(grouped_ann, data_view, viewpoint, image_dir, interactive):
+def time_overlap_verification_interactive(grouped_ann, data_view, viewpoint, image_dir, interactive, db_path=None):
     print(f"\n--- Verifying Time Overlaps for {viewpoint} Viewpoint ---")
     while True:
         no_overlap_pairs = find_clusters_with_no_time_overlap(grouped_ann)
@@ -233,16 +387,65 @@ def time_overlap_verification_interactive(grouped_ann, data_view, viewpoint, ima
             print(f"  No more non-overlapping cluster pairs found in {viewpoint}. Stage complete."); break
         
         print(f"  Found {len(no_overlap_pairs)} candidate pairs with non-overlapping time intervals.")
-        changed_this_pass = False
-        for c1, c2 in no_overlap_pairs:
-            if pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="time"):
-                changed_this_pass = True; break
         
-        if not changed_this_pass:
-            print(f"  No merges made in this pass for {viewpoint}. Time-overlap check is stable."); break
+        # NEW: Database mode batch processing
+        if interactive == "database":
+            pairs_to_decide = []
+            pair_info = {}
+            
+            for c1, c2 in no_overlap_pairs:
+                result = pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="time", db_path=db_path)
+                
+                if isinstance(result, dict):
+                    if result['decision'] is not None:
+                        # Apply existing decision immediately
+                        if result['decision'] == 'correct':
+                            _update_cluster_merge_deterministic(grouped_ann, c2, c1)
+                            data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+                            break
+                    else:
+                        # Need to wait for decision
+                        pairs_to_decide.append(result['pair_id'])
+                        pair_info[result['pair_id']] = (c1, c2)
+            
+            # Wait for all decisions and process them
+            if pairs_to_decide:
+                wait_for_database_decisions(db_path, pairs_to_decide)
+                decisions = get_decisions(pairs_to_decide, db_path)
+                
+                changed_this_pass = False
+                for pair_id in pairs_to_decide:
+                    if pair_id in decisions and pair_id in pair_info:
+                        decision = decisions[pair_id]
+                        c1, c2 = pair_info[pair_id]
+                        
+                        if decision == 'correct':
+                            if c1 in grouped_ann and c2 in grouped_ann:
+                                _update_cluster_merge_deterministic(grouped_ann, c2, c1)
+                                changed_this_pass = True
+                                break
+                
+                if changed_this_pass:
+                    data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+                    continue
+                else:
+                    print(f"  No merges made in this pass for {viewpoint}. Time-overlap check is stable.")
+                    break
+            else:
+                print(f"  No new pairs to decide for {viewpoint}. Time-overlap check is stable.")
+                break
         else:
-            print(f"  Merge occurred. Re-evaluating {viewpoint} for stability...")
-            data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+            # Original interactive processing
+            changed_this_pass = False
+            for c1, c2 in no_overlap_pairs:
+                if pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="time", db_path=db_path):
+                    changed_this_pass = True; break
+            
+            if not changed_this_pass:
+                print(f"  No merges made in this pass for {viewpoint}. Time-overlap check is stable."); break
+            else:
+                print(f"  Merge occurred. Re-evaluating {viewpoint} for stability...")
+                data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
 
 # -------------------------
 # STAGE 3: UNLINKED CLUSTER VERIFICATION
@@ -250,7 +453,7 @@ def time_overlap_verification_interactive(grouped_ann, data_view, viewpoint, ima
 def get_parent_id(tid):
     return str(tid).split('_new')[0]
 
-def unlinked_cluster_verification_interactive(grouped_ann, data_view, viewpoint, image_dir, interactive):
+def unlinked_cluster_verification_interactive(grouped_ann, data_view, viewpoint, image_dir, interactive, db_path=None):
     """
     Interactively verifies and merges clusters within a single viewpoint that have
     no parent TID overlap. This version remembers 'No' decisions to avoid re-asking.
@@ -278,23 +481,76 @@ def unlinked_cluster_verification_interactive(grouped_ann, data_view, viewpoint,
             print(f"  No new unlinked pairs to check in {viewpoint}. Stage complete."); break
 
         print(f"  Found {len(candidate_pairs)} new candidate pairs with no parent TID overlap.")
-        changed_this_pass = False
-        for c1, c2 in candidate_pairs:
-            # A 'True' return value means a merge occurred.
-            if pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="unlinked"):
-                changed_this_pass = True
-                # A merge happened, so we must break and restart the main loop.
-                # The declined_pairs set is preserved.
-                break
-            else:
-                # No merge occurred, so the user selected "No". Remember this pair.
-                declined_pairs.add(tuple(sorted((c1, c2))))
         
-        if not changed_this_pass:
-            print(f"  No merges made in this pass for {viewpoint}. Viewpoint is stable."); break
+        # NEW: Database mode batch processing
+        if interactive == "database":
+            pairs_to_decide = []
+            pair_info = {}
+            
+            for c1, c2 in candidate_pairs:
+                result = pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="unlinked", db_path=db_path)
+                
+                if isinstance(result, dict):
+                    if result['decision'] is not None:
+                        # Apply existing decision immediately
+                        if result['decision'] == 'correct':
+                            _update_cluster_merge_deterministic(grouped_ann, c2, c1)
+                            data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+                            break
+                        else:
+                            declined_pairs.add(tuple(sorted((c1, c2))))
+                    else:
+                        # Need to wait for decision
+                        pairs_to_decide.append(result['pair_id'])
+                        pair_info[result['pair_id']] = (c1, c2)
+            
+            # Wait for all decisions and process them
+            if pairs_to_decide:
+                wait_for_database_decisions(db_path, pairs_to_decide)
+                decisions = get_decisions(pairs_to_decide, db_path)
+                
+                changed_this_pass = False
+                for pair_id in pairs_to_decide:
+                    if pair_id in decisions and pair_id in pair_info:
+                        decision = decisions[pair_id]
+                        c1, c2 = pair_info[pair_id]
+                        
+                        if decision == 'correct':
+                            if c1 in grouped_ann and c2 in grouped_ann:
+                                _update_cluster_merge_deterministic(grouped_ann, c2, c1)
+                                changed_this_pass = True
+                                break
+                        else:
+                            declined_pairs.add(tuple(sorted((c1, c2))))
+                
+                if changed_this_pass:
+                    data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+                    continue
+                else:
+                    print(f"  No merges made in this pass for {viewpoint}. Viewpoint is stable.")
+                    break
+            else:
+                print(f"  No new pairs to decide for {viewpoint}. Viewpoint is stable.")
+                break
         else:
-            print(f"  Merge occurred. Re-evaluating {viewpoint} for stability...")
-            data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
+            # Original interactive processing
+            changed_this_pass = False
+            for c1, c2 in candidate_pairs:
+                # A 'True' return value means a merge occurred.
+                if pairwise_verification_interactive(grouped_ann, c1, c2, image_dir, interactive, stage="unlinked", db_path=db_path):
+                    changed_this_pass = True
+                    # A merge happened, so we must break and restart the main loop.
+                    # The declined_pairs set is preserved.
+                    break
+                else:
+                    # No merge occurred, so the user selected "No". Remember this pair.
+                    declined_pairs.add(tuple(sorted((c1, c2))))
+            
+            if not changed_this_pass:
+                print(f"  No merges made in this pass for {viewpoint}. Viewpoint is stable."); break
+            else:
+                print(f"  Merge occurred. Re-evaluating {viewpoint} for stability...")
+                data_view['annotations'] = [ann for L in grouped_ann.values() for ann in L]
 
 # -------------------------
 # STAGE 5: CROSS-VIEW EQUIVALENCE
@@ -382,7 +638,7 @@ def split_conflicting_cluster(parent_key, targets, grouped_all_wv, all_lca_ids_i
         grouped_all_wv[key] = anns
     return True
 
-def handle_split_leftovers_interactive(grouped_wv, all_grouped_wv, image_dir, interactive):
+def handle_split_leftovers_interactive(grouped_wv, all_grouped_wv, image_dir, interactive, db_path=None):
     change_made_in_stage = False
     while True:
         base_id_to_siblings = defaultdict(list)
@@ -403,7 +659,19 @@ def handle_split_leftovers_interactive(grouped_wv, all_grouped_wv, image_dir, in
             for iso_c in sorted(list(isolated_siblings)):
                 for lnk_c in sorted(list(linked_siblings)):
                     if iso_c not in all_grouped_wv or lnk_c not in all_grouped_wv: continue
-                    if pairwise_verification_interactive(all_grouped_wv, iso_c, lnk_c, image_dir, interactive, stage="leftover_merge"):
+                    result = pairwise_verification_interactive(all_grouped_wv, iso_c, lnk_c, image_dir, interactive, stage="leftover_merge", db_path=db_path)
+                    
+                    # Handle database mode result
+                    if isinstance(result, dict):
+                        if result['decision'] == 'correct':
+                            made_merge_this_pass = True
+                            change_made_in_stage = True
+                            break
+                        elif result['decision'] is None:
+                            # For simplicity in this complex nested case, we don't batch these
+                            # Just continue to next pair
+                            continue
+                    elif result:
                         made_merge_this_pass = True
                         change_made_in_stage = True
                         break
@@ -459,19 +727,81 @@ def assign_final_ids(grouped_left_wv, grouped_right_wv, data_left, data_right):
 # -------------------------
 def main():
     parser = argparse.ArgumentParser(description="Post-process LCA outputs with interactive verification.")
-    parser.add_argument("images", type=str, help="The image directory.")
-    parser.add_argument("in_left", type=str, help="Path to the left LCA annotations JSON.")
-    parser.add_argument("in_right", type=str, help="Path to the right LCA annotations JSON.")
-    parser.add_argument("out_left", type=str, help="Path to save the processed left JSON.")
-    parser.add_argument("out_right", type=str, help="Path to save the processed right JSON.")
+    parser.add_argument("images", nargs='?', type=str, help="The image directory.")
+    parser.add_argument("in_left", nargs='?', type=str, help="Path to the left LCA annotations JSON.")
+    parser.add_argument("in_right", nargs='?', type=str, help="Path to the right LCA annotations JSON.")
+    parser.add_argument("out_left", nargs='?', type=str, help="Path to save the processed left JSON.")
+    parser.add_argument("out_right", nargs='?', type=str, help="Path to save the processed right JSON.")
+    parser.add_argument("--db", type=str, help="Database path for verification (optional, can also be set in config as database.path)")
+    parser.add_argument("--interaction_mode", type=str, choices=["console", "ipywidgets", "database"], help="Interaction mode (overrides config)")
     args = parser.parse_args()
 
     config = load_config("algo/config_evaluation_LCA.yaml")
-    image_dir = args.images if os.path.exists(args.images) and os.path.isdir(args.images) else None
-    interactive_mode = config.get("interactive", True)
     
-    data_left = join_dataframe_dict(json.load(open(args.in_left)))
-    data_right = join_dataframe_dict(json.load(open(args.in_right)))
+    # NEW: Determine interaction mode - command line overrides config
+    if args.interaction_mode:
+        # Command line argument takes priority
+        interaction_mode = args.interaction_mode
+    elif "interaction_mode" in config:
+        # New config format
+        interaction_mode = config["interaction_mode"]
+    else:
+        # Backward compatibility with original config format
+        interactive = config.get("interactive", True)
+        if interactive == "database":
+            interaction_mode = "database"
+        elif interactive:
+            interaction_mode = "ipywidgets"
+        else:
+            interaction_mode = "console"
+
+    # Normalize interaction mode values for consistency
+    if interaction_mode == "ipywidgets":
+        interaction_mode = True
+    elif interaction_mode == "console":
+        interaction_mode = False
+    # "database" stays as string
+
+    # NEW: Use config values as defaults, override with command line args if provided
+    images = args.images or config.get("image", {}).get("directory")
+    in_left = args.in_left or config.get("json", {}).get("left", {}).get("input")
+    in_right = args.in_right or config.get("json", {}).get("right", {}).get("input")
+    out_left = args.out_left or config.get("json", {}).get("left", {}).get("output")
+    out_right = args.out_right or config.get("json", {}).get("right", {}).get("output")
+
+    # Validate required parameters
+    if not in_left:
+        raise ValueError("in_left is required. Specify as positional argument or set json.left.input in config.")
+    if not in_right:
+        raise ValueError("in_right is required. Specify as positional argument or set json.right.input in config.")
+    if not out_left:
+        raise ValueError("out_left is required. Specify as positional argument or set json.left.output in config.")
+    if not out_right:
+        raise ValueError("out_right is required. Specify as positional argument or set json.right.output in config.")
+
+    # NEW: Validate database mode requirements and get database path
+    db_path = None
+    if interaction_mode == "database":
+        if not DATABASE_AVAILABLE:
+            raise ImportError("Database mode requires UI.db_scripts module. Please ensure database components are available.")
+        
+        # Get database path from config or command line
+        db_path = args.db or config.get("database", {}).get("path")
+        if db_path is None:
+            raise ValueError("Database mode requires database path. Specify either --db argument or database.path in config file.")
+        
+        init_db(db_path)
+        print(f"Using database mode with database: {db_path}")
+    elif interaction_mode == True and widgets is None:
+        print("Warning: ipywidgets not available, falling back to console mode")
+        interaction_mode = False
+
+    image_dir = images if images and os.path.exists(images) and os.path.isdir(images) else None
+    if not image_dir:
+        print(f"Warning: Image directory '{images}' not found or not specified. Image display will be skipped.")
+    
+    data_left = join_dataframe_dict(json.load(open(in_left)))
+    data_right = join_dataframe_dict(json.load(open(in_right)))
     
     print("="*50 + "\nINITIAL DATA STATE\n" + "="*50)
     print_viewpoint_cluster_mapping(data_left, "left")
@@ -481,30 +811,30 @@ def main():
     print("\n\n" + "="*50 + "\nSTAGE 1: TID SPLIT VERIFICATION\n" + "="*50)
     grouped_left = group_annotations_by_lca(data_left)
     grouped_right = group_annotations_by_lca(data_right)
-    tid_split_verification_interactive(grouped_left, data_left, "Left", image_dir, interactive_mode)
-    tid_split_verification_interactive(grouped_right, data_right, "Right", image_dir, interactive_mode)
+    tid_split_verification_interactive(grouped_left, data_left, "Left", image_dir, interaction_mode, db_path)
+    tid_split_verification_interactive(grouped_right, data_right, "Right", image_dir, interaction_mode, db_path)
     data_left['annotations'] = [ann for L in grouped_left.values() for ann in L]
     data_right['annotations'] = [ann for L in grouped_right.values() for ann in L]
-    save_json_with_stage(data_left, args.out_left, "split_verified")
-    save_json_with_stage(data_right, args.out_right, "split_verified")
+    save_json_with_stage(data_left, out_left, "split_verified")
+    save_json_with_stage(data_right, out_right, "split_verified")
 
     # --- STAGE 2 ---
     print("\n\n" + "="*50 + "\nSTAGE 2: TIME-OVERLAP VERIFICATION\n" + "="*50)
-    time_overlap_verification_interactive(grouped_left, data_left, "Left", image_dir, interactive_mode)
-    time_overlap_verification_interactive(grouped_right, data_right, "Right", image_dir, interactive_mode)
+    time_overlap_verification_interactive(grouped_left, data_left, "Left", image_dir, interaction_mode, db_path)
+    time_overlap_verification_interactive(grouped_right, data_right, "Right", image_dir, interaction_mode, db_path)
     data_left['annotations'] = [ann for L in grouped_left.values() for ann in L]
     data_right['annotations'] = [ann for L in grouped_right.values() for ann in L]
-    save_json_with_stage(data_left, args.out_left, "time_verified")
-    save_json_with_stage(data_right, args.out_right, "time_verified")
+    save_json_with_stage(data_left, out_left, "time_verified")
+    save_json_with_stage(data_right, out_right, "time_verified")
 
     # --- STAGE 3 ---
     print("\n\n" + "="*50 + "\nSTAGE 3: UNLINKED CLUSTER VERIFICATION\n" + "="*50)
-    unlinked_cluster_verification_interactive(grouped_left, data_left, "Left", image_dir, interactive_mode)
-    unlinked_cluster_verification_interactive(grouped_right, data_right, "Right", image_dir, interactive_mode)
+    unlinked_cluster_verification_interactive(grouped_left, data_left, "Left", image_dir, interaction_mode, db_path)
+    unlinked_cluster_verification_interactive(grouped_right, data_right, "Right", image_dir, interaction_mode, db_path)
     data_left['annotations'] = [ann for L in grouped_left.values() for ann in L]
     data_right['annotations'] = [ann for L in grouped_right.values() for ann in L]
-    save_json_with_stage(data_left, args.out_left, "pre_equivalence")
-    save_json_with_stage(data_right, args.out_right, "pre_equivalence")
+    save_json_with_stage(data_left, out_left, "pre_equivalence")
+    save_json_with_stage(data_right, out_right, "pre_equivalence")
     
     # --- STAGE 5 ---
     print("\n\n" + "="*50 + "\nSTAGE 5: CROSS-VIEW EQUIVALENCE & FINAL ID ASSIGNMENT\n" + "="*50)
@@ -537,8 +867,8 @@ def main():
         grouped_right_wv = group_annotations_by_lca_with_viewpoint(data_right, 'right')
         grouped_all_wv = {**grouped_left_wv, **grouped_right_wv}
         
-        if handle_split_leftovers_interactive(grouped_left_wv, grouped_all_wv, image_dir, interactive_mode): made_change_in_cycle = True
-        if handle_split_leftovers_interactive(grouped_right_wv, grouped_all_wv, image_dir, interactive_mode): made_change_in_cycle = True
+        if handle_split_leftovers_interactive(grouped_left_wv, grouped_all_wv, image_dir, interaction_mode, db_path): made_change_in_cycle = True
+        if handle_split_leftovers_interactive(grouped_right_wv, grouped_all_wv, image_dir, interaction_mode, db_path): made_change_in_cycle = True
         
         if not made_change_in_cycle:
             print("\n--- System is stable. No more splits or merges needed. ---")
@@ -556,8 +886,8 @@ def main():
 
     # --- FINAL RESULTS ---
     print("\n\n" + "="*50 + "\nFINAL RESULTS\n" + "="*50)
-    save_json_with_stage(data_left, args.out_left, "final", final=True)
-    save_json_with_stage(data_right, args.out_right, "final", final=True)
+    save_json_with_stage(data_left, out_left, "final", final=True)
+    save_json_with_stage(data_right, out_right, "final", final=True)
 
     print_viewpoint_cluster_mapping(data_left, "left")
     print_viewpoint_cluster_mapping(data_right, "right")
@@ -573,6 +903,10 @@ def main():
         print(f"Final ID {fid}:")
         print(f"  Left Clusters:  {sorted(list(final_summary[fid]['left'])) if final_summary[fid]['left'] else 'None'}")
         print(f"  Right Clusters: {sorted(list(final_summary[fid]['right'])) if final_summary[fid]['right'] else 'None'}")
+
+    # NEW: Database mode info
+    if interaction_mode == "database":
+        print(f"\nDatabase verification completed using: {os.path.abspath(db_path)}")
 
 if __name__ == "__main__":
     main()
