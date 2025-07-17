@@ -9,12 +9,8 @@ This work is a modular software pipeline and end-to-end workflow for video-based
 
 ---
 
-### Definitions of key terms and concepts
+## Definitions of key terms and concepts
 
-Here are the key terms and concepts related to this work:
-
-
-#### Core Concepts 🐾
 
 * **Animal Re-Identification (re-id)**: The process of determining if an animal has been seen before by matching it against a database of images with known identity labels. The paper addresses this problem in the context of long video sequences.
 * **Multiview Spatio-Temporal Track Clustering**: A novel framework introduced for animal re-identification. It works by clustering tracked animal detections from different viewpoints (multiview) and across time (spatio-temporal) to correctly identify individuals.
