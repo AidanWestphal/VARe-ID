@@ -49,7 +49,7 @@ GGR
 The repository can generally be split into four groups of code:
 
 #### Algorithm Components
-Algorithm components are the invidual steps of the pipeline, such as detection or species classification. They are contained in `GGR/algo/{component_name}/` in separate directories. In some specific cases, two components may share the same directory, such as `video_detector.py` and `image_detector.py`. Their only dependency (within this repository) would be library functions. Every component here should have an executable script to run that step of the pipeline.
+Algorithm components are the invidual steps of the pipeline, such as detection or species classification. They are contained in `GGR/algo/[component_name]/` in separate directories. In some specific cases, two components may share the same directory, such as `video_detector.py` and `image_detector.py`. Their only dependency (within this repository) would be library functions. Every component here should have an executable script to run that step of the pipeline.
 
 For more information on each algorithm component, please view the **README** files in each of their corresponding directories. Their arguments are also documented via the **argparse** python library.
 
