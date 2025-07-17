@@ -9,6 +9,8 @@ import os
 import threading
 import time
 import atexit
+import json
+from PIL import Image
 
 os.environ["GRADIO_TEMP_DIR"] = os.path.expanduser("~/gradio_cache")
 
@@ -24,9 +26,53 @@ init_db(db_path)
 start_heartbeat_system(db_path)
 
 # Global variables
-current_pair = {"id": None, "image1": None, "image2": None}
+current_pair = {"id": None, "image1": None, "image2": None, "bbox1": None, "bbox2": None}
 history_stack = []
 heartbeat_timer = None
+
+
+def crop_image_with_bbox(image_path, bbox_json):
+    """Crop image according to bounding box if provided"""
+    if not image_path or image_path == "NO_IMAGE":
+        return None
+    
+    if not os.path.exists(image_path):
+        print(f"Warning: Image file not found: {image_path}")
+        return None
+    
+    try:
+        # Load the image
+        img = Image.open(image_path)
+        
+        # If no bbox, return original image path
+        if not bbox_json:
+            return image_path
+        
+        # Parse bbox
+        bbox = json.loads(bbox_json)
+        x1, y1, x2, y2 = bbox
+        
+        # Ensure coordinates are within image bounds
+        x1 = max(0, int(x1))
+        y1 = max(0, int(y1))
+        x2 = min(img.width, int(x2))
+        y2 = min(img.height, int(y2))
+        
+        # Crop the image
+        cropped = img.crop((x1, y1, x2, y2))
+        
+        # Save to temp file
+        temp_path = os.path.join(os.path.expanduser("~/gradio_cache"), f"cropped_{os.path.basename(image_path)}")
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+        cropped.save(temp_path)
+        
+        return temp_path
+        
+    except Exception as e:
+        print(f"Error cropping image: {e}")
+        # If cropping fails, return original image
+        return image_path
+
 
 def start_pair_heartbeat(pair_id):
     """Start sending heartbeats for a pair"""
@@ -48,6 +94,7 @@ def start_pair_heartbeat(pair_id):
     # Start new heartbeat
     send_heartbeat()
 
+
 def stop_pair_heartbeat():
     """Stop sending heartbeats"""
     global heartbeat_timer
@@ -55,21 +102,26 @@ def stop_pair_heartbeat():
         heartbeat_timer.cancel()
         heartbeat_timer = None
 
+
 def fetch_pair():
     """Atomically fetch and reserve a pair from the database"""
     result = get_next_pair_atomic(db_path=db_path)
     if result:
-        pair_id, img1_path, img2_path = result
+        pair_id, img1_path, img2_path, bbox1, bbox2 = result
         return {
             "id": pair_id,
             "image1": img1_path,
-            "image2": img2_path
+            "image2": img2_path,
+            "bbox1": bbox1,
+            "bbox2": bbox2
         }
     return None
+
 
 def clear_images():
     """Return empty images to clear the display"""
     return None, None, "Loading new images..."
+
 
 def load_next_pair():
     """Load the next image pair"""
@@ -89,21 +141,26 @@ def load_next_pair():
         # Start heartbeat for new pair
         start_pair_heartbeat(current_pair["id"])
         
+        # Crop images based on bounding boxes
+        cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
+        cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
+        
         # Get instance stats for status message
         stats = get_instance_stats(db_path)
         status_msg = (f"Loaded pair {current_pair['id']} | "
                      f"Available: {stats['awaiting']} | "
                      f"Active instances: {stats['active_instances']} | "
                      f"Instance: {INSTANCE_IDENTIFIER}")
-        return current_pair["image1"], current_pair["image2"], status_msg
+        return cropped_img1, cropped_img2, status_msg
     else:
-        current_pair = {"id": None, "image1": None, "image2": None}
+        current_pair = {"id": None, "image1": None, "image2": None, "bbox1": None, "bbox2": None}
         stats = get_instance_stats(db_path)
         status_msg = (f"No pairs available | "
                      f"Awaiting: {stats['awaiting']} | "
                      f"In progress: {stats['in_progress']} | "
                      f"Checked: {stats['checked']}")
         return None, None, status_msg
+
 
 def submit_decision(label):
     """Submit user decision and trigger the two-step update"""
@@ -127,9 +184,11 @@ def submit_decision(label):
     # First step: Clear images
     return clear_images()
 
+
 def load_after_decision():
     """Second step: Load new images after clearing"""
     return load_next_pair()
+
 
 def go_back_clear():
     """First step of going back: clear images and release current pair"""
@@ -147,6 +206,7 @@ def go_back_clear():
         threading.Thread(target=release_in_background).start()
     
     return clear_images()
+
 
 def go_back_load():
     """Second step of going back: try to load previous pair"""
@@ -183,8 +243,13 @@ def go_back_load():
             if result and result[0] == previous["id"]:
                 current_pair = previous
                 start_pair_heartbeat(current_pair["id"])
+                
+                # Crop images based on bounding boxes
+                cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
+                cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
+                
                 status_msg = f"Returned to previous pair {current_pair['id']}"
-                return current_pair["image1"], current_pair["image2"], status_msg
+                return cropped_img1, cropped_img2, status_msg
         
         # If we couldn't get the previous pair, get a new one
         status_msg = "Previous pair no longer available, loading new pair..."
@@ -196,23 +261,43 @@ def go_back_load():
         status_msg = f"No history to go back to | Available: {stats['awaiting']}"
         if current_pair["id"] is not None:
             start_pair_heartbeat(current_pair["id"])  # Restart heartbeat
-            return current_pair["image1"], current_pair["image2"], status_msg
+            
+            # Crop images based on bounding boxes
+            cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
+            cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
+            
+            return cropped_img1, cropped_img2, status_msg
         else:
             return None, None, status_msg
 
+
 def get_status_update():
-    """Get current status for display"""
+    """Get current status and load pair if needed"""
+    global current_pair
     stats = get_instance_stats(db_path)
+    
+    # If no current pair and pairs are available, try to load one
+    if current_pair.get("id") is None and stats['awaiting'] > 0:
+        return load_next_pair()
+    
+    # Otherwise just update status
     if current_pair.get("id"):
-        return (f"Working on pair {current_pair['id']} | "
-                f"Available: {stats['awaiting']} | "
-                f"Active instances: {stats['active_instances']} | "
-                f"Instance: {INSTANCE_IDENTIFIER}")
+        status_msg = (f"Working on pair {current_pair['id']} | "
+                     f"Available: {stats['awaiting']} | "
+                     f"Active instances: {stats['active_instances']} | "
+                     f"Instance: {INSTANCE_IDENTIFIER}")
+        
+        # Return current images with updated status
+        cropped_img1 = crop_image_with_bbox(current_pair["image1"], current_pair["bbox1"])
+        cropped_img2 = crop_image_with_bbox(current_pair["image2"], current_pair["bbox2"])
+        return cropped_img1, cropped_img2, status_msg
     else:
-        return (f"No active pair | "
-                f"Available: {stats['awaiting']} | "
-                f"In progress: {stats['in_progress']} | "
-                f"Instance: {INSTANCE_IDENTIFIER}")
+        status_msg = (f"No active pair | "
+                     f"Available: {stats['awaiting']} | "
+                     f"In progress: {stats['in_progress']} | "
+                     f"Instance: {INSTANCE_IDENTIFIER}")
+        return None, None, status_msg
+
 
 def cleanup_on_exit():
     """Clean up any active pairs when the app shuts down"""
@@ -220,6 +305,7 @@ def cleanup_on_exit():
     stop_pair_heartbeat()
     if current_pair.get("id") is not None:
         release_pair(current_pair["id"], db_path)
+
 
 # Register cleanup function
 atexit.register(cleanup_on_exit)
@@ -298,7 +384,7 @@ with gr.Blocks() as demo:
     # Refresh status button
     btn_refresh_status.click(
         get_status_update,
-        outputs=[status]
+        outputs=[img1, img2, status]
     )
     
     # Load initial pair on startup
@@ -308,8 +394,10 @@ with gr.Blocks() as demo:
     )
 
 if __name__ == "__main__":
-    # Get the base data directory
-    data_dir = "/fs/ess/PAS2136/ggr_data/image_data/GGR2020_subset"
+    # Add all data directories that might contain images
+    allowed_dirs = [
+        "/fs/ess/PAS2136/ggr_data"  # Parent directory covers all subdirectories
+    ]
     
     print(f"Starting instance {INSTANCE_IDENTIFIER}")
     
@@ -318,5 +406,5 @@ if __name__ == "__main__":
         server_port=7861,
         server_name="0.0.0.0",  # Allow external connections
         share=False,
-        allowed_paths=[data_dir]  # Add data directory to allowed paths
+        allowed_paths=allowed_dirs  # Add data directory to allowed paths
     )

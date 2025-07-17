@@ -134,10 +134,10 @@ if __name__ == "__main__":
 
     if args.separate_viewpoints:
         for viewpoint in config["data"]["viewpoint_list"]:
-            input_dir = os.path.join(output_path, args.exp_name, viewpoint)
+            input_dir = os.path.join(output_path, viewpoint)
             save_lca_results(input_dir, anno_file, output_path, viewpoint=viewpoint, uuid_key=config["data"]["id_key"])
     else:
-        input_dir = os.path.join(output_path, args.exp_name)
+        input_dir = os.path.join(output_path)
         save_lca_results(input_dir, anno_file, output_path, uuid_key=config["data"]["id_key"])
 
     exit()
