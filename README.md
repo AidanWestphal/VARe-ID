@@ -9,21 +9,6 @@ This work is a modular software pipeline and end-to-end workflow for video-based
 
 ---
 
-### License
-- MIT [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
----
-  
-## References
-
-### Links to related resources (libraries, tools, etc.) or external documentation
-* [YOLOv10](https://github.com/THU-MIG/yolov10)
-* [BioCLIP](https://github.com/Imageomics/bioclip)
-* [MiewID](https://github.com/WildMeOrg/wbia-plugin-miew-id)
-* [LCA](https://github.com/WildMeOrg/lca)
-
----
-
 ### Definitions of key terms and concepts
 
 Here are the key terms and concepts related to this work:
@@ -36,23 +21,8 @@ Here are the key terms and concepts related to this work:
 * **Identifiable Annotation (IA)**: An annotation, or detected animal image, that contains sufficient distinguishing information for reliable individual identification. For Grévy's zebras, an IA must show both the hip and chevron patterns on either the left or right side.
 * **Human-in-the-loop**: The involvement of human decisions to confirm animal identities when the automated system is uncertain or to correct algorithmic errors.
 
----
-#### Pipeline Stages & Algorithms ⚙️
 
-* **Detection and Tracking**: The initial stage where animals are detected in video frames and their movement is tracked across those frames. This work uses YOLOv10 for this task.
-* **Viewpoint Classification**: This module categorizes the orientation of an animal into discrete labels like "left," "right," "top," "front," and "back". A fine-tuned EfficientNet B4 model performs this classification.
-* **IA Classification**: A process that classifies if the annotation is an IA or not.
-* **Frame Selection**: A procedure to select a smaller, representative subset of Identifiable Annotations from each track for the matching process, primarily to reduce computation in downstream stages.
-* **Embeddings Extraction**: This work uses the MiewID algorithm for this. Embeddings from the same individual at a similar viewpoint are close together in the feature space, while those from different individuals or viewpoints are distant.
-* **Local Clusters and Alternatives (LCA) Algorithm**: The core algorithm of the framework that first clusters left-side and right-side IAs separately.
-* **Tracking-based ID Procedure**: The final step in the pipeline that processes the output clusters from the LCA algorithm. It involves consistency checks, requesting human verification for ambiguous cases, and assigning the final individual IDs to each track.
 
----
-   
-## Acknowledgements
-
-* **National Science Foundation (NSF)** funded AI institute for Intelligent Cyberinfrastructure with Computational Learning in the Environment (ICICLE) (OAC 2112606).
-* **Imageomics Institute (A New Frontier of Biological Information Powered by Knowledge-Guided Machine Learning)** is funded by the US National Science Foundation's Harnessing the Data Revolution (HDR) program under Award (OAC 2118240).
 
 
 ---
@@ -106,3 +76,28 @@ Here are the key terms and concepts related to this work:
 
 ### Readings and Resources
 - Suggested readings or resources for further exploration.
+
+---
+
+
+
+### License
+- MIT [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+  
+## References
+
+### Links to related resources (libraries, tools, etc.) or external documentation
+* [YOLOv10](https://github.com/THU-MIG/yolov10)
+* [BioCLIP](https://github.com/Imageomics/bioclip)
+* [MiewID](https://github.com/WildMeOrg/wbia-plugin-miew-id)
+* [LCA](https://github.com/WildMeOrg/lca)
+
+---
+   
+## Acknowledgements
+
+* **National Science Foundation (NSF)** funded AI institute for Intelligent Cyberinfrastructure with Computational Learning in the Environment (ICICLE) (OAC 2112606).
+* **Imageomics Institute (A New Frontier of Biological Information Powered by Knowledge-Guided Machine Learning)** is funded by the US National Science Foundation's Harnessing the Data Revolution (HDR) program under Award (OAC 2118240).
+* Resources from **Ohio Supercomputer Center** made it possible to train and test algorithmic components.
