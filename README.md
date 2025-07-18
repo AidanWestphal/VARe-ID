@@ -247,7 +247,9 @@ python -m VAREID.drivers.[driver_script] --config_path path/to/your_config.yaml
 Notice that we didn't include the `.py` extension on the driver. This is because we're referencing it as a module. Think of this like an import statement, `import VAREID.drivers.[driver_script]`, but you're executing it as a script.
 
 ### Using the algorithm component itself
-If you don't have a full configfile filled out or would rather not rely on it, you can directly execute each algorithm component using its executable script. Each algorithm component has a separate set of parameters documented with `argparse` Please follow these parameters for your desired component and supply the necessary paths, flags, etc. Here is an example on how to run frame_sampling.py:
+If you don't have a full configfile filled out or would rather not rely on it, you can directly execute each algorithm component using its executable script. Each algorithm component has a separate set of parameters documented with `argparse` Please follow these parameters for your desired component and supply the necessary paths, flags, etc.
+
+Here is an example on how to run frame_sampling.py:
 
 ```
 python -m VAREID.algo.frame_sampling.frame_sampling \
