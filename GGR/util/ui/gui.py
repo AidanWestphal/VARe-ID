@@ -1,6 +1,6 @@
 import gradio as gr
 import argparse
-from db_scripts import (
+from GGR.util.ui.db_scripts import (
     update_status, get_next_pair_atomic, release_pair, 
     start_heartbeat_system, init_db, get_instance_stats,
     update_heartbeat, INSTANCE_IDENTIFIER
@@ -13,17 +13,6 @@ import json
 from PIL import Image
 
 os.environ["GRADIO_TEMP_DIR"] = os.path.expanduser("~/gradio_cache")
-
-# Parse command-line arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('--db', required=True, help='Path to SQLite database')
-args = parser.parse_args()
-
-db_path = args.db
-
-# Initialize database and start heartbeat system
-init_db(db_path)
-start_heartbeat_system(db_path)
 
 # Global variables
 current_pair = {"id": None, "image1": None, "image2": None, "bbox1": None, "bbox2": None}
@@ -403,10 +392,18 @@ with gr.Blocks() as demo:
     )
 
 if __name__ == "__main__":
-    # Add all data directories that might contain images
-    allowed_dirs = [
-        "/fs/ess/PAS2136/ggr_data"  # Parent directory covers all subdirectories
-    ]
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db', required=True, help='Path to SQLite database')
+    parser.add_argument('--allowed_dir', required=True, help='The directory that the GUI is allowed to access')
+    args = parser.parse_args()
+    print("GUI: Loading args...")
+
+    db_path = args.db
+
+    # Initialize database and start heartbeat system
+    init_db(db_path)
+    start_heartbeat_system(db_path)
     
     print(f"Starting instance {INSTANCE_IDENTIFIER}")
     
@@ -415,5 +412,5 @@ if __name__ == "__main__":
         server_port=7861,
         server_name="0.0.0.0",  # Allow external connections
         share=False,
-        allowed_paths=allowed_dirs  # Add data directory to allowed paths
+        allowed_paths=[args.allowed_dir]  # Add data directory to allowed paths
     )

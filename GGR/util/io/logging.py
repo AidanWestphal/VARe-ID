@@ -33,7 +33,7 @@ def setup_logging(logfile, reset_logfile=True):
     '''
     Configurates a logger with the the proper formatting for the pipeline.
     '''
-    logger = logging.getLogger("smk_pipeline")
+    logger = logging.getLogger(logfile)
     logger.setLevel(logging.INFO)
     logger.propagate = False
 

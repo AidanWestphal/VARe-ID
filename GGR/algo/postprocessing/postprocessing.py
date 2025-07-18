@@ -16,6 +16,7 @@ import itertools
 from PIL import Image
 
 from GGR.util.io.format_funcs import load_config, save_json, split_dataframe, join_dataframe_dict
+from GGR.util.utils import path_from_file
 
 # If running in a Jupyter Notebook, enable inline plotting.
 try:
@@ -33,7 +34,6 @@ except ImportError:
 
 # Try to import database functions (NEW - for database mode)
 try:
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from GGR.util.ui.db_scripts import init_db, add_image_pair, get_decisions, check_pair_exists
     DATABASE_AVAILABLE = True
 except ImportError:
@@ -585,8 +585,8 @@ def main():
     parser.add_argument("--db", type=str, help="Database path for verification (optional, can also be set in config as database.path)")
     parser.add_argument("--interaction_mode", type=str, choices=["console", "ipywidgets", "database"], help="Interaction mode (overrides config)")
     args = parser.parse_args()
-
-    config = load_config("algo/config_evaluation_LCA.yaml")
+    
+    config = load_config(path_from_file(__file__, "postprocessing_config.yaml"))
     
     # NEW: Determine interaction mode - command line overrides config
     if args.interaction_mode:

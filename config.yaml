@@ -84,6 +84,11 @@ lca_out_suffix: "annots"
 
 # Postprocessing step fields
 post_dirname: "post"
+post_db_file: "post_ui_decision_db.db"
 post_left_out_file: "post_left_annots.json"
 post_right_out_file: "post_right_annots.json"
 post_logfile: "post.txt"
+gui_logfile: "gui.txt"
+
+# Optional interaction mode for postprocessing human decision making. OPTIONS: [console, ipywidgets, console]
+interaction_mode: "database"

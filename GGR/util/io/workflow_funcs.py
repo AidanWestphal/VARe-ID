@@ -151,9 +151,11 @@ def build_config(config):
 
     # POST PROCESSING STEP
     post_dir = os.path.join(out_dir, config["post_dirname"])
+    post_db_path = os.path.join(post_dir, config["post_db_file"])
     post_left_out_path = os.path.join(post_dir, config["post_left_out_file"])
     post_right_out_path = os.path.join(post_dir, config["post_right_out_file"])
     post_logs = os.path.join(log_dir, config["post_logfile"])
+    gui_logs = os.path.join(log_dir, config["gui_logfile"])
 
     # REINSERT ALL NEWLY-BUILT PATHS INTO CONFIG DICTIONARY
     config["image_dir"] = image_dir
@@ -194,8 +196,10 @@ def build_config(config):
     config["lca_logs"] = lca_logs
     config["lca_out_path"] = lca_out_path
     config["post_dir"] = post_dir
+    config["post_db_path"] = post_db_path
     config["post_left_out_path"] = post_left_out_path
     config["post_right_out_path"] = post_right_out_path
     config["post_logs"] = post_logs
+    config["gui_logs"] = gui_logs
 
     return config

@@ -26,5 +26,6 @@ dependencies:
     - transformers ==4.49.0
     - lap >=0.5.12
     - pyzbar >= 0.1.9
+    - gradio
     - git+https://github.com/AidanWestphal/pybioclip
     - -e . # INSTALLS GGR ITSELF AS A MODULE IN EDIT MODE
