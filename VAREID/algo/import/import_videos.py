@@ -1,8 +1,8 @@
 import argparse
 import yaml
 
-from VAREID.util.io.con_funcs import import_video_folder
-from VAREID.util.utils import path_from_file
+from VAREID.libraries.io.con_funcs import import_video_folder
+from VAREID.libraries.utils import path_from_file
 
 def load_config(config_file_path):
     with open(config_file_path, "r") as file:

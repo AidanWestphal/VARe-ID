@@ -1,6 +1,6 @@
 import gradio as gr
 import argparse
-from VAREID.util.ui.db_scripts import (
+from VAREID.libraries.ui.db_scripts import (
     update_status, get_next_pair_atomic, release_pair, 
     start_heartbeat_system, init_db, get_instance_stats,
     update_heartbeat, INSTANCE_IDENTIFIER

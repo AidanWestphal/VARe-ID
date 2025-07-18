@@ -1,8 +1,8 @@
 import argparse
 
-from VAREID.util.io.format_funcs import load_config
-from VAREID.util.io.logging import log_subprocess, setup_logging
-from VAREID.util.io.workflow_funcs import build_config, decode_config
+from VAREID.libraries.io.format_funcs import load_config
+from VAREID.libraries.io.logging import log_subprocess, setup_logging
+from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 def get_inputs(config):
     return [config["dt_video_out_path"]] if config["data_video"] else [config["dt_image_out_path"]]

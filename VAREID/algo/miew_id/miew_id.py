@@ -18,8 +18,8 @@ from torch.utils.data import Dataset
 
 from transformers import AutoModel
 
-from VAREID.util.utils import path_from_file
-from VAREID.util.io.format_funcs import load_config, load_json, join_dataframe
+from VAREID.libraries.utils import path_from_file
+from VAREID.libraries.io.format_funcs import load_config, load_json, join_dataframe
 
 config = load_config(path_from_file(__file__, "miew_id_config.yaml"))
 

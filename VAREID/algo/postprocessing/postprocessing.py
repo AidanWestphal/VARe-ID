@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 import itertools
 from PIL import Image
 
-from VAREID.util.io.format_funcs import load_config, save_json, split_dataframe, join_dataframe_dict
-from VAREID.util.utils import path_from_file
+from VAREID.libraries.io.format_funcs import load_config, save_json, split_dataframe, join_dataframe_dict
+from VAREID.libraries.utils import path_from_file
 
 # If running in a Jupyter Notebook, enable inline plotting.
 try:
@@ -34,7 +34,7 @@ except ImportError:
 
 # Try to import database functions (NEW - for database mode)
 try:
-    from VAREID.util.ui.db_scripts import init_db, add_image_pair, get_decisions, check_pair_exists
+    from VAREID.libraries.ui.db_scripts import init_db, add_image_pair, get_decisions, check_pair_exists
     DATABASE_AVAILABLE = True
 except ImportError:
     DATABASE_AVAILABLE = False

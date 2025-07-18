@@ -7,8 +7,8 @@ import yaml
 
 import pandas as pd
 
-from VAREID.util.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe, join_dataframe_dict
-from VAREID.util.utils import path_from_file
+from VAREID.libraries.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe, join_dataframe_dict
+from VAREID.libraries.utils import path_from_file
 
 
 def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, viewpoint=None, uuid_key="annot_uuid"):

@@ -1,10 +1,10 @@
 import argparse
 import os.path
 
-from VAREID.util.constants import GREVYS_ZEBRA
-from VAREID.util.db.table import ImageTable
+from VAREID.libraries.constants import GREVYS_ZEBRA
+from VAREID.libraries.db.table import ImageTable
 
-from VAREID.util.ggr_funcs import extrapolate_ggr_gps
+from VAREID.libraries.ggr_funcs import extrapolate_ggr_gps
 
 if __name__ == "__main__":
     # Parse command line arguments

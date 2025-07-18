@@ -1,4 +1,4 @@
-# Video-Based Animal Re-Identification from Multiview Spatio-Temporal Track Clustering
+# Video-Based Animal Re-Identification (VARe-ID) from Multiview Spatio-Temporal Track Clustering
 
 This work is a modular software pipeline and end-to-end workflow for video-based animal re-identification that clusters multiview spatio-temporal tracks to assign consistent individual IDs with minimal human review. From raw video, we detect and track animals, score and select informative left/right views, compute embeddings, cluster annotations/embeddings by viewpoint, and then link clusters across time and disparate views using spatio-temporal track continuity plus automated consistency checks to resolve ambiguities; preliminary experiments show the approach can reach near-perfect identification accuracy with very little manual verification. This workflow is designed to be generalizable across different species. Currently, the trained models support Grevy's and Plains Zebras but it will be expanded to work with variety of other animal species.
 
@@ -22,7 +22,7 @@ This work is a modular software pipeline and end-to-end workflow for video-based
 The following is a simplified hierarchy of the file structure using in this repository.
 
 ```
-GGR
+VAREID
 ├── algo
 |   ├── detection/
 |   ├── frame_sampling/
@@ -49,7 +49,7 @@ GGR
 The repository can generally be split into four groups of code:
 
 #### Algorithm Components
-Algorithm components are the invidual steps of the pipeline, such as detection or species classification. They are contained in `GGR/algo/[component_name]/` in separate directories. In some specific cases, two components may share the same directory, such as `video_detector.py` and `image_detector.py`. Their only dependency (within this repository) would be library functions. Every component here should have an executable script to run that step of the pipeline.
+Algorithm components are the invidual steps of the pipeline, such as detection or species classification. They are contained in `VAREID/algo/[component_name]/` in separate directories. In some specific cases, two components may share the same directory, such as `video_detector.py` and `image_detector.py`. Their only dependency (within this repository) would be library functions. Every component here should have an executable script to run that step of the pipeline.
 
 For more information on each algorithm component, please view the **README** files in each of their corresponding directories. Their arguments are also documented via the **argparse** python library.
 
@@ -68,7 +68,7 @@ The libraries contain all util functions used throughout the pipeline. These lib
 In addition to the above structure, there's a few more important directories to note. 
 
 #### Models
-All models are stored in the `GGR/models/` directory. This primarily includes the `.pth` files for the viewpoint classifier and IA classifier models. It also includes the verifiers probabilities used by LCA, but this is being phased out.
+All models are stored in the `VAREID/models/` directory. This primarily includes the `.pth` files for the viewpoint classifier and IA classifier models. It also includes the verifiers probabilities used by LCA, but this is being phased out.
 
 #### Tools
 This directory contains some prototype tools that provide convenience and extra functionality to users. `visualize.py` is a script that draws and labels specific annotations. `extrapolate_ggr_gps.py` extrapolates GPS data for images missing it, which is specific functionality for images taken by the same camera with timestamp data.
@@ -194,15 +194,15 @@ snakemake -s snakefile.smk --unlock
 Sometimes you don't want to run the full pipeline but rather just a specific algorithm step. There's two ways to do this:
 
 ### Using the driver script (RECOMMENDED)
-We recommend executing specific algorithm components using their corresponding driver script in `GGR/drivers/` for the simplicity of user input and consistent logging with a pipeline execution.
+We recommend executing specific algorithm components using their corresponding driver script in `VAREID/drivers/` for the simplicity of user input and consistent logging with a pipeline execution.
 
 Driver scripts require a complete configfile structured like `config.yaml`. **All required fields, including those for other stages of the pipeline, must be filled out.** Once again, your configfile can be supplied by any filepath, relative or absolute.
 
-Since the pipeline was installed as a module, you can easily execute the driver script through this module. No matter what directory you execute from, the path to the driver script will be the same (and relative to GGR).
+Since the pipeline was installed as a module, you can easily execute the driver script through this module. No matter what directory you execute from, the path to the driver script will be the same (and relative to VAREID).
 ```
-python -m GGR.drivers.[driver_script] --config_path path/to/your_config.yaml
+python -m VAREID.drivers.[driver_script] --config_path path/to/your_config.yaml
 ```
-Notice that we didn't include the `.py` extension on the driver. This is because we're referencing it as a module. Think of this like an import statement, `import GGR.drivers.[driver_script]`, but you're executing it as a script.
+Notice that we didn't include the `.py` extension on the driver. This is because we're referencing it as a module. Think of this like an import statement, `import VAREID.drivers.[driver_script]`, but you're executing it as a script.
 
 ### Using the algorithm component itself
 If you don't have a full configfile filled out or would rather not rely on it, you can directly execute each algorithm component using its executable script. Each algorithm component has a separate set of parameters documented with `argparse` Please follow these parameters for your desired component and supply the necessary paths, flags, etc.

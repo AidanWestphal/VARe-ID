@@ -1,6 +1,6 @@
 import argparse
 
-from VAREID.util.io.con_funcs import import_image_folder
+from VAREID.libraries.io.con_funcs import import_image_folder
 
 
 if __name__ == "__main__":

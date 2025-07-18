@@ -13,8 +13,8 @@ from pathlib import Path
 import pandas as pd
 from ultralytics import YOLO
 
-from VAREID.util.io.format_funcs import clone_from_github, load_config, load_json, load_dataframe, save_json, split_dataframe
-from VAREID.util.utils import path_from_file
+from VAREID.libraries.io.format_funcs import clone_from_github, load_config, load_json, load_dataframe, save_json, split_dataframe
+from VAREID.libraries.utils import path_from_file
 
 ultralytics.checks()
 warnings.filterwarnings("ignore")

@@ -5,10 +5,10 @@ developer convenience functions
 import json
 import os.path
 
-from VAREID.util.io.image_funcs import add_images
-from VAREID.util.io.video_funcs import add_videos, link_srts, update_timestamps
-from VAREID.util.db.directory import Directory
-from VAREID.util.db.table import ImageTable
+from VAREID.libraries.io.image_funcs import add_images
+from VAREID.libraries.io.video_funcs import add_videos, link_srts, update_timestamps
+from VAREID.libraries.db.directory import Directory
+from VAREID.libraries.db.table import ImageTable
 
 
 # Import images recursively from path into database

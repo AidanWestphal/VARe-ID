@@ -3,9 +3,9 @@ from os.path import isabs, join
 from PIL import Image
 from shapely.geometry import Point, Polygon
 
-import VAREID.util.utils as ut
-from VAREID.util.constants import VALID_COLNAMES
-from VAREID.util.preproc import get_exif
+import VAREID.libraries.utils as ut
+from VAREID.libraries.constants import VALID_COLNAMES
+from VAREID.libraries.preproc import get_exif
 
 
 class ImageTable:

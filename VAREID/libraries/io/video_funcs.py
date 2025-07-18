@@ -4,8 +4,8 @@ import shutil
 import cv2
 from pathlib import Path
 import os
-from VAREID.util.preproc import parse_imageinfo
-import VAREID.util.constants as const
+from VAREID.libraries.preproc import parse_imageinfo
+import VAREID.libraries.constants as const
 
 
 EXIF_NORMAL = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_000]

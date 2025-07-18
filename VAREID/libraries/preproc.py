@@ -7,8 +7,8 @@ import uuid
 from os.path import basename, splitext
 from PIL import Image
 
-import VAREID.util.constants as const
-from VAREID.util.utils import parse_exif
+import VAREID.libraries.constants as const
+from VAREID.libraries.utils import parse_exif
 
 EXIF_NORMAL = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_000]
 EXIF_UNDEFINED = const.ORIENTATION_DICT_INVERSE[const.ORIENTATION_UNDEFINED]

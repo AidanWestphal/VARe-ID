@@ -15,12 +15,12 @@ import yaml
 from tqdm import tqdm
 from bioclip import CustomLabelsClassifier
 
-from VAREID.util.utils import path_from_file
+from VAREID.libraries.utils import path_from_file
 
 warnings.filterwarnings("ignore")
 from PIL import Image
 
-from VAREID.util.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
+from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
 def run_pyBioclip(bioclip_classifier, df):

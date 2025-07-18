@@ -5,8 +5,8 @@ from VAREID.drivers.lca_driver import get_inputs as get_lca_inputs
 from VAREID.drivers.lca_driver import get_outputs as get_lca_outputs
 from VAREID.drivers.mid_driver import get_inputs as get_mid_inputs
 from VAREID.drivers.si_driver import get_inputs as get_si_inputs
-from VAREID.util.io.workflow_funcs import build_config, generate_targets, encode_config
-from VAREID.util.utils import path_from_file
+from VAREID.libraries.io.workflow_funcs import build_config, generate_targets, encode_config
+from VAREID.libraries.utils import path_from_file
 
 # Default configfile, can supply alternative with --configfile
 configfile: "config.yaml"

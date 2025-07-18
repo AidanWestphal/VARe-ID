@@ -4,7 +4,7 @@ import warnings
 
 import pandas as pd
 
-from VAREID.util.io.format_funcs import load_json, save_json, split_dataframe, join_dataframe
+from VAREID.libraries.io.format_funcs import load_json, save_json, split_dataframe, join_dataframe
 
 warnings.filterwarnings("ignore")
 

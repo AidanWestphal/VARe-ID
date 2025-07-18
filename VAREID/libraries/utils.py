@@ -6,7 +6,7 @@ import numpy as np
 from os.path import exists, expanduser, join, normpath, realpath, abspath, dirname
 from PIL import Image, ExifTags
 
-from VAREID.util.constants import (
+from VAREID.libraries.constants import (
     ORIENTATION_DICT,
     ORIENTATION_000,
     ORIENTATION_090,
