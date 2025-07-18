@@ -113,18 +113,18 @@ def main(args):
 
     print("Running pyBioCLIP ...")
     labels = config["custom_labels"]
-    data = load_json(args.in_csv_path)
+    data = load_json(args.in_json_path)
     df = join_dataframe(data)
     df = pyBioCLIP(labels, df)
     print("pyBioCLIP Completed ...")
 
-    prediction_dir = os.path.dirname(args.out_csv_path)
+    prediction_dir = os.path.dirname(args.out_json_path)
     shutil.rmtree(prediction_dir, ignore_errors=True)
     os.makedirs(prediction_dir, exist_ok=True)
 
     print("Saving ALL Predictions as JSON ...")
     annotations = split_dataframe(df)
-    save_json(annotations,args.out_csv_path)
+    save_json(annotations,args.out_json_path)
 
     print("Completed Successfully!")
 
@@ -132,18 +132,18 @@ def main(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Detect bounding boxes for database of animal images"
+        description="Classify species for annotations"
     )
     parser.add_argument(
-        "in_csv_path",
+        "in_json_path",
         type=str,
-        help="The full path to the viewpoint classifier output csv to use as input",
+        help="The full path to the annotations json file",
     )
     parser.add_argument(
         "si_dir", type=str, help="The directory to install bioCLIP within"
     )
     parser.add_argument(
-        "out_csv_path", type=str, help="The full path to the output csv file"
+        "out_json_path", type=str, help="The full path to the output json file"
     )
     args = parser.parse_args()
     main(args)

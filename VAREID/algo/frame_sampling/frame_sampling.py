@@ -159,12 +159,12 @@ def main():
     # "python {input.script} {input.file} {output.json_stage1} {output.json_final}"
 
     parser = argparse.ArgumentParser(
-        description="Run frame sampling algorithm on ca classifier output"
+        description="Run frame sampling algorithm on ia classifier output"
     )
     parser.add_argument(
         "in_json_path",
         type=str,
-        help="The full path to the ca classifier output json to use as input",
+        help="The full path to the ia classifier output json to use as input",
     )
     parser.add_argument(
         "json_final", type=str, help="The full path to the output json file for final"

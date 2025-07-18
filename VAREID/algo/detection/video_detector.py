@@ -186,7 +186,7 @@ if __name__ == "__main__":
         description="Detect and track bounding boxes for database of animal videos"
     )
     parser.add_argument(
-        "video_data", type=str, help="The json file with frame information stored"
+        "video_data", type=str, help="The video metadata file"
     )
     parser.add_argument(
         "dt_dir", type=str, help="The directory to export models and annots to"

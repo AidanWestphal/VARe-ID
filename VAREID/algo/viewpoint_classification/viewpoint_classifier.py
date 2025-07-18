@@ -181,7 +181,7 @@ def main(args):
         Done!
     """
 
-    original_json = load_json(args.in_csv_path)
+    original_json = load_json(args.in_json_path)
     annots = join_dataframe(original_json)
 
     # Remove rows that are not the desired species
@@ -245,8 +245,8 @@ def main(args):
         lambda x: reformat_viewpoint(x)
     )
 
-    # Save the updated DataFrame to a new CSV file
-    viewpoint_dir = os.path.dirname(args.out_csv_path)
+    # Save the updated DataFrame to a new JSON file
+    viewpoint_dir = os.path.dirname(args.out_json_path)
 
     if os.path.exists(viewpoint_dir):
         print("Removing Previous Instance of Experiment...")
@@ -256,7 +256,7 @@ def main(args):
     os.makedirs(viewpoint_dir, exist_ok=True)
 
     final_json = split_dataframe(final_output)
-    save_json(final_json, args.out_csv_path)
+    save_json(final_json, args.out_json_path)
 
     print("Done!")
 
@@ -267,15 +267,15 @@ if __name__ == "__main__":
         description="Run viewpoint classifier for database of animal images"
     )
     parser.add_argument(
-        "in_csv_path",
+        "in_json_path",
         type=str,
-        help="The full path to the viewpoint classifier output csv to use as input",
+        help="The annotations json file to add viewpoints to",
     )
     parser.add_argument(
         "model_checkpoint_path", type=str, help="The full path to the model checkpoint"
     )
     parser.add_argument(
-        "out_csv_path", type=str, help="The full path to the output csv file"
+        "out_json_path", type=str, help="The full path to the output json file"
     )
     args = parser.parse_args()
     main(args)

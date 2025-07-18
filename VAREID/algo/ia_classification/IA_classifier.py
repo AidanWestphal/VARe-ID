@@ -180,13 +180,13 @@ def main(args):
     device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
 
     print("Loading and preprocessing data...")
-    data = load_json(args.in_csv_path)
+    data = load_json(args.in_json_path)
     df = join_dataframe(data)
 
     # Expand bbox column into separate x, y, w, h columns
     df = expand_bbox_columns(df)
 
-    print(f"The length of input CSV is: {len(df)}")
+    print(f"The length of input JSON is: {len(df)}")
     filtered_test, filtered_out = filter_dataframe(df, config)
 
     print("Setting up transformations and data loader...")
@@ -209,7 +209,7 @@ def main(args):
     all_softmax_outputs = test_new(dataloader, model, device)  #
 
     print(
-        "Testing completed. Appending softmax outputs to CSV and starting post-processing..."
+        "Testing completed. Appending softmax outputs to JSON and starting post-processing..."
     )
     filtered_test["softmax_output_0"] = all_softmax_outputs[:, 0]
     filtered_test["softmax_output_1"] = all_softmax_outputs[:, 1]
@@ -222,7 +222,7 @@ def main(args):
         filtered_test["softmax_output_1"] <= config["threshold_CA"]
     ].reset_index(drop=True)
 
-    print(f"The length of softmax thresholded CSV is: {len(above_threshold)}")
+    print(f"The length of softmax thresholded JSON is: {len(above_threshold)}")
 
     # Step 2: Filter based on log(aspect_ratio)
     above_threshold["log_AR"] = np.log(
@@ -237,7 +237,7 @@ def main(args):
         | (above_threshold["log_AR"] > config["max_log_AR"])
     ].reset_index(drop=True)
 
-    print(f"The length of AR thresholded CSV is: {len(ar_filtered)}")
+    print(f"The length of AR thresholded JSON is: {len(ar_filtered)}")
 
     # Step 3: Apply NMS
     grouped = ar_filtered.groupby("image_path")
@@ -252,7 +252,7 @@ def main(args):
 
     if all_results:
         nms_filtered = pd.concat(all_results).reset_index(drop=True)
-        print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
+        print(f"The length of NMS thresholded JSON is: {len(nms_filtered)}")
     else:
         print("Warning: No objects passed NMS filtering")
         nms_filtered = pd.DataFrame(
@@ -265,7 +265,7 @@ def main(args):
         nms_filtered_out = pd.DataFrame(columns=ar_filtered.columns)
 
     # print(nms_filtered_out)
-    print(f"The length of NMS thresholded CSV is: {len(nms_filtered)}")
+    print(f"The length of NMS thresholded JSON is: {len(nms_filtered)}")
 
     # Add annotations_census column
     nms_filtered["annotations_census"] = True
@@ -289,10 +289,10 @@ def main(args):
     # Rename to CA_score (desired output)
     final_df = final_df.rename(columns={"softmax_output_1": "CA_score"})
 
-    print(f"The length of final concatenated CSV is: {len(final_df)}\n")
+    print(f"The length of final concatenated JSON is: {len(final_df)}\n")
 
-    # Save the updated DataFrame to a new CSV file
-    cac_dir = os.path.dirname(args.out_csv_path)
+    # Save the updated DataFrame to a new json file
+    cac_dir = os.path.dirname(args.out_json_path)
     if os.path.exists(cac_dir):
         print("Removing Previous Instance of Experiment...")
         shutil.rmtree(cac_dir)
@@ -300,10 +300,10 @@ def main(args):
     print("Saving the results...")
     os.makedirs(cac_dir, exist_ok=True)
     annotations = split_dataframe(final_df)
-    save_json(annotations,args.out_csv_path)
+    save_json(annotations,args.out_json_path)
 
     print(
-        f"CSV with softmax outputs and census annotations saved to: {args.out_csv_path}"
+        f"JSON with softmax outputs and census annotations saved to: {args.out_json_path}"
     )
     print("All tasks completed successfully!")
 
@@ -311,18 +311,18 @@ def main(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Run viewpoint classifier for database of animal images"
+        description="Run IA classifier to determine identifiability of animal annotations"
     )
     parser.add_argument(
-        "in_csv_path",
+        "in_json_path",
         type=str,
-        help="The full path to the viewpoint classifier output csv to use as input",
+        help="The full path to the viewpoint classifier output json to use as input",
     )
     parser.add_argument(
         "model_checkpoint_path", type=str, help="The full path to the model checkpoint"
     )
     parser.add_argument(
-        "out_csv_path", type=str, help="The full path to the output csv file"
+        "out_json_path", type=str, help="The full path to the output json file"
     )
     args = parser.parse_args()
 

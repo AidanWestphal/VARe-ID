@@ -244,9 +244,9 @@ if __name__ == "__main__":
         description="Generate miewid embeddings for database of animal images"
     )
     parser.add_argument(
-        "in_csv_path",
+        "in_json_path",
         type=str,
-        help="The full path to the ca classifier output csv to use as input",
+        help="The full path to the annotations to generate embeddings from",
     )
     parser.add_argument(
         "model_url",
@@ -258,7 +258,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    data = load_json(args.in_csv_path)
+    data = load_json(args.in_json_path)
     # Joining is not necessary here, but done for consistency
     df = join_dataframe(data)
 

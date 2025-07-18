@@ -62,13 +62,13 @@ def convert_bbox(bbox_str):
 if __name__ == "__main__":
     print("Loading data...")
     parser = argparse.ArgumentParser(
-        description="Detect bounding boxes for database of animal images"
+        description="Filter annotations by identifiability and simplify viewpoint"
     )
     parser.add_argument(
-        "csv_file", type=str, help="The path to the CSV file to convert."
+        "json_file", type=str, help="The path to the json file with IA markings."
     )
     parser.add_argument(
-        "eda_out", type=str, help="The location to save the JSON preprocessed annots."
+        "eda_out", type=str, help="The location to save the JSON filtered annots."
     )
     parser.add_argument(
         "--video", action="store_true", help="True if we are processing video data."
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     video_mode = args.video
 
-    data = load_json(args.csv_file)
+    data = load_json(args.json_file)
     df = join_dataframe(data)
 
     print("Filtering data...")
