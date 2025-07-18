@@ -42,7 +42,8 @@ VAREID
 |   ├── logging/
 |   ├── ui/
 |   └── constants.py
-|   config.yaml
+├──   config.yaml
+├──   environment.yaml
 └──   snakefile.smk
 ```
 
@@ -90,7 +91,6 @@ flowchart LR
         n16["<b>Frame Sampling</b><br>fs_driver.py"]
         n17["<b>Miew-Id</b><br>mid_driver.py"]
         n18["<b>LCA</b><br>lca_driver.py"]
-        n19["<b>Postprocessing</b><br>post_driver.py"]
   end
  subgraph s3["data_video == False"]
         n21@{ label: "<b><span style=\"--tw-scale-x:\">Image Importer</span><br style=\"--tw-scale-x:\"></b>import_image_detector.py" }
@@ -107,20 +107,56 @@ flowchart LR
     n16 --> n17
     n16 -- annotations --> n18
     n17 -- embeddings --> n18
-    n18 --> n19
     n15 -- embeddings --> n20
     n10 -- annotations --> n20
     n22 --> n24
     n21 --> n25
     n24 --> n6
     n25 --> n6
+    n18 --> n26["<b>Postprocessing</b><br>post_driver.py"]
 
     n16@{ shape: rect}
     n21@{ shape: rect}
     n25@{ shape: rect}
     n7@{ shape: rect}
     n8@{ shape: rect}
+    n26@{ shape: rect}
+    style n26 stroke-width:4px,stroke-dasharray: 5
 ```
+
+One important detail to note immediately is that postprocessing is external from the pipeline's workflow! This section, as will be explained below, requires human interaction and thus is not automatically ran by the pipeline. It is run separately and for video data only.
+
+### Pipeline Stages & Algorithms
+
+#### 1. Import
+Importing's main goal is generating the `image_data.json` or `video_data.json` file describing each image (or frame for videos) in terms of metadata, including the absolute path to the image. For videos, this also includes splitting and saving the video into frames as well as parsing an SRT file to assign timestamps to frames.
+
+#### 2. Detection
+Detection uses YOLO to create detections for all images in the json files from above. Video detection also generates tracking IDs for each detection. The detections are saved as annotations.
+
+#### 3. Species Classification
+The species of each annotation is generated via Bioclip. For now, this includes Grevys Zebras, Plains Zebras, or neither.
+
+#### 4. Viewpoint Classification
+The viewpoint of each annotation is generated. The viewpoint is a combination of the following classifiers: `[up, front, back, left, right]`.
+
+#### 5. Identifiable Annotation (IA) Classification
+Each annotation is assessed for its quality and ability to be identified. They are assigned a score and assigned a boolean for whether they are identifiable or not based on a threshold.
+
+#### 6. Identifiable Annotation (IA) Filtering
+This step filters out all annotations that were marked as not identifiable and simplifies the viewpoint to `left` or `right`.
+
+#### 7. *Frame Sampling*
+This is a *video only* process. This step further filters annotations by performing non-maximum supression over sets of consecutive tracking ids, maximizing the score from IA classification.
+
+#### 8. Miew-Id
+This step generates embeddings for all remaining annotations.
+
+#### 9. Local Clusters and Alternatives (LCA) Algorithm
+This step clusters the annotations by their embeddings and assigns cluster ids.
+
+#### 10. *Post-processing and ID Assignment*
+Applies final consistency checks, resolves cluster overlaps, handles manual verification when needed, assigns final unique IDs, and integrates non-identifiable annotations via tracking links.
 
 ---
 # How-To
@@ -163,7 +199,7 @@ The following fields are **optional** and either have default (recommended) valu
 - `lca_separate_viewpoints`: This field specifies whether to split and save annotation files by each viewpoint or to save them alltogether. **In video mode, this MUST be True!**
 
 ## Running the Pipeline
-To run the pipeline, you'll execute `snakefile.smk`.
+To run the pipeline, you'll execute `snakefile.smk`. Remember: the pipeline does NOT run postprocessing. This is run separately.
 
 **Please run the snakefile from the parent directory in this repository.** For more information on how to run a snakefile (e.g. available flags), please view the [Snakemake Docs](https://snakemake.readthedocs.io/en/stable/executing/cli.html). The most important flags you'll need to specify are as follows: 
 
@@ -194,9 +230,9 @@ snakemake -s snakefile.smk --unlock
 Sometimes you don't want to run the full pipeline but rather just a specific algorithm step. There's two ways to do this:
 
 ### Using the driver script (RECOMMENDED)
-We recommend executing specific algorithm components using their corresponding driver script in `VAREID/drivers/` for the simplicity of user input and consistent logging with a pipeline execution.
+We recommend executing specific algorithm components using their corresponding driver script in `VAREID/drivers/` for the simplicity of user input and consistent logging with a pipeline execution. **We highly recommend staying consistent with the formatting standards layed out by `config.yaml`!** This way, it's extremely easy to switch between executing stages via the pipeline and separately.
 
-Driver scripts require a complete configfile structured like `config.yaml`. **All required fields, including those for other stages of the pipeline, must be filled out.** Once again, your configfile can be supplied by any filepath, relative or absolute.
+Driver scripts require a configfile structured like `config.yaml`. Once again, your configfile can be supplied by any filepath, relative or absolute.
 
 Since the pipeline was installed as a module, you can easily execute the driver script through this module. No matter what directory you execute from, the path to the driver script will be the same (and relative to VAREID).
 ```
@@ -206,6 +242,30 @@ Notice that we didn't include the `.py` extension on the driver. This is because
 
 ### Using the algorithm component itself
 If you don't have a full configfile filled out or would rather not rely on it, you can directly execute each algorithm component using its executable script. Each algorithm component has a separate set of parameters documented with `argparse` Please follow these parameters for your desired component and supply the necessary paths, flags, etc.
+
+## Running the Postprocessing Step
+Postprocessing is not ran by the pipeline because it requires human interaction to resolve conflicts. To run postprocessing, you can use a driver (see **Running the Postprocessing Step** above). This driver runs the postprocessing script, waits for a SQLite database file to be created, and then opens a GUI. The GUI will checks the database file until conflicts are posted. Your job is to resolve these.
+
+To run the postprocessing driver, use the following:
+```
+python -m VAREID.drivers.post_driver --config_path path/to/your_config.yaml
+```
+Wait for a prompt to open a web browser. This is the GUI. Once opened, you'll see a screen similar to the following:
+
+![GUI Screen](readme_images/ui.png)
+With with the GUI to resolve all conflicts. It will constantly refresh to check whether conflicts have been saved to the database file. Once all conflicts are resolved, the postprocessing script will end and automatically close the GUI.
+
+### Finishing resolution later
+When working with large datasets with many conflicts to resolve, you may have to stop filling out conflicts and come back later. All conflicts and their resolution status are saved to the database file, which **is not reset** on a new call to `post_driver.py`. Thus, you can simply rerun the driver and pick up where you left off.
+
+### Executing without the driver script
+If your output formatting is inconsistent with the pipeline you'll need to manually execute two scripts found in `VAREID/algo/postprocessing/`. These are `postprocessing.py` and `gui.py`. Please check their `argparse` parameters for more details.
+
+You will need to execute `postprocessing.py` first and wait until it blocks on user input. For the database (GUI) method, this will look like the following:
+```
+Still waiting for cluster pair 1 - 0 - Checking again in 5 seconds...
+```
+At this point, start up `gui.py`.
 
 ## Executing tools or any other scripts
 Please see the documentation in these scripts, which is usually done via `argparse`.
