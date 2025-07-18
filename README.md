@@ -258,8 +258,8 @@ python -m VAREID.drivers.post_driver --config_path path/to/your_config.yaml
 ```
 Wait for a prompt to open a web browser. This is the GUI. Once opened, you'll see a screen similar to the following:
 
-![GUI Screen](readme_images/ui.png)
-With with the GUI to resolve all conflicts. It will constantly refresh to check whether conflicts have been saved to the database file. Once all conflicts are resolved, the postprocessing script will end and automatically close the GUI.
+![GUI Screen](https://github.com/user-attachments/assets/153efa29-cba5-4677-8157-f7c61f7019ec)
+Use the GUI to resolve all conflicts. It will constantly refresh to check whether conflicts have been saved to the database file. Once all conflicts are resolved, the postprocessing script will end and automatically close the GUI.
 
 ### Finishing resolution later
 When working with large datasets with many conflicts to resolve, you may have to stop filling out conflicts and come back later. All conflicts and their resolution status are saved to the database file, which **is not reset** on a new call to `post_driver.py`. Thus, you can simply rerun the driver and pick up where you left off.
