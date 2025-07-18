@@ -1,4 +1,4 @@
-# Video-Based Animal Re-Identification from Multiview Spatio-Temporal Track Clustering
+# **V**ideo-based **A**nimal **Re-ID**entification (VARe-ID) from Multiview Spatio-Temporal Track Clustering
 
 This work is a modular software pipeline and end-to-end workflow for video-based animal re-identification that clusters multiview spatio-temporal tracks to assign consistent individual IDs with minimal human review. From raw video, we detect and track animals, score and select informative left/right views, compute embeddings, cluster annotations/embeddings by viewpoint, and then link clusters across time and disparate views using spatio-temporal track continuity plus automated consistency checks to resolve ambiguities; preliminary experiments show the approach can reach near-perfect identification accuracy with very little manual verification. This workflow is designed to be generalizable across different species. Currently, the trained models support Grevy's and Plains Zebras but it will be expanded to work with variety of other animal species.
 
