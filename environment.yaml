@@ -28,4 +28,4 @@ dependencies:
     - pyzbar >= 0.1.9
     - gradio
     - git+https://github.com/AidanWestphal/pybioclip
-    - -e . # INSTALLS GGR ITSELF AS A MODULE IN EDIT MODE
+    - -e . # INSTALLS VAREID ITSELF AS A MODULE IN EDIT MODE

@@ -3,9 +3,9 @@ from multiprocessing import Process
 import os
 from pathlib import Path
 
-from GGR.util.io.format_funcs import load_config
-from GGR.util.io.logging import log_subprocess, setup_logging
-from GGR.util.io.workflow_funcs import build_config
+from VAREID.util.io.format_funcs import load_config
+from VAREID.util.io.logging import log_subprocess, setup_logging
+from VAREID.util.io.workflow_funcs import build_config
 
 def main(args):
     config = build_config(load_config(args.config_path))
@@ -17,8 +17,8 @@ def main(args):
     if interaction_mode not in ["database", "ipywidgets", "console"]:
         interaction_mode = "database"
 
-    post_command = f'python -u -m GGR.algo.postprocessing.postprocessing {config["image_dir"]} {config["post_left_in_path"]} {config["post_right_in_path"]} {config["post_left_out_path"]} {config["post_right_out_path"]} --db {config["post_db_path"]} --interaction_mode {interaction_mode}'
-    gui_command = f'python -u -m GGR.util.ui.gui --db {config["post_db_path"]} --allowed_dir {config["data_dir_out"]}'
+    post_command = f'python -u -m VAREID.algo.postprocessing.postprocessing {config["image_dir"]} {config["post_left_in_path"]} {config["post_right_in_path"]} {config["post_left_out_path"]} {config["post_right_out_path"]} --db {config["post_db_path"]} --interaction_mode {interaction_mode}'
+    gui_command = f'python -u -m VAREID.util.ui.gui --db {config["post_db_path"]} --allowed_dir {config["data_dir_out"]}'
 
     # MODE (UI)
     if interaction_mode == "database":
