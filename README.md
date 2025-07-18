@@ -247,7 +247,14 @@ python -m VAREID.drivers.[driver_script] --config_path path/to/your_config.yaml
 Notice that we didn't include the `.py` extension on the driver. This is because we're referencing it as a module. Think of this like an import statement, `import VAREID.drivers.[driver_script]`, but you're executing it as a script.
 
 ### Using the algorithm component itself
-If you don't have a full configfile filled out or would rather not rely on it, you can directly execute each algorithm component using its executable script. Each algorithm component has a separate set of parameters documented with `argparse` Please follow these parameters for your desired component and supply the necessary paths, flags, etc.
+If you don't have a full configfile filled out or would rather not rely on it, you can directly execute each algorithm component using its executable script. Each algorithm component has a separate set of parameters documented with `argparse` Please follow these parameters for your desired component and supply the necessary paths, flags, etc. Here is an example on how to run frame_sampling.py:
+
+```
+python -m VAREID.algo.frame_sampling.frame_sampling \
+path/to/ia_filtered_annots.json \
+  path/to/fs_annots.json \
+  --json_stage1 path/to/stage1_fs_annots.json
+```
 
 ## Running the Postprocessing Step
 Postprocessing is not ran by the pipeline because it requires human interaction to resolve conflicts. To run postprocessing, you can use a driver (see **Running the Postprocessing Step** above). This driver runs the postprocessing script, waits for a SQLite database file to be created, and then opens a GUI. The GUI will checks the database file until conflicts are posted. Your job is to resolve these.
