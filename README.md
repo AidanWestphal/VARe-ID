@@ -85,40 +85,6 @@ This is the file defining the python environemnt requirements for this repositor
 
 ## Pipeline Workflow
 
-### Pipeline Stages & Algorithms
-
-#### 1. Import
-Importing's main goal is generating the `image_data.json` or `video_data.json` file describing each image (or frame for videos) in terms of metadata, including the absolute path to the image. For videos, this also includes splitting and saving the video into frames as well as parsing an SRT file to assign timestamps to frames.
-
-#### 2. Detection
-Detection uses YOLO to create detections for all images in the json files from above. Video detection also generates tracking IDs for each detection. The detections are saved as annotations.
-
-#### 3. Species Classification
-The species of each annotation is generated via Bioclip. For now, this includes Grevys Zebras, Plains Zebras, or neither.
-
-#### 4. Viewpoint Classification
-The viewpoint of each annotation is generated. The viewpoint is a combination of the following classifiers: `[up, front, back, left, right]`.
-
-#### 5. Identifiable Annotation (IA) Classification
-Each annotation is assessed for its quality and ability to be identified. They are assigned a score and assigned a boolean for whether they are identifiable or not based on a threshold.
-
-#### 6. Identifiable Annotation (IA) Filtering
-This step filters out all annotations that were marked as not identifiable and simplifies the viewpoint to `left` or `right`.
-
-#### 7. *Frame Sampling*
-This is a *video only* process. This step further filters annotations by performing non-maximum supression over sets of consecutive tracking ids, maximizing the score from IA classification.
-
-#### 8. *Embedding Generation (MiewID)*
-Converts all retained annotations into embeddings using the MiewID model to capture identity features in the feature space.
-
-#### 9. Local Clusters and Alternatives (LCA) Algorithm
-This step clusters the annotations by their embeddings and assigns cluster ids.
-
-#### 10. *Post-processing and ID Assignment*
-Applies final consistency checks, resolves cluster overlaps, handles manual verification when needed, assigns final unique IDs, and integrates non-identifiable annotations via tracking links.
-
----
-
 The following is a flowchart describing the workflow of the pipeline, along with the associated driver script for each stage.
 
 ```mermaid
