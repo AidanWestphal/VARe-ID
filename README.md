@@ -78,6 +78,16 @@ This is the file defining the python environemnt requirements for this repositor
 
 ## Pipeline Workflow
 
+### Pipeline Stages & Algorithms
+
+* **Detection and Tracking**: The initial stage where animals are detected in video frames and their movement is tracked across those frames. This work uses YOLOv10 for this task.
+* **IA Classification**: This module classifies if the annotation is an IA or not.
+* **Viewpoint Classification**: This module categorizes the orientation of an animal into discrete labels like "left," "right," "up," "front," and "back". A fine-tuned EfficientNet B4 model performs this classification.
+* **Frame Selection**: A procedure to select a smaller, representative subset of Identifiable Annotations from each track for the matching process, primarily to reduce computation in the downstream stages.
+* **Embeddings**: This work uses the MiewID algorithm for this. Embeddings from the same individual at a similar viewpoint are close together in the feature space, while those from different individuals or viewpoints are distant.
+* **Local Clusters and Alternatives (LCA) Algorithm**: The core algorithm of the framework that first clusters left-side and right-side IAs separately. 
+* **Tracking-based ID Procedure**: The final step in the pipeline that processes the output clusters from the LCA algorithm. It involves consistency checks, requesting human verification for ambiguous cases, and assigning the final individual IDs to each track.
+
 The following is a flowchart describing the workflow of the pipeline, along with the associated driver script for each stage.
 
 ```mermaid
@@ -232,4 +242,9 @@ Please see the documentation in these scripts, which is usually done via `argpar
 * Support from **Rensselaer Polytechnic Institute (RPI)**.
 * Support from **Finnish Cultural Foundation**.
 * Resources from **Ohio Supercomputer Center** made it possible to train and test algorithmic components.
+
+## Citation
+
+Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. *Animal Re-Identification via Multiview Spatio-Temporal Track Clustering*. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025.
+
 
