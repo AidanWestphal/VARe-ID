@@ -1,10 +1,16 @@
 # Video-Based Animal Re-Identification (VARe-ID) from Multiview Spatio-Temporal Track Clustering
 
-This work is a modular software pipeline and end-to-end workflow for video-based animal re-identification that clusters multiview spatio-temporal tracks to assign consistent individual IDs with minimal human review. From raw video, we detect and track animals, score and select informative left/right views, compute embeddings, cluster annotations/embeddings by viewpoint, and then link clusters across time and disparate views using spatio-temporal track continuity plus automated consistency checks to resolve ambiguities; preliminary experiments show the approach can reach near-perfect identification accuracy with very little manual verification. This workflow is designed to be generalizable across different species. Currently, the trained models support Grevy's and Plains Zebras but it will be expanded to work with variety of other animal species.
+This work presents a modular software pipeline and end-to-end workflow for video-based animal re-identification, which assigns consistent individual IDs by clustering multiview spatio-temporal tracks with minimal human intervention. Starting from raw video, the system detects and tracks animals, scores and selects informative left/right views, computes embeddings, clusters annotations by viewpoint, and then links clusters across time and varying perspectives using spatio-temporal continuity. Automated consistency checks resolve remaining ambiguities. Preliminary experiments demonstrate near-perfect identification accuracy with very limited manual verification. The workflow is designed to be generalizable across species. Currently, trained models support Grevy’s and Plains zebras, with plans to expand to a broader range of species.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/8ddd01a3-6511-40f7-b182-41c479ad447b" alt="image" width="862" height="896">
+</p>
+
+
+
 
 ### Tags: 
 - Software
-- CI4AI
 - Animal-Ecology
 
 ---
@@ -80,13 +86,37 @@ This is the file defining the python environemnt requirements for this repositor
 
 ### Pipeline Stages & Algorithms
 
-* **Detection and Tracking**: The initial stage where animals are detected in video frames and their movement is tracked across those frames. This work uses YOLOv10 for this task.
-* **IA Classification**: This module classifies if the annotation is an IA or not.
-* **Viewpoint Classification**: This module categorizes the orientation of an animal into discrete labels like "left," "right," "up," "front," and "back". A fine-tuned EfficientNet B4 model performs this classification.
-* **Frame Selection**: A procedure to select a smaller, representative subset of Identifiable Annotations from each track for the matching process, primarily to reduce computation in the downstream stages.
-* **Embeddings**: This work uses the MiewID algorithm for this. Embeddings from the same individual at a similar viewpoint are close together in the feature space, while those from different individuals or viewpoints are distant.
-* **Local Clusters and Alternatives (LCA) Algorithm**: The core algorithm of the framework that first clusters left-side and right-side IAs separately. 
-* **Tracking-based ID Procedure**: The final step in the pipeline that processes the output clusters from the LCA algorithm. It involves consistency checks, requesting human verification for ambiguous cases, and assigning the final individual IDs to each track.
+#### 1. Import
+Importing's main goal is generating the `image_data.json` or `video_data.json` file describing each image (or frame for videos) in terms of metadata, including the absolute path to the image. For videos, this also includes splitting and saving the video into frames as well as parsing an SRT file to assign timestamps to frames.
+
+#### 2. Detection
+Detection uses YOLO to create detections for all images in the json files from above. Video detection also generates tracking IDs for each detection. The detections are saved as annotations.
+
+#### 3. Species Classification
+The species of each annotation is generated via Bioclip. For now, this includes Grevys Zebras, Plains Zebras, or neither.
+
+#### 4. Viewpoint Classification
+The viewpoint of each annotation is generated. The viewpoint is a combination of the following classifiers: `[up, front, back, left, right]`.
+
+#### 5. Identifiable Annotation (IA) Classification
+Each annotation is assessed for its quality and ability to be identified. They are assigned a score and assigned a boolean for whether they are identifiable or not based on a threshold.
+
+#### 6. Identifiable Annotation (IA) Filtering
+This step filters out all annotations that were marked as not identifiable and simplifies the viewpoint to `left` or `right`.
+
+#### 7. *Frame Sampling*
+This is a *video only* process. This step further filters annotations by performing non-maximum supression over sets of consecutive tracking ids, maximizing the score from IA classification.
+
+#### 8. *Embedding Generation (MiewID)*
+Converts all retained annotations into embeddings using the MiewID model to capture identity features in the feature space.
+
+#### 9. Local Clusters and Alternatives (LCA) Algorithm
+This step clusters the annotations by their embeddings and assigns cluster ids.
+
+#### 10. *Post-processing and ID Assignment*
+Applies final consistency checks, resolves cluster overlaps, handles manual verification when needed, assigns final unique IDs, and integrates non-identifiable annotations via tracking links.
+
+---
 
 The following is a flowchart describing the workflow of the pipeline, along with the associated driver script for each stage.
 
