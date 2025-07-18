@@ -24,8 +24,12 @@ def init_db(db_path="./zebra_verification.db"):
         id TEXT PRIMARY KEY,
         uuid1 TEXT,
         image1_path TEXT,
+        bbox1 TEXT,
+        cluster1 TEXT,
         uuid2 TEXT,
         image2_path TEXT,
+        bbox2 TEXT,
+        cluster2 TEXT,
         status TEXT CHECK(status IN ('awaiting', 'in_progress', 'checked', 'sent')) DEFAULT 'awaiting',
         decision TEXT CHECK(decision IN ('none', 'correct', 'incorrect', 'cant_tell')) DEFAULT 'none',
         started_at TIMESTAMP,
@@ -41,16 +45,106 @@ def init_db(db_path="./zebra_verification.db"):
     reset_instance_pairs(db_path)
 
 
-# def add_image_pair(uuid1, image1, uuid2, image2, db_path="./zebra_verification.db"):
-#     conn = sqlite3.connect(db_path)
-#     cursor = conn.cursor()
-#     cursor.execute("""
-#         INSERT INTO image_verification (uuid1, image1_path, uuid2, image2_path, status)
-#         VALUES (?, ?, ?, ?, 'awaiting')
-#     """, (uuid1, image1, uuid2, image2))
-#     conn.commit()
-#     print("Image pair added successfully.")
-#     conn.close()
+def add_image_pairs(pairs, db_path="./zebra_verification.db"):
+    """Batch insert image pairs. pairs is a list of tuples: [(id, uuid1, path1, bbox1, uuid2, path2, bbox2), ...]"""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.executemany("""
+        INSERT OR IGNORE INTO image_verification (id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting')
+    """, pairs)
+    inserted_count = cursor.rowcount
+    conn.commit()
+    conn.close()
+    if inserted_count > 0:
+        print(f"Added {inserted_count} image pair(s) successfully.")
+    return inserted_count
+
+
+def add_image_pair(id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, db_path="./zebra_verification.db"):
+    """Add a single image pair - calls batch function with one item"""
+    return add_image_pairs([(id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2)], db_path)
+
+
+def get_decisions(pair_ids, db_path="./zebra_verification.db"):
+    """Get decisions for multiple pairs and mark them as sent. Returns dict: {pair_id: decision}"""
+    if not pair_ids:
+        return {}
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Create placeholders for SQL IN clause
+    placeholders = ','.join('?' * len(pair_ids))
+    
+    # Get decisions
+    cursor.execute(f"""
+        SELECT id, decision FROM image_verification
+        WHERE id IN ({placeholders}) AND status = 'checked'
+    """, pair_ids)
+    
+    results = cursor.fetchall()
+    
+    if results:
+        # Mark as sent
+        cursor.execute(f"""
+            UPDATE image_verification SET status = 'sent'
+            WHERE id IN ({placeholders}) AND status = 'checked'
+        """, pair_ids)
+    
+    conn.commit()
+    conn.close()
+    
+    return {pair_id: decision for pair_id, decision in results}
+
+
+def get_decision(pair_id, db_path="./zebra_verification.db"):
+    """Get decision for one pair - calls batch function with one item"""
+    results = get_decisions([pair_id], db_path)
+    return results.get(pair_id)
+
+
+def get_existing_pair_decision(uuid1, uuid2, db_path="./zebra_verification.db"):
+    """Check if a pair with these UUIDs already exists and has been decided.
+    Checks both UUID orderings since pairs can be submitted in either order.
+    Returns decision if found and checked/sent, None otherwise."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Check both possible orderings
+    cursor.execute("""
+        SELECT decision FROM image_verification
+        WHERE ((uuid1 = ? AND uuid2 = ?) OR (uuid1 = ? AND uuid2 = ?))
+        AND status IN ('checked', 'sent')
+        LIMIT 1
+    """, (uuid1, uuid2, uuid2, uuid1))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    return result[0] if result else None
+
+
+def check_pair_exists(uuid1, uuid2, db_path="./zebra_verification.db"):
+    """Check if a pair with these UUIDs exists in any status.
+    Returns (exists, status, decision) tuple."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Check both possible orderings
+    cursor.execute("""
+        SELECT status, decision FROM image_verification
+        WHERE ((uuid1 = ? AND uuid2 = ?) OR (uuid1 = ? AND uuid2 = ?))
+        LIMIT 1
+    """, (uuid1, uuid2, uuid2, uuid1))
+    
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        return (True, result[0], result[1])
+    else:
+        return (False, None, None)
 
 
 def reset_instance_pairs(db_path="./zebra_verification.db"):
@@ -106,7 +200,7 @@ def get_next_pair_atomic(db_path="./zebra_verification.db"):
     try:
         # Find the next available pair
         cursor.execute("""
-            SELECT id, image1_path, image2_path FROM image_verification
+            SELECT id, image1_path, image2_path, bbox1, bbox2, cluster1, cluster2 FROM image_verification
             WHERE status = 'awaiting'
             ORDER BY id ASC LIMIT 1
         """)
