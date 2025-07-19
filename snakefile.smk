@@ -1,272 +1,122 @@
-import os
+import base64
+import json
 
+from VAREID.drivers.lca_driver import get_inputs as get_lca_inputs
+from VAREID.drivers.lca_driver import get_outputs as get_lca_outputs
+from VAREID.drivers.mid_driver import get_inputs as get_mid_inputs
+from VAREID.drivers.si_driver import get_inputs as get_si_inputs
+from VAREID.libraries.io.workflow_funcs import build_config, generate_targets, encode_config
+from VAREID.libraries.utils import path_from_file
+
+# Default configfile, can supply alternative with --configfile
 configfile: "config.yaml"
 
-data_is_video = config["data_video"]
+# BUILD THE CONFIG FILE
+config = build_config(config)
 
-exp_name = config["data_dir_out"]
+# SERIALIZE CONFIG DICT AS STRING (and add quotes to either side s.t. its passed as a param)
+config_str = encode_config(config)
 
-image_dirname = config["image_dirname"]
-video_dirname = config["video_dirname"]
-annot_dirname = config["annot_dirname"]
-model_dirname = config["model_dirname"]
-
-log_dir = os.path.join(exp_name, config["log_dir"])
-
-# for data import
-image_out_path = os.path.join(exp_name,config["image_out_file"])
-image_dir = os.path.join(exp_name,image_dirname)
-
-video_out_path = os.path.join(exp_name,config["video_out_file"])
-video_dir = os.path.join(exp_name,video_dirname)
-
-import_logs = os.path.join(log_dir, config["import_logfile"])
-
-# for detector
-dt_dir = os.path.join(exp_name,config["dt_dir"])
-annot_dir = os.path.join(exp_name,annot_dirname)
-ground_truth_csv = os.path.join(model_dirname,config["ground_truth_csv"])
-model_version = config["model_version"]
-detector_logs = os.path.join(log_dir, config["dt_logfile"])
-
-vid_annots_filename = "vid_" + config["annots_filename"] + config["model_version"] + ".json"
-img_annots_filename = "img_" + config["annots_filename"] + config["model_version"] + ".json"
-vid_annots_filtered_filename = "vid_" + config["annots_filtered_filename"] + config["model_version"] + ".json"
-img_annots_filtered_filename = "img_" + config["annots_filtered_filename"] + config["model_version"] + ".json"
-
-# SPLIT BASED ON INPUT S.T. DAG HAS TWO PATHS
-vid_annots_filtered_path = os.path.join(annot_dir, vid_annots_filtered_filename)
-img_annots_filtered_path = os.path.join(annot_dir, img_annots_filtered_filename)
-
-# for species identifier
-si_dir = os.path.join(exp_name,config["si_dir"])
-predictions_dir = os.path.join(si_dir,config["predictions_dir"])
-si_logs = os.path.join(log_dir, config["si_logfile"])
-
-if data_is_video:
-    exp_annots_filtered_path = vid_annots_filtered_path
-    si_out_path = os.path.join(predictions_dir, vid_annots_filtered_filename + config["si_out_file_end"])
-else:
-    exp_annots_filtered_path = img_annots_filtered_path
-    si_out_path = os.path.join(predictions_dir, img_annots_filtered_filename + config["si_out_file_end"])
-
-# for viewpoint classifier
-vc_dir = os.path.join(exp_name,config["vc_dir"])
-vc_model_checkpoint = os.path.join(model_dirname,config["vc_model_checkpoint"])
-vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
-vc_logs = os.path.join(log_dir, config["vc_logfile"])
-
-# for census annotation classifier
-cac_dir = os.path.join(exp_name,config["cac_dir"])
-cac_model_checkpoint = os.path.join(model_dirname,config["cac_model_checkpoint"])
-cac_out_path = os.path.join(cac_dir, config["cac_out_file"])
-cac_logs = os.path.join(log_dir, config["cac_logfile"])
-
-# for eda preprocessing
-eda_preprocess_path = os.path.join(cac_dir, config["cac_out_filtered"])
-eda_logs = os.path.join(log_dir, config["eda_logfile"])
-
-if data_is_video:
-    eda_flag = "--video"
-else:
-    eda_flag = ""
-
-# for frame sampling
-fs_dir = os.path.join(exp_name,config["fs_dir"])
-fs_out_stage1_path = os.path.join(fs_dir, config["fs_out_stage1_json_file"])
-fs_out_final_path = os.path.join(fs_dir, config["fs_out_final_json_file"])
-fs_logs = os.path.join(log_dir, config["fs_logfile"])
-
-# DEFINE THE INPUT FOR FRAME SAMPLING BASED ON INPUT TYPE
-if not data_is_video:
-    fs_out_final_path = eda_preprocess_path
-
-# for miew id embedding generator
-mid_dir = os.path.join(exp_name,config["mid_dir"])
-mid_model_url = config["mid_model_url"]
-mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
-mid_logs = os.path.join(log_dir, config["mid_logfile"])
-
-# for lca clustering algorithm
-lca_dir = os.path.join(exp_name,config["lca_dir"])
-lca_out_dir = os.path.join(exp_name,config["lca_out_dir"])
-lca_db_dir = os.path.join(lca_dir, config["lca_db_dir"]) 
-lca_logs_path = config["lca_log_file"]
-lca_verifiers_path = os.path.join(model_dirname,config["lca_verifiers_probs"])
-lca_exp_name = exp_name
-lca_logs = os.path.join(log_dir, config["lca_logfile"])
-
-if config["lca_separate_viewpoints"]:
-    lca_sep_viewpoint = "--separate_viewpoints"
-else:
-    lca_sep_viewpoint = ""
-if config["use_alternative_clustering"]:
-    lca_alg_name = "hdbscan"
-else:
-    lca_alg_name = "lca"
-
-# for lca post processing
-fs_file_name = os.path.basename(fs_out_final_path)
-post_dir = os.path.join(exp_name,config["post_dir"])
-sep = fs_file_name.rfind(".")
-annot_file_no_ext = fs_file_name[:sep].replace(".","")
-post_right = os.path.join(lca_out_dir,annot_file_no_ext + config["post_lca_left_end"])
-post_left = os.path.join(lca_out_dir,annot_file_no_ext + config["post_lca_right_end"])
-post_right_out = os.path.join(post_dir, config["post_lca_right_out"])
-post_left_out = os.path.join(post_dir, config["post_lca_left_out"])
-post_logs = os.path.join(log_dir, config["post_logfile"])
-
-# TARGET FUNCTION DEFINES WHICH FILES WE WANT TO GENERATE (i.e. DAG follows one path only)
-def get_targets():
-    targets = list()
-    if data_is_video:
-        targets.append([video_out_path, vid_annots_filtered_path])
-        targets.append([post_right_out,post_left_out])
-    else:
-        targets.append([image_out_path, img_annots_filtered_path])
-        targets.append([post_right,post_left])
-
-    return targets
+# WORKFLOW IS ORGANIZED BY DRIVERS
 
 rule all: 
     input:
-        get_targets()
+        generate_targets(config)
+
 
 rule import_images:
     input:
-        dir=config["data_dir_in"],
-        script="import_images.py"
+        directory(config["data_dir_in"])
     output:
-        image_out_path  
-    log:
-        import_logs
+        config["image_out_path"]
     shell:
-        "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {image_out_path} {output} &> {log}"
+        "python -m VAREID.drivers.import_image_driver --config {config_str}"
 
-rule detector_images:
-    input:
-        file=image_out_path,
-        script="algo/image_detector.py"
-    output:
-        img_annots_filtered_path
-    log:
-        detector_logs
-    shell:
-        "python {input.script} {input.file} {annot_dir} {dt_dir} {ground_truth_csv} {model_version} {img_annots_filename} {img_annots_filtered_filename} &> {log}"
 
 rule import_videos:
     input:
-        dir=config["data_dir_in"],
-        script="import_videos.py"
+        directory(config["data_dir_in"])
     output:
-        video_out_path
-    log:
-        import_logs
+        config["video_out_path"]
     shell:
-        "export DYLD_LIBRARY_PATH=/opt/homebrew/opt/zbar/lib && python {input.script} {input.dir} {video_out_path} {output} &> {log}"
+        "python -m VAREID.drivers.import_video_driver --config {config_str}"
 
-rule detector_videos:
-    input:
-        file=video_out_path,
-        script="algo/video_detector.py"
-    output:
-        vid_annots_filtered_path
-    log:
-        detector_logs
-    shell:
-        "python {input.script} {input.file} {annot_dir} {dt_dir} {model_version} {vid_annots_filename} {vid_annots_filtered_filename} &> {log}"
 
-rule species_identifier:
+rule detect_images:
     input:
-        file=exp_annots_filtered_path,
-        script="algo/species_identifier.py"
+        config["image_out_path"]
     output:
-        si_out_path
-    log:
-        si_logs
+        config["dt_image_out_path"]
     shell:
-        "python {input.script} {input.file} {si_dir} {output} &> {log}"
+        "python -m VAREID.drivers.dt_image_driver --config {config_str}"
     
-rule viewpoint_classifier:
-    input:
-        file=si_out_path,
-        script="algo/viewpoint_classifier.py"
-    output:
-        vc_out_path
-    log:
-        vc_logs
-    shell:
-        "python {input.script} {input.file} {vc_model_checkpoint} {output} &> {log}"
 
-rule ca_classifier:
+rule detect_videos:
     input:
-        file=vc_out_path,
-        script="algo/CA_classifier.py"
+        config["video_out_path"]
     output:
-        cac_out_path
-    log:
-        cac_logs
+        config["dt_video_out_path"]
     shell:
-        "python {input.script} {input.file} {cac_model_checkpoint} {output} &> {log}"
+        "python -m VAREID.drivers.dt_video_driver --config {config_str}"
 
-rule eda_preprocess:
+
+rule species_identification:
     input:
-        file=cac_out_path,
-        script="algo/EDA_preprocess_csv2json.py"
+        *get_si_inputs(config)
     output:
-        eda_preprocess_path
-    log:
-        eda_logs
+        config["si_out_path"]
     shell:
-        "python {input.script} {input.file} {output} {eda_flag} &> {log}"
+        "python -m VAREID.drivers.si_driver --config {config_str}"
+
+
+rule viewpoint_classification:
+    input:
+        config["si_out_path"]
+    output:
+        config["vc_out_path"]
+    shell:
+        "python -m VAREID.drivers.vc_driver --config {config_str}"
+
+
+rule ia_classification:
+    input:
+        config["vc_out_path"]
+    output:
+        config["ia_out_path"]
+    shell:
+        "python -m VAREID.drivers.iac_driver --config {config_str}"
+
+rule ia_filtering:
+    input:
+        config["ia_out_path"]
+    output:
+        config["ia_filtered_out_path"]
+    shell:
+        "python -m VAREID.drivers.iaf_driver --config {config_str}"
+
 
 rule frame_sampling:
     input:
-        file=eda_preprocess_path,
-        script="algo/frame_sampling.py"
+        config["ia_filtered_out_path"]
     output:
-        json_stage1=fs_out_stage1_path,
-        json_final=fs_out_final_path
-    log:
-        fs_logs
-    shell: 
-        "python {input.script} {input.file} {output.json_stage1} {output.json_final} &> {log}"
+        config["fs_out_path"]
+    shell:
+        "python -m VAREID.drivers.fs_driver --config {config_str}"
+
 
 rule miew_id:
     input:
-        file=fs_out_final_path,
-        script="algo/miew_id.py"
+        *get_mid_inputs(config)
     output:
-        mid_out_path
-    log:
-        mid_logs
-    shell: 
-        "python {input.script} {input.file} {mid_model_url} {output} &> {log}"
+        config["mid_out_path"]
+    shell:
+        "python -m VAREID.drivers.mid_driver --config {config_str}"
+
 
 rule lca:
     input:
-        annots=fs_out_final_path,
-        embeddings=mid_out_path,
-        script="algo/lca.py"
+        *get_lca_inputs(config)
     output:
-        pr=post_right,
-        pl=post_left,
-    log:
-        lca_logs
-    shell: 
-        "python {input.script} {lca_dir} {lca_out_dir} {input.annots} {input.embeddings} {lca_verifiers_path} {lca_db_dir} {lca_logs_path} {lca_exp_name} {lca_alg_name} {lca_sep_viewpoint} &> {log}"
-
-
-rule post:
-    input:
-        pr=post_right,
-        pl=post_left,
-        merged=cac_out_path,
-        script="algo/LCA_postprocessing_updated.py"
-    output:
-        right=post_right_out,
-        left=post_left_out
-    log:
-        post_logs
+        *get_lca_outputs(config)
     shell:
-        "python {input.script} {input.merged} {image_dir} {input.pl} {input.pr} {post_left_out} {post_right_out} &> {log}"
+        "python -m VAREID.drivers.lca_driver --config {config_str}"

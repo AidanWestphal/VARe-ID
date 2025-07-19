@@ -1,64 +1,94 @@
-data_dir_out: "/fs/ess/PAS2136/ggr_data/results/video_test_timestamp_fix"
-data_dir_in: "/fs/ess/PAS2136/ggr_data/video_data/Aidan_Experiment"
+# CONFIGURATION FILE: PLEASE READ OUR DOCUMENTATION FOR MORE INFORMATION ON HOW THIS WORKS
+# You DO NOT need to change anything other than what is marked. Read up on the other values 
+# if you want to customize the output formatting of the pipeline.
+
+
+# -------- FILL OUT THIS SECTION --------
+
+# The file path (dir) to save your output to
+data_dir_out: ~
+# The file path (dir) to read data from
+data_dir_in: ~
+# True/False describing whether the data is in video format (True) or image format (False)
 data_video: True
 
-log_dir: "logs"
+# -------- END FILL OUT SECTION --------
 
+
+# Important directories to reference
+log_dirname: "logs"
 image_dirname: "images"
-video_dirname: "videos"
-annot_dirname: "annots"
-model_dirname: "PLACE_MODELS_HERE"
+model_dirname: "VAREID/models"
+
+# Import step fields
 image_out_file: "image_data.json"
 video_out_file: "video_data.json"
 import_logfile: "import.txt"
 
-dt_dir: "detector"
-ground_truth_csv: "annotations.csv"
-model_version: "yolov10l"
-annots_filename: "pred_annots_"
-annots_filtered_filename: "filtered_pred_annots_"
+# Detection step fields
+dt_dirname: "detector"
+dt_model: "yolov10l"
 dt_logfile: "detector.txt"
 
-si_dir: "species_identifier"
-predictions_dir: "predictions"
-si_out_file_end: "_bioCLIP_predictions.json"
+# Detection (gt present) fields -- FILL IN IF PROVIDING GT FILE
+dt_gt_file: ~
+dt_filtered_out_file: ~
+
+# Detection split based on image or video (snakemake needs this split)
+dt_video_out_file: "vid_annots.json"
+dt_image_out_file: "img_annots.json"
+
+# Species identification step fields
+si_dirname: "species_identifier"
+si_out_file: "si_annots.json"
 si_logfile: "species_identifier.txt"
 
-vc_dir: "viewpoint_classifier"
-vc_model_checkpoint: "plains_grevys_viewpoint_classifier_june_25_tf_efficientnet_b4_ns_9.pth"
-vc_out_file: "output_with_viewpoint.json"
+# Viewpoint classification step fields
+vc_dirname: "viewpoint_classifier"
+vc_model: "plains_grevys_VC_june_25_tf_efficientnet_b4_ns_9.pth"
+vc_out_file: "vc_annots.json"
 vc_logfile: "viewpoint_classifier.txt"
 
-cac_dir: "ca_classifier"
-cac_model_checkpoint: "best_june_24_2025_IA_classifier_016.pth"
-cac_out_file: "final_output_with_softmax_and_census.json"
-cac_out_filtered: "filtered_final_output_with_softmax_and_census.json"
-cac_logfile: "ca_classifier.txt"
+# Identifiable annotation classification step fields
+ia_dirname: "ia_classifier"
+ia_model: "best_june_24_2025_IA_classifier_016.pth"
+ia_out_file: "ia_annots.json"
+ia_filtered_out_file: "ia_filtered_annots.json"
+ia_logfile: "ia_classify_and_filter.txt"
 
-eda_logfile: "eda_preprocess.txt"
-
-fs_dir: "frame_sampling"
-fs_out_stage1_json_file: "stage1_fs_output.json"
-fs_out_final_json_file: "final_fs_output.json"
+# Frame sampling step fields
+fs_dirname: "frame_sampling"
+fs_out_file: "fs_annots.json"
 fs_logfile: "frame_sampling.txt"
 
-mid_dir: "miew_id"
-mid_model_url: "conservationxlabs/miewid-msv3"
-mid_out_file: "miewid_output.pickle"
+# Optional stage1 output of frame sampling -- OPTIONAL FILL IN
+fs_stage1_out_file: "stage1_fs_annots.json"
+
+# Miew-id step fields
+mid_dirname: "miew_id"
+mid_model: "conservationxlabs/miewid-msv3"
+mid_out_file: "miewid_embeddings.pickle"
 mid_logfile: "miew_id.txt"
 
-lca_dir: "lca"
-lca_out_dir: "lca_output"
-lca_db_dir: "db"
-lca_log_file: "lca_logs.log"
+# LCA step fields
+lca_dirname: "lca"
 lca_verifiers_probs: "verifiers_probs.json"
-lca_separate_viewpoints: True
-use_alternative_clustering: False
+lca_subunit_logfile: "lca_algorithm.txt"
 lca_logfile: "lca.txt"
 
-post_dir: "output"
-post_lca_left_end: "_LCA_left.json"
-post_lca_left_out: "annotations_left_LCA.json"
-post_lca_right_end: "_LCA_right.json"
-post_lca_right_out: "annotations_right_LCA.json"
+lca_separate_viewpoints: True
+
+# LCA is special: its output is formatted as {prefix}_{viewpoint}_{suffix}.json (or {prefix}_{suffix}.json if not separating viewpoint).
+lca_out_prefix: "lca"
+lca_out_suffix: "annots"
+
+# Postprocessing step fields
+post_dirname: "post"
+post_db_file: "post_ui_decision_db.db"
+post_left_out_file: "post_left_annots.json"
+post_right_out_file: "post_right_annots.json"
 post_logfile: "post.txt"
+gui_logfile: "gui.txt"
+
+# Optional interaction mode for postprocessing human decision making. OPTIONS: [console, ipywidgets, console]
+interaction_mode: "database"

@@ -1,0 +1,34 @@
+exp_name: lca_image
+species: Grevys zebra
+algorithm_type: gc
+data:
+  viewpoint_list:
+  - left
+  - right
+  name_keys:
+  - tracking_id
+  # - individual_id
+  id_key: "uuid"
+  n_filter_min: 1
+  n_filter_max: 100
+  # annotation_file: ./zebra_annotations.json <-- provided by lca.py
+  # embedding_file: ./zebra_embeddings.pickle <-- provided by lca.py
+  # output_path: ./output <-- provided by lca.py
+  # separate_viewpoints: true <-- provided by lca.py
+algorithm:
+  target_edges: 0
+  initial_topk: 10
+edge_weights:
+  prob_human_correct: 1.0
+  classifier_thresholds:
+    miewid: auto
+  verifier_names: miewid no_human
+logging:
+  log_level: INFO
+  # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py
+  update_log_file: false
+  file_mode: w # or a for append
+gc:
+  verifier_name: miewid
+  theta: 0.1
+  validation_step: 20

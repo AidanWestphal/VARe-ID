@@ -1,0 +1,8 @@
+# CONFIG FOR lca.py SCRIPT
+
+github_lca_url: https://github.com/WildMeOrg/lca.git
+config_save_path: "lca/configs/"
+
+lca_alternative_clustering: False
+
+lca_log_file: "lca_logs.log"
