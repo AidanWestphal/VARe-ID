@@ -7,7 +7,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/import/import_images.py
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -27,7 +27,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/import/import_videos.py
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -47,7 +47,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/detection/image_detector.py
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -67,7 +67,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/detection/video_detector.py
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -87,7 +87,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/species_identification
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -107,7 +107,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/viewpoint_classification
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -127,7 +127,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/ia_classification
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -147,7 +147,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/frame_sampling
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -167,7 +167,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/miew_id
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -187,7 +187,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/lca
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -207,7 +207,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/algo/postprocessing
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
@@ -227,7 +227,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/tools/visualize.py
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.1.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: false
@@ -247,7 +247,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release/VAREID/tools/extrapolate_ggr_gps.py
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: false
@@ -267,7 +267,7 @@ components:
     primaryThrust: useInspired/AE
     sourceCodeUrl: https://github.com/ziesski/VARe-ID/tree/icicle-beta-release
     targetIcicleRelease: 2025-08
-    componentVersion: 1.0.0
+    componentVersion: v0.2.0
     licenseUrl: https://github.com/ziesski/VARe-ID/blob/icicle-beta-release/LICENSE
     citation: "Ankit K. Upadhyay, Ekaterina Nepovinnykh, S. M. Rayeed, Aidan Westphal, Lawrence Miao, Julian Bain, Jaeseok Kang, Tuomas Eerola, Heikki Kälviäinen, Charles V. Stewart. Animal Re-Identification via Multiview Spatio-Temporal Track Clustering. Rensselaer Polytechnic Institute, LUT University, Brno University of Technology, CV4Animals, CVPR 2025."
     codeReviewConducted: true
