@@ -10,7 +10,7 @@ species: Grevys zebra
 comment: Experiment comment goes here
 algorithm_type: gc
 data:
-  images_dir: ./images
+  images_dir: ./images # optional if full image_path is available for images in df
   viewpoint_list:
   - left
   - right
@@ -22,50 +22,21 @@ data:
   n_filter_max: 100
   annotation_file: ./zebra_annotations.json
   embedding_file: ./zebra_embeddings.pickle
-  stats_file: tmp/zebra_baseline_prob_098.json
   output_path: ./output
+  separate_viewpoints: true
 algorithm:
   target_edges: 0
   initial_topk: 10
-lca:
-  verifier_name: miewid
-  db_path: tmp
-  temp_db: false
-  clear_db: true
-  distance_power: 1
-  theta: 0.1 
-  iterations:
-    min_delta_converge_multiplier: 0.95
-    min_delta_stability_ratio: 4
-    num_per_augmentation: 2
-    tries_before_edge_done: 1
-    ga_iterations_before_return: 10
-    ga_max_num_waiting: 50
-    max_human_decisions: 5000
-    should_densify: true
-    densify_min_number_human: 10
-    densify_min_edges: 10
-    densify_frac: 0.5
-  drawing:
-    draw_iterations: false
-    drawing_prefix: drawing_lca
 edge_weights:
-  verifier_file: tmp/zebra_baseline_prob_098.json
   prob_human_correct: 1.0
-  augmentation_names: miewid simulated_human
-  num_pos_needed: 300
-  num_neg_needed: 50
-  scorer: kde
   classifier_thresholds:
-    miewid: 0.9
-  # weighter_thresholds:
-  #   miewid: 50
-  verifier_names: miewid simulated_human
+    miewid: auto
+  verifier_names: miewid no_human
 logging:
   log_level: INFO
   log_file: tmp/logs/whaleshark_kde.log
   update_log_file: false
-  # histogram_path: ./hist.png
+  file_mode: w # or a for append
 gc:
   verifier_name: miewid
   theta: 0.1

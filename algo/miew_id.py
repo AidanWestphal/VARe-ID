@@ -39,8 +39,17 @@ class MiewIDDataset(Dataset):
         return len(self.df)
 
     def __getitem__(self, index):
-        img = get_chip(self.df.loc[index])
+        # 1) grab the entire row
+        row = self.df.loc[index]
+
+        # 2) crop the chip
+        img = get_chip(row)
         # print(f'Shape of the input image: {img.shape}')    # Print the shape of the image
+
+        # if dataset says “left”, flip before any other transforms
+        if row.get("viewpoint", "").lower() == "left":
+            img = cv2.flip(img, 1)
+
         if self.transforms:
             img = self.transforms(image=img)["image"]  # Apply transformations
             label = self.id_to_uuid[self.labels[index].item()]

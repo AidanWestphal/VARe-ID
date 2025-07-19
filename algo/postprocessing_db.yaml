@@ -1,0 +1,27 @@
+# Database configuration
+database:
+  # path: "/fs/ess/PAS2136/ggr_data/results/kate/drone/database/cluster_verification.db"
+  path: "/users/PAS2136/nepove/code/GGR/algo/test_cluster_verification.db"
+
+# Processing options
+interactive: false # Not used in database version, kept for compatibility
+
+# CSV file paths
+csv:
+  detections1: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/detections_with_timestamps_dji_0143.csv"
+  detections2: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/detections_with_timestamps_dji_0144.csv"
+  merged_detections: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/merged_detections_with_timestamps_dji_0143_0144.csv"
+  metadata: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/ca_filtered_merged_tracking_ids_dji_0143_0144_no_unwanted_viewpoints.csv"
+  merged_bbox: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/ca_filtered_merged_tracking_ids_dji_0143_0144_no_unwanted_viewpoints_with_timestamp.csv"
+
+json:
+  left:
+    input: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/feb_28_2025_test_copy_updated_annotations_left_with_timestamp.json"
+    output: "/fs/ess/PAS2136/ggr_data/results/kate/drone/output/feb_28_2025_test_copy_updated_annotations_left_with_timestamp.json"
+
+  right:
+    input: "/fs/ess/PAS2136/ggr_data/results/kate/drone/annotations/feb_28_2025_test_copy_updated_annotations_right_with_timestamp.json"
+    output: "/fs/ess/PAS2136/ggr_data/results/kate/drone/output/feb_28_2025_test_copy_updated_annotations_right_with_timestamp.json"
+
+image:
+  directory: "/fs/ess/PAS2136/ggr_data/experiment_postprocessing_kate/DJI_0143_0144_merged_rounded_detection_result/"

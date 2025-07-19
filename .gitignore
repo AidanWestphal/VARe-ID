@@ -21,10 +21,12 @@ D2/
 D3/
 UI/init_db.sh
 UI/run_gui.sh
-kate/
+kate/*
 
 config_*.yaml
 
 .ipynb_checkpoints/
 post_run.ipynb
 post_run.ipynb
+
+
