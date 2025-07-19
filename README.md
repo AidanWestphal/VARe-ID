@@ -14,7 +14,7 @@ This work presents a modular software pipeline and end-to-end workflow for video
 - Animal-Ecology
 
 ---
-# Software Structure
+# Explanation
 
 ## Definitions of Key Terms and Concepts
 
@@ -177,7 +177,7 @@ This step clusters the annotations by their embeddings and assigns cluster ids.
 Applies final consistency checks, resolves cluster overlaps, handles manual verification when needed, assigns final unique IDs, and integrates non-identifiable annotations via tracking links.
 
 ---
-# How-To
+# How-To Guides
 
 This section walks through how to use this repository and its features. It is split into sections based on the types of tasks you're looking to accomplish.
 
