@@ -132,6 +132,18 @@ flowchart LR
 
 One important detail to note immediately is that postprocessing is external from the pipeline's workflow! This section, as will be explained below, requires human interaction and thus is not automatically ran by the pipeline. It is run separately and for video data only.
 
+### Input Format
+The pipeline's input is any recursive directory structure. For image mode, the pipeline will read in ALL images within the provided directory and its child directories. For video mode, we will read all videos. **When running the pipeline on videos, each video must have a matching (same file name) SRT file located in the same directory.** In other words, the absolute paths to the video and SRT file only differ by their file extension. Each entry of the SRT file should be formatted like the following:
+
+```
+1
+00:00:00,000 --> 00:00:00,033
+<font size="36">SrtCnt : 1, DiffTime : 33ms
+2023-01-19 11:48:31,795,565
+[iso : 100] [shutter : 1/2000.0] [fnum : 280] [ev : 0] [ct : 4823] [color_md : default] [focal_len : 224] [latitude: 0.386694] [longitude: 36.893198] [altitude: 23.900000] 
+</font>
+```
+
 ### Pipeline Stages & Algorithms
 
 #### 1. Import
