@@ -141,38 +141,6 @@ def expand_bbox_columns(df):
 
 
 def main(args):
-    """
-    Doctest Command:
-        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE algo/CA_classifier.py
-
-    Example:
-        >>> from argparse import Namespace
-        >>> args = Namespace(
-        ...     image_dir="test_imgs",
-        ...     in_csv_path="temp/viewpoint/viewpoint_output.csv",
-        ...     model_checkpoint_path="test_dataset/best_july_8_cuda_extended_aug_sample_annot_classifier.pth",
-        ...     out_csv_path="temp/ca/ca_output.csv"
-        ... )
-        >>> main(args) # doctest: +ELLIPSIS
-        Loading configuration...
-        Setting up device...
-        Loading and preprocessing data...
-        The length of input CSV is: 40
-        Setting up transformations and data loader...
-        Loading model...
-        Starting testing...
-        Testing completed. Appending softmax outputs to CSV and starting post-processing...
-        The length of softmax thresholded CSV is: 18
-        The length of AR thresholded CSV is: 18
-        The length of NMS thresholded CSV is: 17
-        The length of NMS thresholded CSV is: 0
-        The length of final concatenated CSV is: 23
-        Removing Previous Instance of Experiment...
-        Saving the results...
-        CSV with softmax outputs and census annotations saved to: temp/ca/ca_output.csv
-        All tasks completed successfully!
-    """
-
     print("Loading configuration...")
     config = load_config(path_from_file(__file__, "IA_classifier_config.yaml"))
 

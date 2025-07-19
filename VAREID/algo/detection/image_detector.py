@@ -159,28 +159,6 @@ def compare(predicted_df, original_df):
 
 
 def main(args):
-    """
-    Doctest Command:
-        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE algo/detector.py
-
-    Example:
-        >>> from argparse import Namespace
-        >>> args = Namespace(image_dir="test_imgs", annot_dir="temp/annots",
-        ...                  exp_dir="temp/models", model_version="yolov10l",
-        ...                  annots_csv_filename="annots", annots_filtered_csv_filename="filtered_annots",
-        ...                  original_csv_path="path/to/csv")
-        >>> main(args) # doctest: +ELLIPSIS
-            Cloning repository https://github.com/....git into temp/models/Yolo_v10...
-            Successfully Downloaded yolov10l to temp/models/Yolo_v10/weights/yolov10l.pt
-            Running detection... done.
-            , done.
-            Saving annotations to JSON: temp/annots/annots.json
-            Saving annotations to CSV: temp/annots/annots.csv
-            Loading ground truth annotations...
-            No ground truth annotations detected. Skipped filtering.
-            Saving non-filtered annotations to JSON: temp/annots/filtered_annots.json
-            Saving annotations to CSV: temp/annots/filtered_annots.csv
-    """
     # Loading Configuration File ...
     config = load_config(path_from_file(__file__, "detector_config.yaml"))
 

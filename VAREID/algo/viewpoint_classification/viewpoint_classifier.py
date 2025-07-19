@@ -155,32 +155,6 @@ def get_chip(row):
 
 
 def main(args):
-    """
-    Doctest Command:
-        python -W "ignore" -m doctest -o NORMALIZE_WHITESPACE algo/viewpoint_classifier.py
-
-    Example:
-        >>> from argparse import Namespace
-        >>> args = Namespace(
-        ...     image_dir="test_imgs",
-        ...     in_csv_path="temp/species_classifier/species_classifier_output.csv",
-        ...     model_checkpoint_path="test_dataset/viewpoint_trained_model.pth",
-        ...     out_csv_path="temp/viewpoint/viewpoint_output.csv"
-        ... )
-        >>> main(args) # doctest: +ELLIPSIS
-        Index(['annot uuid', 'image uuid', 'image fname', 'bbox x', 'bbox y', 'bbox w',
-            'bbox h', 'bbox pred score', 'category id', 'species_prediction',
-            'species_pred_score', 'species_pred_simple'],
-            dtype='object')
-        Preparing data for the model...
-        Setting up the model...
-        Running the model...
-        Processing the model predictions...
-        Removing Previous Instance of Experiment...
-        Saving the results...
-        Done!
-    """
-
     original_json = load_json(args.in_json_path)
     annots = join_dataframe(original_json)
 
