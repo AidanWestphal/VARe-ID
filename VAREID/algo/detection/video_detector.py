@@ -162,7 +162,7 @@ def main(args):
     detector = select_model(yolo_model, config, model_dir)
 
     threshold = config["confidence_threshold"]
-    sz = config["img_size"]
+    sz = config["img_size_vid"]
 
     # Detect and track objects over all videos
     print("Running detection on all videos...")

@@ -179,7 +179,7 @@ def main(args):
     yolo_model = args.model_version
     detector = select_model(yolo_model, config, model_dir)
 
-    predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size"])
+    predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size_img"])
 
     print("Splitting annotations...")
     df = pd.DataFrame(predictions)
