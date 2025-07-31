@@ -105,15 +105,14 @@ def filter_dataframe(df, config):
 
 
 def test_new(dataloader, model, device):
-    model.eval()
     all_softmax_outputs = []
 
     with torch.no_grad():
-        for X in dataloader:  #
+        for X in dataloader:
             X = X.to(device)
             pred = model(X)
             pred_softmax = torch.softmax(pred, dim=1)
-            all_softmax_outputs.extend(pred_softmax.cpu().numpy())
+            all_softmax_outputs.append(pred_softmax.detach().cpu())
 
     all_softmax_outputs = np.array(all_softmax_outputs)
     return all_softmax_outputs
@@ -145,7 +144,7 @@ def main(args):
     config = load_config(path_from_file(__file__, "IA_classifier_config.yaml"))
 
     print("Setting up device...")
-    device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print("Loading and preprocessing data...")
     data = load_json(args.in_json_path)
@@ -174,7 +173,7 @@ def main(args):
         model = load_model(args.model_checkpoint_path, device)
 
     print("Starting testing...")
-    all_softmax_outputs = test_new(dataloader, model, device)  #
+    all_softmax_outputs = test_new(dataloader, model, device)
 
     print(
         "Testing completed. Appending softmax outputs to JSON and starting post-processing..."
