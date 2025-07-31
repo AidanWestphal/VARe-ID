@@ -114,7 +114,7 @@ def test_new(dataloader, model, device):
             pred_softmax = torch.softmax(pred, dim=1)
             all_softmax_outputs.append(pred_softmax.detach().cpu())
 
-    all_softmax_outputs = np.array(all_softmax_outputs)
+    all_softmax_outputs = torch.cat(all_softmax_outputs, dim=0).numpy()
     return all_softmax_outputs
 
 
