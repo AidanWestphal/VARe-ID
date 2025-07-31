@@ -12,3 +12,6 @@ VAREID.egg-info/
 # Mac system
 .DS_Store
 *.pickle
+notebooks/cluster_visualizations*
+config_*
+hist*

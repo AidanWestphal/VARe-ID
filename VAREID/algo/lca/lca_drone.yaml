@@ -21,7 +21,7 @@ algorithm:
 edge_weights:
   prob_human_correct: 1.0
   classifier_thresholds:
-    miewid: auto
+    miewid: auto(0.30)
   verifier_names: miewid no_human
 logging:
   log_level: INFO
