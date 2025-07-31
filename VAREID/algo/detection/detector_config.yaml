@@ -15,4 +15,6 @@ confidence_threshold: 0.75
 
 video_fps: 8
 video_max_frames: 2000
-img_size: 320
+
+img_size_vid: 3008
+img_size_img: 320
