@@ -1,5 +1,6 @@
 import argparse
 import pickle
+import shutil
 import cv2
 import numpy as np
 import pandas as pd
@@ -17,6 +18,7 @@ from albumentations.pytorch import ToTensorV2
 from torch.utils.data import Dataset
 
 from transformers import AutoModel
+from huggingface_hub import hf_hub_download
 
 from VAREID.libraries.utils import path_from_file
 from VAREID.libraries.io.format_funcs import load_config, load_json, join_dataframe
@@ -95,10 +97,21 @@ def get_chip(row):
     return crop_rect(img, ((xm, ym), (x2 - x1, y2 - y1), theta))[0]
 
 
-def download_model(model_url, device):
+def download_model(model_url, save_dir, cp_file=None):
     # Load model directly
     model = AutoModel.from_pretrained(model_url, trust_remote_code=True)
-    model.to(device)
+    model.save_pretrained(save_dir)
+
+    if(cp_file):
+        # Remove all non-config files
+        for item in os.listdir(save_dir):
+            if item != "config.json":
+                os.remove(os.path.join(save_dir, item))
+        # Add the weights
+        shutil.copy(cp_file, os.path.join(save_dir, "pytorch_model.bin"))
+
+    model = AutoModel.from_pretrained(save_dir, trust_remote_code=True)
+    model.eval()
     return model
 
 
@@ -254,8 +267,15 @@ if __name__ == "__main__":
         help="The url to the hugging face model for miewid embeddings",
     )
     parser.add_argument(
+        "out_dir", type=str, help="The full path to the output directory"
+    )
+    parser.add_argument(
         "out_file", type=str, help="The full path to the output pickle file"
     )
+    parser.add_argument(
+        "--model_cp", type=str, default=None, help="The full path to a custom checkpoint for the Miew-ID model."
+    )
+
     args = parser.parse_args()
 
     data = load_json(args.in_json_path)
@@ -264,7 +284,9 @@ if __name__ == "__main__":
 
     print(f"Downloading model {args.model_url}...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = download_model(args.model_url, device)
+
+    save_dir = os.path.join(args.out_dir, "mid_model")
+    model = download_model(args.model_url, save_dir, args.model_cp)
 
     preprocess = Compose(
         [

@@ -66,10 +66,12 @@ fs_stage1_out_file: "stage1_fs_annots.json"
 
 # Miew-id step fields
 mid_dirname: "miew_id"
-mid_model: "conservationxlabs/miewid-msv3"
-mid_from_local: False
+mid_model_url: "conservationxlabs/miewid-msv3"
 mid_out_file: "miewid_embeddings.pickle"
 mid_logfile: "miew_id.txt"
+
+# Custom checkpoint (.bin) for the above miewid model can be optionally provided
+mid_model_cp: ~
 
 # LCA step fields
 lca_dirname: "lca"

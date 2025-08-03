@@ -133,9 +133,10 @@ def build_config(config):
 
     # MIEWID EMBEDDING STEP
     mid_dir = os.path.join(out_dir, config["mid_dirname"])
-    mid_model_path = os.path.join(model_dir, config["mid_model"]) if config["mid_from_local"] else config["mid_model"]
     mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
     mid_logs = os.path.join(log_dir, config["mid_logfile"])
+
+    mid_model_path = os.path.join(model_dir, config["mid_model_cp"]) if config["mid_model_cp"] is not None else None
 
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])

@@ -18,8 +18,13 @@ def main(args):
         config = build_config(load_config(args.config_path))
     
     input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
+    
+    if config["mid_model_path"]:
+        mid_model_path = "--model_cp " + config["mid_model_path"]
+    else:
+        mid_model_path = ""
 
-    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model_path"]} {config["mid_out_path"]}'
+    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model_url"]} {config["mid_dir"]} {config["mid_out_path"]} {mid_model_path}'
 
     logger = setup_logging(config["mid_logs"])
     log_subprocess(command, logger)
