@@ -133,6 +133,7 @@ def build_config(config):
 
     # MIEWID EMBEDDING STEP
     mid_dir = os.path.join(out_dir, config["mid_dirname"])
+    mid_model_path = os.path.join(model_dir, config["mid_model"]) if config["mid_from_local"] else config["mid_model"]
     mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
     mid_logs = os.path.join(log_dir, config["mid_logfile"])
 
@@ -186,6 +187,7 @@ def build_config(config):
     config["fs_logs"] = fs_logs
     config["fs_stage1_out_path"] = fs_stage1_out_path
     config["mid_dir"] = mid_dir
+    config["mid_model_path"] = mid_model_path
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs
     config["lca_dir"] = lca_dir

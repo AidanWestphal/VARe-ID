@@ -19,7 +19,7 @@ def main(args):
     
     input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
 
-    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model"]} {config["mid_out_path"]}'
+    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model_path"]} {config["mid_out_path"]}'
 
     logger = setup_logging(config["mid_logs"])
     log_subprocess(command, logger)
