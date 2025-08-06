@@ -27,7 +27,7 @@ import_logfile: "import.txt"
 
 # Detection step fields
 dt_dirname: "detector"
-dt_model: "yolov10l"
+dt_model: "yolov9c.pt" # SEE Ultralytics for recognizable models
 dt_logfile: "detector.txt"
 
 # Detection (gt present) fields -- FILL IN IF PROVIDING GT FILE
