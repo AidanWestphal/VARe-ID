@@ -1,41 +1,20 @@
 import argparse
 import os
-import shutil
-import subprocess
 import sys
+import ultralytics
 import uuid
 import warnings
-import ultralytics
-import urllib.request
 
-from tqdm import tqdm
-from pathlib import Path
 import pandas as pd
-from ultralytics import YOLO
 
-from VAREID.libraries.io.format_funcs import clone_from_github, load_config, load_json, load_dataframe, save_json, split_dataframe
+from pathlib import Path
+from tqdm import tqdm
+from ultralytics import YOLO
+from VAREID.libraries.io.format_funcs import load_config, load_json, load_dataframe, save_json, split_dataframe
 from VAREID.libraries.utils import path_from_file
 
 ultralytics.checks()
 warnings.filterwarnings("ignore")
-
-
-def download_model(yolo_model, yolo_url, model_dir):
-    if yolo_url:
-        file_name = os.path.join(model_dir, yolo_model) + ".pt"
-        urllib.request.urlretrieve(yolo_url, file_name)
-        print(f"Successfully Downloaded {yolo_model} to {file_name}")
-    else:
-        print(f"URL for version {yolo_model} is not available ... ")
-
-
-def select_model(yolo_model, config, model_dir):
-    url_key = f"{yolo_model}_url"
-    yolo_url = config.get(url_key)
-    download_model(yolo_model, yolo_url, model_dir)
-    model = YOLO(os.path.join(model_dir, yolo_model + ".pt"))
-    print(f"Model device: {next(model.parameters()).device}")
-    return model
 
 
 def detect_images(image_data, model, threshold, sz):
@@ -163,22 +142,11 @@ def main(args):
     config = load_config(path_from_file(__file__, "detector_config.yaml"))
 
     dt_dir = Path(args.dt_dir)
-
     image_data = load_json(args.image_data)
+    detector = YOLO(args.model_path)
 
     os.makedirs(dt_dir, exist_ok=True)
-
-    yolo_dir = os.path.join(dt_dir, config["yolo_dir"])
-    github_v10_url = config["github_v10_url"]
-
-    clone_from_github(yolo_dir, github_v10_url)
-
-    model_dir = os.path.join(yolo_dir, config["model_dir"])
-    os.makedirs(model_dir, exist_ok=True)
-
-    yolo_model = args.model_version
-    detector = select_model(yolo_model, config, model_dir)
-
+    
     predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size_img"])
 
     print("Splitting annotations...")
@@ -224,7 +192,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Detect bounding boxes for database of animal images")
     parser.add_argument("image_data", type=str, help="The image metadata file")
     parser.add_argument("dt_dir", type=str, help="The directory to export models and annots to")
-    parser.add_argument("model_version", type=str, help="The yolo model version to use")
+    parser.add_argument("model_path", type=str, help="YOLO model path (or path to create)")
     parser.add_argument("out_json_path", type=str, help="The name of the output annotations json file")
     parser.add_argument("--gt_path", type=str, default=None, help="The full path to the ground truth file.")
     parser.add_argument("--gt_filtered_annots", type=str, default=None, help="The name of the output annots filted by gt data.")
