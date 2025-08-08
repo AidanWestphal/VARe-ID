@@ -409,7 +409,6 @@ if __name__ == "__main__":
     
     # Launch the interface with allowed paths
     demo.launch(
-        server_port=7861,
         server_name="0.0.0.0",  # Allow external connections
         share=False,
         allowed_paths=[args.allowed_dir]  # Add data directory to allowed paths

@@ -118,7 +118,9 @@ def get_parent_id(tid):
 
 def parse_timestamp(ts):
     """Parses many allowed timestamp formats to datetime."""
-    if not isinstance(ts, str):
+    if isinstance(ts, float) or isinstance(ts, int):
+        return ts
+    elif not isinstance(ts, str):
         raise ValueError('Timestamp must be a string')
     for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
         try:
@@ -286,7 +288,7 @@ def wait_for_single_decision(db_path, pair_id, check_interval=5):
 # INTERACTIVE DISPLAY & DECISION
 # -----------------------------------------------------------------------------
 
-def pairwise_verification_interactive(grouped, c1_id, c2_id, data_context, image_dir, interactive_mode, *, context_message="", db_path):
+def pairwise_verification_interactive(grouped, c1_id, c2_id, data_context, image_dir, interactive_mode, db_path, context_message=""):
     """Show side‑by‑side crops for two representative anns and ask the user."""
     if (c1_id not in grouped or c2_id not in grouped or not grouped[c1_id] or not grouped[c2_id]):
         return 'No'
