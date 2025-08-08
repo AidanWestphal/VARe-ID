@@ -1,7 +1,7 @@
-threshold_CA: 0.35  # threshold for classification
+threshold_CA: 0.95  # threshold for classification
 min_log_AR: -0.4660522261520754
 max_log_AR: 1.4348566194081924
 batch_size: 32
 species: 'zebra_grevys'
 NMS_threshold: 0.1
-viewpoints: ['right', 'frontright', 'backright', 'left', 'frontleft', 'backleft', 'upbackleft', 'upbackright', 'upfrontleft', 'upfrontright', 'upleft', 'upright']
+viewpoints: ['right', 'left', 'upleft', 'upright']
