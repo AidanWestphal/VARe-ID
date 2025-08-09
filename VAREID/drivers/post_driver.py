@@ -1,7 +1,8 @@
 import argparse
-from multiprocessing import Process
+from multiprocessing import Process, Pipe
 import os
 from pathlib import Path
+import signal
 
 from VAREID.libraries.io.format_funcs import load_config
 from VAREID.libraries.io.logging import log_subprocess, setup_logging
@@ -25,9 +26,12 @@ def main(args):
         post_logger = setup_logging(config["post_logs"])
         gui_logger = setup_logging(config["gui_logs"])
 
+        # PID PIPE FOR GUI
+        p_conn, c_conn = Pipe()
+
         # THREADDING TO RUN SIMULTANEOUSLY
         post_process = Process(target=log_subprocess, args=(post_command, post_logger))
-        gui_process = Process(target=log_subprocess, args=(gui_command, gui_logger))
+        gui_process = Process(target=log_subprocess, args=(gui_command, gui_logger), kwargs={"conn": c_conn})
 
         # STAT POST AND WAIT FOR DB PATH TO APPEAR
         post_process.start()
@@ -41,13 +45,17 @@ def main(args):
 
         # DB created, open it
         gui_process.start()
-        
+
         # Join at end
         post_process.join()
         # If GUI is alive, kill it. We are DONE!
         if gui_process.is_alive():
             gui_logger.info(f"POST PROCESSING TERMINATING. EXITING GUI.")
-            gui_process.terminate()
+            pid = p_conn.recv()
+            gui_logger.info(f"TERMINATING GUI PROCESS (PID {pid}) & FREEING PORT.")
+            # Kill the process directly
+            os.kill(pid, signal.SIGTERM)
+            # Join the killed process
             gui_process.join()
 
     # IPYWIDGETS AND CONSOLE INTERACTION
