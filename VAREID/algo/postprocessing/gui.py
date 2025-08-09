@@ -408,8 +408,13 @@ if __name__ == "__main__":
     print(f"Starting instance {INSTANCE_IDENTIFIER}")
     
     # Launch the interface with allowed paths
-    demo.launch(
-        server_name="0.0.0.0",  # Allow external connections
-        share=False,
-        allowed_paths=[args.allowed_dir]  # Add data directory to allowed paths
-    )
+    try:
+        demo.launch(
+            
+            server_name="0.0.0.0",  # Allow external connections
+            share=False,
+            allowed_paths=[args.allowed_dir]  # Add data directory to allowed paths
+        )
+    finally:
+        # Close port upon termination
+        demo.close()
