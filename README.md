@@ -294,7 +294,24 @@ Still waiting for cluster pair 1 - 0 - Checking again in 5 seconds...
 ```
 At this point, start up `gui.py`.
 
-## Executing tools or any other scripts
+### Classifying other species
+Currently, this pipeline is best used on Grevys Zebras and Plains Zebras. However, it can be used for other species.
+
+Every algorithm component in the pipeline has a configfile with some internal variables controlling how the script runs. These parameters can be coefficients, flags, labels, etc. **YOU SHOULD RARELY NEED TO CHANGE THESE PARAMETERS!** 
+
+All config files are found in `VAREID/algo` within their corresponding algorithm component subfolders. Please refer to any comments in these files before making changes.
+
+To modify the species labels the pipeline will classify into, modify the following fields:
+1. `custom_labels` in `species_identifier_config.yaml`:
+  
+    This is a list of the species to classify annotations into. This is CLIP-based so you can format the names any way you wish.
+   
+2. `filtered_classes` in `viewpoint_classifier_config.yaml`: 
+  
+    This is a list of the species to generate viewpoint classifications for. This should match `#1`.
+
+
+### Executing tools or any other scripts
 Please see the documentation in these scripts, which is usually done via `argparse`.
 
 ---
