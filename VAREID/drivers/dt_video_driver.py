@@ -11,7 +11,7 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    command = f'python -u -m VAREID.algo.detection.video_detector {config["video_out_path"]} {config["dt_dir"]} {config["dt_model"]} {config["dt_video_out_path"]}'
+    command = f'python -u -m VAREID.algo.detection.video_detector {config["video_out_path"]} {config["dt_dir"]} {config["dt_model_path"]} {config["dt_video_out_path"]}'
 
     logger = setup_logging(config["dt_logs"])
     log_subprocess(command, logger)

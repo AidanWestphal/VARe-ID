@@ -5,6 +5,9 @@
 scratch/
 VAREID.egg-info/
 
+# YOLO models saved from ultralytics
+VAREID/models/yolo*.pt
+
 *.out
 *.err
 *.sh

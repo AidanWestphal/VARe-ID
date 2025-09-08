@@ -1,6 +1,5 @@
 valid_bs: 4
 num_workers: 1
-device: "cuda"
 img_size: 440
 k: 5
 flip: False

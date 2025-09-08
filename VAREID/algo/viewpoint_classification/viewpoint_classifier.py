@@ -189,14 +189,14 @@ def main(args):
     )
 
     print("Setting up the model...")
-    device = torch.device(config["device"])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     with warnings.catch_warnings():  # Add this line
         warnings.filterwarnings("ignore", category=UserWarning)
         model = ImgClassifier(
             config["model_arch"], len(config["label_cols"]), pretrained=True
         ).to(device)
         model.load_state_dict(
-            torch.load(args.model_checkpoint_path, map_location=config["device"])
+            torch.load(args.model_checkpoint_path, map_location=device)
         )
 
     print("Running the model...")

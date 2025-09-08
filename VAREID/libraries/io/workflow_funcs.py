@@ -97,6 +97,7 @@ def build_config(config):
 
     # DETECTION STEP
     dt_dir = os.path.join(out_dir, config["dt_dirname"])
+    dt_model_path = os.path.join(model_dir, config["dt_model"])
     dt_video_out_path = os.path.join(dt_dir, config["dt_video_out_file"])
     dt_image_out_path = os.path.join(dt_dir, config["dt_image_out_file"])
     dt_logs = os.path.join(log_dir, config["dt_logfile"])
@@ -164,6 +165,7 @@ def build_config(config):
     config["video_out_path"] = video_out_path
     config["import_logs"] = import_logs
     config["dt_dir"] = dt_dir
+    config["dt_model_path"] = dt_model_path
     config["dt_video_out_path"] = dt_video_out_path
     config["dt_image_out_path"] = dt_image_out_path
     config["dt_logs"] = dt_logs
