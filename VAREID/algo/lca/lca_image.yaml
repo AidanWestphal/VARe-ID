@@ -21,14 +21,17 @@ algorithm:
 edge_weights:
   prob_human_correct: 1.0
   classifier_thresholds:
-    miewid: auto
+    miewid: auto(0.05)
   verifier_names: miewid no_human
 logging:
   log_level: INFO
   # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py
   update_log_file: false
+  histogram_path: "/users/PAS2136/nepove/code/VARe-ID/hist.png"
+  auto_threshold_plot_path: "/users/PAS2136/nepove/code/VARe-ID/hist_auto.png"
   file_mode: w # or a for append
 gc:
   verifier_name: miewid
   theta: 0.1
   validation_step: 20
+  max_densify_edges: 200

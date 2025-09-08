@@ -21,14 +21,23 @@ algorithm:
 edge_weights:
   prob_human_correct: 1.0
   classifier_thresholds:
-    miewid: auto(0.30)
-  verifier_names: miewid no_human
+    miewid: auto(0.5)
+    tracking(miewid): miewid
+  verifier_names: tracking(miewid) no_human
+  auto_threshold_plot_path: ../../hist_auto.png
+exp_name: lca_image
+gc:
+  theta: 0.1
+  validation_step: 20
+  verifier_name: tracking(miewid)
 logging:
   log_level: INFO
   # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py
+  auto_threshold_plot_path: "/users/PAS2136/nepove/code/VARe-ID/hist_auto.png"
   update_log_file: false
   file_mode: w # or a for append
 gc:
   verifier_name: miewid
   theta: 0.1
   validation_step: 20
+  max_densify_edges: 200
