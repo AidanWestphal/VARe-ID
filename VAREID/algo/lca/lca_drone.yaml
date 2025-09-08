@@ -33,7 +33,7 @@ gc:
 logging:
   log_level: INFO
   # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py
-  auto_threshold_plot_path: "/users/PAS2136/nepove/code/VARe-ID/hist_auto.png"
+  auto_threshold_plot_path: ""
   update_log_file: false
   file_mode: w # or a for append
 gc:
