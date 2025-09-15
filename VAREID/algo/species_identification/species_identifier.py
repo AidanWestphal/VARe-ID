@@ -92,6 +92,10 @@ def main(args):
     prediction_dir = os.path.dirname(args.out_json_path)
     shutil.rmtree(prediction_dir, ignore_errors=True)
     os.makedirs(prediction_dir, exist_ok=True)
+    
+    if (df.size == 0):
+        raise Exception("Species identifier found nothing, cannot continue pipeline.")
+
 
     print("Saving ALL Predictions as JSON ...")
     annotations = split_dataframe(df)
