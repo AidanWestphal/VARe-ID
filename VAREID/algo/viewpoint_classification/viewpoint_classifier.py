@@ -157,6 +157,10 @@ def get_chip(row):
 def main(args):
     original_json = load_json(args.in_json_path)
     annots = join_dataframe(original_json)
+    
+    if (annots.size == 0):
+        raise Exception("Loaded DataFrame is empty, cannot continue pipeline.")
+
 
     # Remove rows that are not the desired species
     filtered_annots = annots[
