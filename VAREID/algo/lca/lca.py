@@ -76,6 +76,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+
+    if os.path.exists(args.lca_dir) and os.path.isdir(args.lca_dir):
+        shutil.rmtree(args.lca_dir) 
+    os.makedirs(args.lca_dir)
+
     # Config for LCA itself -- not input config to LCA
     lca_config = load_config(path_from_file(__file__, "lca_config.yaml"))
     
@@ -123,7 +128,7 @@ if __name__ == "__main__":
 
     if args.separate_viewpoints:
         for viewpoint in input_config["data"]["viewpoint_list"]:
-            input_dir = os.path.join(output_path, viewpoint)
+            input_dir = os.path.join(output_path, "viewpoint-" + viewpoint)
             save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, viewpoint=viewpoint, uuid_key=input_config["data"]["id_key"])
     else:
         input_dir = output_path
