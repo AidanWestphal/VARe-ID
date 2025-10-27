@@ -40,7 +40,7 @@ if __name__ == "__main__":
     if not os.path.exists(json_path):
         print(f"{json_path} does not exist.")
         exit(-1)
-    if not json_path[-5] == ".json":
+    if not json_path[-5:] == ".json":
         print(f"Extrapolate ggr gps needs a .json file")
         print(f"{json_path} is not a JSON file")
         exit(-1)
