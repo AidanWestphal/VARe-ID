@@ -7,7 +7,6 @@ from VAREID.libraries.db.table import ImageTable
 from VAREID.libraries.ggr_funcs import extrapolate_ggr_gps
 
 from VAREID.libraries.io.format_funcs import load_config
-from VAREID.libraries.io.logging import setup_logging, log_subprocess
 from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 if __name__ == "__main__":
@@ -34,15 +33,20 @@ if __name__ == "__main__":
     else:
         config = build_config(load_config(args.config_path))
 
-    # TODO: Update to use import_image_driver.py probably
-    # Load image data from json when applicable
-    if os.path.isfile(config["data_dir_in"]) and os.path.getsize(config["data_dir_in"]) != 0:
-        imgtable = ImageTable(os.path.dirname(config["data_dir_in"]))
-        imgtable.import_from_json(config["data_dir_in"])
-    else:
-        print("Unable to import image data... (exiting)")
+    imgtable = ImageTable(config["data_dir_out"])
+    
+    json_path = os.path.join(config["data_dir_out"], config["image_out_file"])
+    
+    if not os.path.exists(json_path):
+        print(f"{json_path} does not exist.")
+        exit(-1)
+    if not json_path[-5] == ".json":
+        print(f"Extrapolate ggr gps needs a .json file")
+        print(f"{json_path} is not a JSON file")
         exit(-1)
     
+    imgtable.import_from_json(json_path)
+
     # Add images to database
     skipped_gid_list = extrapolate_ggr_gps(imgtable, doctest_mode=False)
-    imgtable.export_to_json(config["data_dir_out"])
+    imgtable.export_to_json(json_path)
