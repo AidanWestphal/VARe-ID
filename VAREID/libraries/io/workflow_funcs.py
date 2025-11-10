@@ -64,6 +64,26 @@ def generate_targets(config):
 
     return targets
 
+def generate_ggr_preprocess_targets(config):
+    '''
+    Generates the snakemake target files for the all rule s.t. the pipeline follows the proper 
+    workflow depending on its mode (video or image mode).
+
+    Parameters:
+        config (dict): The dictionary format of config.yaml with all important paths built.
+
+    Returns:
+        targets (list): The list of targets (file paths) that snakemake must generate.
+    '''
+
+    targets = []
+
+    if config["data_video"]:
+        targets.append(config["video_out_path"])
+    else:
+        targets.append(config["image_out_path"])
+
+    return targets
 
 def build_config(config):
     '''
