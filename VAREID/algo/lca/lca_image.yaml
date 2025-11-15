@@ -15,6 +15,12 @@ data:
   # embedding_file: ./zebra_embeddings.pickle <-- provided by lca.py
   # output_path: ./output <-- provided by lca.py
   # separate_viewpoints: true <-- provided by lca.py
+  separate_by_fields:
+  - viewpoint
+  - encounter_id
+  viewpoint_list:
+  - left
+  - right
 algorithm:
   target_edges: 0
   initial_topk: 10

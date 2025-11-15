@@ -132,6 +132,11 @@ def build_config(config):
     # Optional stage1 frame sampling output, generate path iff not none
     fs_stage1_out_path = os.path.join(fs_dir, config["fs_stage1_out_file"]) if config["fs_stage1_out_file"] is not None else None
 
+    # ENCOUNTER GROUPING STEP
+    eg_dir = os.path.join(out_dir, config["eg_dirname"])
+    eg_out_path = os.path.join(eg_dir, config["eg_out_file"])
+    eg_logs = os.path.join(log_dir, config["eg_logfile"])
+
     # MIEWID EMBEDDING STEP
     mid_dir = os.path.join(out_dir, config["mid_dirname"])
     mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
@@ -187,6 +192,9 @@ def build_config(config):
     config["fs_out_path"] = fs_out_path
     config["fs_logs"] = fs_logs
     config["fs_stage1_out_path"] = fs_stage1_out_path
+    config["eg_dir"] = eg_dir
+    config["eg_out_path"] = eg_out_path
+    config["eg_logs"] = eg_logs
     config["mid_dir"] = mid_dir
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs

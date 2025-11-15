@@ -11,7 +11,13 @@ from VAREID.libraries.io.format_funcs import clone_from_github, load_config, loa
 from VAREID.libraries.utils import path_from_file
 
 
-def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, viewpoint=None, uuid_key="annot_uuid"):
+def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, field_filters=None, uuid_key="annot_uuid"):
+    """
+    Save LCA results with support for multiple field filtering.
+    
+    Args:
+        field_filters: dict of {field_name: field_value} to filter on, e.g. {'viewpoint': 'left', 'encounter': 'E001'}
+    """
     clustering_file = os.path.join(input_dir, "clustering.json")
     node2uuid_file = os.path.join(input_dir, "node2uuid_file.json")
 
@@ -31,14 +37,28 @@ def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, viewpoin
             if uuid:
                 uuid_to_cluster[uuid] = cluster_id
 
-    # Filter annotations based on viewpoint if provided
-    if viewpoint is not None:
-        filtered_annotations = [
-            ann for ann in data['annotations']
-            if ann.get('viewpoint', '').strip().lower() == viewpoint.strip().lower()
-        ]
-        print(f"Filtered {len(filtered_annotations)} annotations with viewpoint='{viewpoint}' "
-            f"out of {len(data['annotations'])}")
+    # Filter annotations based on field filters (substring matching)
+    if field_filters:
+        print(field_filters)
+        filtered_annotations = []
+        for ann in data['annotations']:
+            match = True
+            for field, value in field_filters.items():
+                # Check direct field or name_<field> pattern
+                field_value = ann.get(field) or ann.get(f"name_{field}")
+                if field_value is None:
+                    match = False
+                    break
+                # Substring matching (consistent with new filtering logic)
+                if str(value) not in str(field_value):
+                    match = False
+                    break
+            if match:
+                filtered_annotations.append(ann)
+        
+        filter_desc = ', '.join(f"{k}={v}" for k, v in field_filters.items())
+        print(f"Filtered {len(filtered_annotations)} annotations with {filter_desc} "
+              f"out of {len(data['annotations'])}")
     else:
         filtered_annotations = data['annotations']
 
@@ -47,17 +67,19 @@ def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, viewpoin
         ann['LCA_clustering_id'] = uuid_to_cluster.get(ann[uuid_key], None)
     
     # Build output path
-    if viewpoint is not None:
-        output_filename = f"{prefix}_{viewpoint}_{suffix}.json"
+    if field_filters:
+        field_str = '_'.join(f"{k}-{v}" for k, v in field_filters.items())
+        output_filename = f"{prefix}_{field_str}_{suffix}.json"
     else:
         output_filename = f"{prefix}_{suffix}.json"
-    output_path = os.path.join(output_path, output_filename)
+    output_path_full = os.path.join(output_path, output_filename)
 
     # Save final result with same categories/images, modified annotations
     result_dict = split_dataframe(pd.DataFrame(filtered_annotations))
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    save_json(result_dict, output_path)
+    os.makedirs(os.path.dirname(output_path_full), exist_ok=True)
+    save_json(result_dict, output_path_full)
+    print(f"Saved LCA results to {output_path_full}")
     
 
 if __name__ == "__main__":
@@ -72,10 +94,10 @@ if __name__ == "__main__":
     parser.add_argument("log_subunit_file", type=str, help="The path to the log file for the LCA algorithm itself.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
     parser.add_argument("--video", action="store_true", help="True if LCA should run on the video (drone) config file.")
-    parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right.")
+    parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right. (Legacy - use --separate_by_fields instead)")
+    parser.add_argument("--separate_by_fields", nargs="+", help="List of fields to separate runs by, e.g., viewpoint encounter")
 
     args = parser.parse_args()
-
     # Config for LCA itself -- not input config to LCA
     lca_config = load_config(path_from_file(__file__, "lca_config.yaml"))
     
@@ -93,12 +115,22 @@ if __name__ == "__main__":
         input_config_name = "lca_image.yaml"
         input_config = load_config(path_from_file(__file__, input_config_name))
 
-    # ADD CONFIG INFO
+    # # ADD CONFIG INFO
     input_config["data"]["output_path"] = args.lca_dir
     input_config["data"]["annotation_file"] = args.annots
     input_config["data"]["embedding_file"] = args.embeddings
-    input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
-    #input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
+    
+    # Handle backward compatibility and new field separation
+    if args.separate_by_fields:
+        input_config["data"]["separate_by_fields"] = args.separate_by_fields
+        # Remove old separate_viewpoints if using new system
+        if "separate_viewpoints" in input_config["data"]:
+            del input_config["data"]["separate_viewpoints"]
+    elif args.separate_viewpoints:
+        # Legacy support
+        input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
+    
+    # input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
     input_config["logging"]["log_file"] = args.log_subunit_file # should append LCA outputs into same log file used by this script
 
 
@@ -120,13 +152,42 @@ if __name__ == "__main__":
 
     output_path = args.lca_dir
     anno_file = args.annots
+    uuid_key = input_config["data"]["id_key"]
 
-    if args.separate_viewpoints:
+    if args.separate_by_fields:
+        # New multi-field separation logic
+        import glob
+        import re
+        
+        # Build regex pattern to match and extract field values
+        # Pattern: field1-value1_field2-value2_...
+        regex_pattern = "_".join([f"{field}-([^_]+)" for field in args.separate_by_fields])
+        regex = re.compile(regex_pattern)
+        
+        # Find all directories matching the pattern
+        glob_pattern = "_".join([f"{field}-*" for field in args.separate_by_fields])
+        
+        for input_dir in glob.glob(os.path.join(output_path, glob_pattern)):
+            if os.path.isdir(input_dir):
+                dir_name = os.path.basename(input_dir)
+                match = regex.match(dir_name)
+                
+                if match:
+                    # Extract field values from regex groups
+                    field_combo = dict(zip(args.separate_by_fields, match.groups()))
+                    save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, 
+                                   field_filters=field_combo, uuid_key=uuid_key)
+                
+    elif args.separate_viewpoints:
+        # Legacy viewpoint separation
         for viewpoint in input_config["data"]["viewpoint_list"]:
             input_dir = os.path.join(output_path, viewpoint)
-            save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, viewpoint=viewpoint, uuid_key=input_config["data"]["id_key"])
+            save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, 
+                           field_filters={"viewpoint": viewpoint}, uuid_key=uuid_key)
     else:
+        # No separation
         input_dir = output_path
-        save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, uuid_key=input_config["data"]["id_key"])
+        save_lca_results(input_dir, anno_file, output_path, args.output_prefix, args.output_suffix, 
+                       uuid_key=uuid_key)
 
     exit()

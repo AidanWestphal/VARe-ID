@@ -96,7 +96,7 @@ def fetch_pair():
     """Atomically fetch and reserve a pair from the database"""
     result = get_next_pair_atomic(db_path=db_path)
     if result:
-        pair_id, img1_path, img2_path, bbox1, bbox2, cluster1, cluster2 = result
+        pair_id, img1_path, img2_path, bbox1, bbox2, cluster1, cluster2, score = result
         return {
             "id": pair_id,
             "image1": img1_path,
@@ -104,7 +104,8 @@ def fetch_pair():
             "bbox1": bbox1,
             "bbox2": bbox2,
             "cluster1": cluster1,
-            "cluster2": cluster2
+            "cluster2": cluster2,
+            "score": score
         }
     return None
 
@@ -139,6 +140,7 @@ def load_next_pair():
         # Get instance stats for status message
         stats = get_instance_stats(db_path)
         status_msg = (f"Loaded pair {current_pair['id']} | "
+                     f"Score: {current_pair['score']:.2f} | "
                      f"Available: {stats['awaiting']} | "
                      f"Active instances: {stats['active_instances']} | "
                      f"Instance: {INSTANCE_IDENTIFIER}")
@@ -412,7 +414,7 @@ if __name__ == "__main__":
         demo.launch(
             
             server_name="0.0.0.0",  # Allow external connections
-            share=False,
+            share=True,
             allowed_paths=[args.allowed_dir]  # Add data directory to allowed paths
         )
     finally:
