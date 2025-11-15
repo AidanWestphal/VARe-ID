@@ -267,6 +267,10 @@ if __name__ == "__main__":
     # Joining is not necessary here, but done for consistency
     df = join_dataframe(data)
 
+    if (df.size == 0):
+        raise Exception("Loaded DataFrame is empty, cannot continue pipeline.")
+
+
     print(f"Downloading model {args.model_url}...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = download_model(args.model_url, device)

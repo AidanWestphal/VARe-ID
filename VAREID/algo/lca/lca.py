@@ -98,6 +98,12 @@ if __name__ == "__main__":
     parser.add_argument("--separate_by_fields", nargs="+", help="List of fields to separate runs by, e.g., viewpoint encounter")
 
     args = parser.parse_args()
+
+
+    if os.path.exists(args.lca_dir) and os.path.isdir(args.lca_dir):
+        shutil.rmtree(args.lca_dir) 
+    os.makedirs(args.lca_dir)
+
     # Config for LCA itself -- not input config to LCA
     lca_config = load_config(path_from_file(__file__, "lca_config.yaml"))
     

@@ -90,6 +90,10 @@ if __name__ == "__main__":
     # Make individual id column
     df["individual_id"] = 0
 
+    # Check for case where all data has been filtered out
+    if (df.size == 0):
+        raise Exception("No data left after filtering, cannot continue pipeline.")
+
     print("Reassigning viewpoints...")
     # Reassign all viewpoints to just left/right
     df = assign_viewpoints(df, excluded_viewpoints=["upback", "upfront"])

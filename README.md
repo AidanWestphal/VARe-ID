@@ -182,7 +182,7 @@ Applies final consistency checks, resolves cluster overlaps, handles manual veri
 This section walks through how to use this repository and its features. It is split into sections based on the types of tasks you're looking to accomplish.
 
 ## Setting up a Python Environment
-You'll need to setup a python envionment that meets the requirements layed out in `environment.yaml`. There's several package managers that revolve around **conda** as well as the more-efficient reimplementation **mamba**. Pick your favorite and use its documentation to set up an environment. To setup the environment, you'll need to do a command similar to the following:
+This pipeline must be run in a Linux-based conda environment. You'll need to setup a python envionment that meets the requirements layed out in `environment.yaml`. There's several package managers that revolve around **conda** as well as the more-efficient reimplementation **mamba**. Pick your favorite and use its documentation to set up an environment. To setup the environment, you'll need to do a command similar to the following:
 
 From the parent directory...
 
