@@ -4,10 +4,14 @@ from VAREID.libraries.io.format_funcs import load_config
 from VAREID.libraries.io.logging import log_subprocess, setup_logging
 from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
-def get_inputs(config):
+def get_inputs(config, inter=False, intra=False):
     inputs = [config["mid_out_path"]]
 
-    if config["data_video"]:
+    if intra:
+        inputs.append(config["eg_out_path"])
+    elif inter:
+        inputs.append(config["representative_out_path"])
+    elif config["data_video"]:
         inputs.append(config["fs_out_path"])
     else:
         inputs.append(config["ia_filtered_out_path"])
@@ -15,14 +19,19 @@ def get_inputs(config):
     return inputs
 
 
-def get_outputs(config):
-    if config.get("lca_separate_by_fields"):
-        # For multi-field separation, we don't know exact outputs without knowing field values
-        # Return base path - actual outputs will be generated based on field combinations
-        outputs = [config["lca_dir"]]  # Base directory contains all outputs
-    elif config.get("lca_separate_viewpoints"):
-        # Legacy viewpoint separation
-        outputs = [config["post_left_in_path"], config["post_right_in_path"]]
+def get_outputs(config, inter=False, intra=False):
+    # if config.get("lca_separate_by_fields"):
+    #     # For multi-field separation, we don't know exact outputs without knowing field values
+    #     # Return base path - actual outputs will be generated based on field combinations
+    #     outputs = [config["lca_dir"]]  # Base directory contains all outputs
+    # elif config.get("lca_separate_viewpoints"):
+    #     # Legacy viewpoint separation
+    #     outputs = [config["post_left_in_path"], config["post_right_in_path"]]
+    # else:
+    if intra:
+        outputs = [config["intra_lca_out_path"]]
+    elif inter:
+        outputs = [config["inter_lca_out_path"]]
     else:
         outputs = [config["lca_out_path"]]
 
@@ -36,7 +45,15 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    input = config["fs_out_path"] if config["data_video"] else config["eg_out_path"]
+    intra = args.intra
+    inter = args.inter
+
+    if intra:
+        input = config["eg_out_path"]
+    elif inter:
+        input = config["representative_out_path"]
+    else:
+        input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
     video_flag = "--video" if config["data_video"] else ""
     
     # Handle field separation (new) vs viewpoint separation (legacy)
@@ -53,7 +70,11 @@ def main(args):
         separation_flag = ""
 
     command = f'python -u -m VAREID.algo.lca.lca {input} {config["mid_out_path"]} {config["lca_dir"]} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {config["lca_subunit_logs"]} {config["lca_logs"]} {video_flag} {separation_flag}'
-
+    if intra:
+        command += " --intra"
+    elif inter:
+        command += " --inter"
+    
     logger = setup_logging(config["lca_logs"])
     log_subprocess(command, logger)
 

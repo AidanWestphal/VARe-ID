@@ -21,6 +21,7 @@ ANNOTATION_COLNAMES = [
     "category_id",
     "LCA_clustering_id",
     "gt_iou",
+    "encounter_id",
 ]
 
 # COLUMNS TO BE KEPT IN CATEGORIES (as found in annotations)
@@ -43,7 +44,8 @@ IMAGE_COLNAMES = [
     "gps_lon",
     "video_path",
     "timestamp",
-    "frame_number"
+    "frame_number",
+    "encounter_id",
 ]
 
 # RENAME PATTERNS FOR IMAGES (to be converted from above)

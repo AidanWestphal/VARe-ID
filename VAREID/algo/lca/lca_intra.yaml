@@ -2,9 +2,6 @@ exp_name: lca_image
 species: Grevys zebra
 algorithm_type: gc
 data:
-  viewpoint_list:
-  - left
-  - right
   name_keys:
   - tracking_id
   # - individual_id
@@ -17,9 +14,11 @@ data:
   # separate_viewpoints: true <-- provided by lca.py
   separate_by_fields:
   - viewpoint
+  - encounter_id
   viewpoint_list:
   - left
   - right
+  output_key: intra_cluster_id
 algorithm:
   target_edges: 0
   initial_topk: 10

@@ -7,7 +7,7 @@ from sklearn.cluster import DBSCAN
 from geopy.distance import geodesic
 import datetime
 
-from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, join_dataframe_dict, split_dataframe
+from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, join_dataframe_dict, join_dataframe, split_dataframe
 from VAREID.libraries.utils import path_from_file
 
 
@@ -146,42 +146,31 @@ def group_encounters(images_df, config):
 def save_encounter_results(input_path, output_path, config):
     """
     Load annotation data, group into encounters, and save results.
-    
+    Uses the standard split/join dataframe logic to preserve original field names.
+
     Args:
         input_path: Path to input annotation JSON file
         output_path: Path to save output annotation JSON file
         config: Configuration parameters
     """
     print(f"Loading annotations from: {input_path}")
-    
-    # Load and join annotation data
-    data = join_dataframe_dict(load_json(input_path))
-    
-    # Convert images to DataFrame for processing
-    images_df = pd.DataFrame(data['images'])
-    
+
+    # Load annotation data and join into a single dataframe
+    # This applies reverse renaming to standardize field names
+    joined_df = join_dataframe(load_json(input_path))
+
     # Group images into encounters
-    images_with_encounters = group_encounters(images_df, config)
-    
-    # Update annotations with encounter information
-    annotations_df = pd.DataFrame(data['annotations'])
-    
-    # Merge encounter IDs into annotations based on image_uuid
-    if 'image_uuid' in annotations_df.columns:
-        encounter_mapping = images_with_encounters.set_index('image_uuid')['encounter_id'].to_dict()
-        annotations_df['encounter_id'] = annotations_df['image_uuid'].map(encounter_mapping)
-    else:
-        print("Warning: No image_uuid found in annotations")
-        annotations_df['encounter_id'] = -2
-    
-    # Update the data structure
-    data['images'] = images_with_encounters.to_dict('records')
-    data['annotations'] = annotations_df.to_dict('records')
-    
+    # This adds the encounter_id column to the dataframe
+    joined_df_with_encounters = group_encounters(joined_df, config)
+
+    # Split the dataframe back into the standard format
+    # This applies forward renaming to restore original field names
+    output_data = split_dataframe(joined_df_with_encounters)
+
     # Save results
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    save_json(data, output_path)
-    
+    save_json(output_data, output_path)
+
     print(f"Saved encounter-grouped annotations to: {output_path}")
 
 

@@ -2,9 +2,6 @@ exp_name: lca_image
 species: Grevys zebra
 algorithm_type: gc
 data:
-  viewpoint_list:
-  - left
-  - right
   name_keys:
   - tracking_id
   # - individual_id
@@ -20,6 +17,9 @@ data:
   viewpoint_list:
   - left
   - right
+  representative_list:
+  - true
+  output_key: inter_cluster_id
 algorithm:
   target_edges: 0
   initial_topk: 10
