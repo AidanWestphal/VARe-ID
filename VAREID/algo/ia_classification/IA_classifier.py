@@ -206,7 +206,7 @@ def main(args):
         dataset=dataset,
         model=model,
         device=device,
-        cp_freq=args.cp_freq,
+        cp_int=args.cp_freq,
         cp_path=args.cp_path,
         batch_size=config["batch_size"],
         num_workers=num_workers
@@ -305,10 +305,10 @@ def main(args):
     print("Saving the results...")
     annotations = split_dataframe(final_df)
     save_json(annotations,args.out_json_path)
-
-    # Cleanup checkpoint
-    if os.path.exists(temp_checkpoint_path):
-        os.remove(temp_checkpoint_path)
+    
+    # Clean up checkpoint
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
 
     print(
         f"JSON with softmax outputs and census annotations saved to: {args.out_json_path}"

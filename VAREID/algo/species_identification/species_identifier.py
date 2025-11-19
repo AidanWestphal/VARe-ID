@@ -112,6 +112,10 @@ def main(args):
     annotations = split_dataframe(df)
     save_json(annotations,args.out_json_path)
 
+    # Clean up checkpoint
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
+
     print("Completed Successfully!")
 
 

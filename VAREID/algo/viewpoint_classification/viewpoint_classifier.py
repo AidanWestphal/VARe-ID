@@ -226,7 +226,7 @@ def main(args):
         dataset=test_ds,
         model=model,
         device=device,
-        cp_freq=args.cp_freq,
+        cp_int=args.cp_freq,
         cp_path=args.cp_path,
         batch_size=config["valid_bs"],
         num_workers=config["num_workers"]
@@ -261,8 +261,8 @@ def main(args):
     save_json(final_json, args.out_json_path)
 
     # Clean up checkpoint
-    if os.path.exists(temp_checkpoint_path):
-        os.remove(temp_checkpoint_path)
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
 
     print("Done!")
 
@@ -276,6 +276,9 @@ if __name__ == "__main__":
         "in_json_path",
         type=str,
         help="The annotations json file to add viewpoints to",
+    )
+    parser.add_argument(
+        "model_checkpoint_path", type=str, help="The full path to the model checkpoint"
     )
     parser.add_argument(
         "cp_freq", type=int, help="The checkpoint frequency for safe exiting"

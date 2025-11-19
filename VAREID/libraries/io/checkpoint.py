@@ -5,7 +5,7 @@ import os
 from torch.utils.data import DataLoader
 from typing import Any, Iterable, Optional, Callable, Dict
 
-from VAREID.libraries.io import resumable_random_sampler
+from VAREID.libraries.io.resumable_random_sampler import ResumableRandomSampler
 
 # SIGNATE FOR CALLBACK GETTER FUNCTION
 StateGetter = Callable[[], Dict[str, Any]]
@@ -68,7 +68,7 @@ class DataLoaderCheckpointManager:
 
         # --- B. BUILD DATALOADER ---
         # Create the sampler with the calculated offset
-        sampler = resumable_random_sampler(self.dataset, seed=42, start_index=start_index_samples)
+        sampler = ResumableRandomSampler(self.dataset, seed=42, start_index=start_index_samples)
         
         self.loader = DataLoader(
             self.dataset,
@@ -179,7 +179,7 @@ class CheckpointManager:
             # SAVE IF AT INTERVAL
             if self.iteration % self._interval == 0:
                 self._save_checkpoint()
-                
+
             self.current_item = next(self.iterator)
             self.iteration += 1
                 
@@ -203,13 +203,25 @@ class CheckpointManager:
                 print(f"Resuming from Checkpoint: Iteration {self.iteration}.")
                 
                 # Advance the iterator to the resume point
-                if isinstance(self._raw_iterable, (list, range)) and self.iteration > 0:
-                    self.iterator = iter(self._raw_iterable[self.iteration:])
+                if self.iteration > 0:
+                    # If it's a list/range, we can slice it (Fast)
+                    if isinstance(self._raw_iterable, (list, range)):
+                        self.iterator = iter(self._raw_iterable[self.iteration:])
+                    # If it's a generator (like df.iterrows), we must manually consume items (Safe)
+                    else:
+                        print(f"Fast-forwarding iterator by {self.iteration} steps...")
+                        # We re-create the iterator from scratch to be safe
+                        self.iterator = iter(self._raw_iterable)
+                        # Burn the first N items
+                        for _ in range(self.iteration):
+                            try:
+                                next(self.iterator)
+                            except StopIteration:
+                                break
 
         except FileNotFoundError:
             print("Starting from scratch: no checkpoint found.")
             
-        # Return self, so the user can access loaded state (trainer.external_state)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

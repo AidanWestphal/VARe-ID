@@ -11,7 +11,7 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    command = f'python -u -m VAREID.algo.viewpoint_classification.viewpoint_classifier {config["si_out_path"]} {config["vc_model_path"]} {config["vc_freq"]} {config["vc_cp_path"]} {config["vc_out_path"]}'
+    command = f'python -u -m VAREID.algo.viewpoint_classification.viewpoint_classifier {config["si_out_path"]} {config["vc_model_path"]} {config["cp_freq"]} {config["vc_cp_path"]} {config["vc_out_path"]}'
 
     logger = setup_logging(config["vc_logs"])
     log_subprocess(command, logger)

@@ -152,6 +152,10 @@ def main(args):
     non_filtered_annot_json_path = os.path.join(dt_dir, non_filtered_pred_json_name)
     print("Saving non-filtered annotations to JSON:", non_filtered_annot_json_path)
     save_json(predictions, non_filtered_annot_json_path)
+    
+    # Clean up checkpoint
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
 
     # FILTER PENDING PRESENCE OF GT DATA
     if args.gt_path and args.gt_filtered_annots:
