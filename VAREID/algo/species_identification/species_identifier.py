@@ -15,6 +15,7 @@ import yaml
 from tqdm import tqdm
 from bioclip import CustomLabelsClassifier
 
+from VAREID.libraries.io.checkpoint import CheckpointManager
 from VAREID.libraries.utils import path_from_file
 
 warnings.filterwarnings("ignore")
@@ -23,30 +24,40 @@ from PIL import Image
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 
 
-def run_pyBioclip(bioclip_classifier, df):
+def run_pyBioclip(bioclip_classifier, df, cp_int, cp_path):
 
     predicted_labels = []
     predicted_scores = []
 
-    for _, row in tqdm(df.iterrows()):
-        x0, y0, w, h = row["bbox"]
+    # STATE GETTER FOR ANNOTATIONS INFO
+    state_getter = lambda : {"labels": predicted_labels, "scores": predicted_scores}
 
-        original_image = Image.open(row["image_path"])
-        cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
+    with CheckpointManager(df.iterrows(), state_getter, cp_int, cp_path, len(df)) as cpdata:
 
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-        temp_file.close()
-        cropped_image.save(temp_file.name)
+        # Load current annotations if needed
+        if cpdata.iteration > 0:
+            predicted_labels = cpdata.external_state["labels"]
+            predicted_scores = cpdata.external_state["scores"]
 
-        predictions = bioclip_classifier.predict(temp_file.name)
+        for _, row in tqdm(cpdata, initial=cpdata.iteration, desc="Identifying Species"):
+            x0, y0, w, h = row["bbox"]
 
-        top_prediction = max(predictions, key=lambda x: x["score"])
-        predicted_label = top_prediction["classification"]
-        pred_conf_score = top_prediction["score"]
+            original_image = Image.open(row["image_path"])
+            cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
-        predicted_labels.append(predicted_label)
-        predicted_scores.append(pred_conf_score)
-        os.remove(temp_file.name)
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+            temp_file.close()
+            cropped_image.save(temp_file.name)
+
+            predictions = bioclip_classifier.predict(temp_file.name)
+
+            top_prediction = max(predictions, key=lambda x: x["score"])
+            predicted_label = top_prediction["classification"]
+            pred_conf_score = top_prediction["score"]
+
+            predicted_labels.append(predicted_label)
+            predicted_scores.append(pred_conf_score)
+            os.remove(temp_file.name)
 
     category_ids, _ = pd.factorize(predicted_labels)
 
@@ -57,10 +68,10 @@ def run_pyBioclip(bioclip_classifier, df):
     return df
 
 
-def pyBioCLIP(labels, df):
+def pyBioCLIP(labels, df, cp_int, cp_path):
 
     classifier = CustomLabelsClassifier(labels)
-    df = run_pyBioclip(classifier, df)
+    df = run_pyBioclip(classifier, df, cp_int, cp_path)
 
     return df
 
@@ -86,7 +97,7 @@ def main(args):
     labels = config["custom_labels"]
     data = load_json(args.in_json_path)
     df = join_dataframe(data)
-    df = pyBioCLIP(labels, df)
+    df = pyBioCLIP(labels, df, args.cp_freq, args.cp_path)
     print("pyBioCLIP Completed ...")
 
     prediction_dir = os.path.dirname(args.out_json_path)
@@ -119,6 +130,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "out_json_path", type=str, help="The full path to the output json file"
+    )
+    parser.add_argument(
+        "cp_freq", type=int, help="The checkpoint frequency for safe exiting"
+    )
+    parser.add_argument(
+        "cp_path", type=str, help="The checkpoint path for safe exiting"
     )
     args = parser.parse_args()
     main(args)

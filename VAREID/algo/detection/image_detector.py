@@ -10,6 +10,7 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 from ultralytics import YOLO
+from VAREID.libraries.io.checkpoint import CheckpointManager
 from VAREID.libraries.io.format_funcs import load_config, load_json, load_dataframe, save_json, split_dataframe
 from VAREID.libraries.utils import path_from_file
 
@@ -17,7 +18,7 @@ ultralytics.checks()
 warnings.filterwarnings("ignore")
 
 
-def detect_images(image_data, model, threshold, sz):
+def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
 
     images = image_data["images"]
     tracking_id = 1
@@ -25,56 +26,48 @@ def detect_images(image_data, model, threshold, sz):
     # ANNOTION LIST FOR OUTPUT
     annotations = []
 
-    for image in tqdm(images, desc=f"Detecting images..."):
-        # Detect from the image
-        results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
+    # STATE GETTER FOR ANNOTATIONS INFO
+    state_getter = lambda : {"data": annotations}
 
-        for result in results:
-            # Check if any detection in the image is a person (class 0)
-            if any(box.cls.item() == 0 for box in result.boxes):
-                # Skip this entire image
-                continue
+    with CheckpointManager(images, state_getter, cp_int, cp_path, len(images)) as cpdata:
 
-            # Process the image only if no person was detected
-            for box in result.boxes:
-                x1 = box.xyxy[0][0].item()
-                y1 = box.xyxy[0][1].item()
-                x2 = box.xyxy[0][2].item()
-                y2 = box.xyxy[0][3].item()
+        # Load current annotations if needed
+        if cpdata.iteration > 0:
+            annotations = cpdata.external_state["data"]
 
-                # ADD THE ANNOTATION TO THE LIST OF ANNOTS
-                annotations.append(
-                    {
-                        "uuid": str(uuid.uuid4()),
-                        "image_uuid": image["uuid"],
-                        "bbox": [x1, y1, x2 - x1, y2 - y1],
-                        "confidence": box.conf.item(),
-                        "detection_class": int(box.cls.item()),
-                        "tracking_id": tracking_id,
-                        "timestamp": image["time_posix"],
-                        "image_path": image["uri_original"],
-                    }
-                )
+        for image in tqdm(cpdata, initial=cpdata.iteration, desc=f"Detecting images..."):
+            # Detect from the image
+            results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
 
-                # For images, assign unique tracking ids to every image
-                tracking_id += 1
-            # if len(result.boxes) == 0:
-            #     print(image)
-            #     img = Image.open(image["uri_original"])
+            for result in results:
+                # Check if any detection in the image is a person (class 0)
+                if any(box.cls.item() == 0 for box in result.boxes):
+                    # Skip this entire image
+                    continue
 
-            #     # ADD THE ANNOTATION TO THE LIST OF ANNOTS
-            #     annotations.append(
-            #         {
-            #             "annot_uuid": str(uuid.uuid4()),
-            #             "image_uuid": image["uuid"],
-            #             "bbox": [0, 0, img.size[0], img.size[1]],
-            #             "confidence": 0,
-            #             "detection_class": 0,
-            #             "tracking_id": tracking_id,
-            #             "timestamp": image["time_posix"],
-            #             "image_path": image["uri_original"],
-            #         }
-            #     )
+                # Process the image only if no person was detected
+                for box in result.boxes:
+                    x1 = box.xyxy[0][0].item()
+                    y1 = box.xyxy[0][1].item()
+                    x2 = box.xyxy[0][2].item()
+                    y2 = box.xyxy[0][3].item()
+
+                    # ADD THE ANNOTATION TO THE LIST OF ANNOTS
+                    annotations.append(
+                        {
+                            "uuid": str(uuid.uuid4()),
+                            "image_uuid": image["uuid"],
+                            "bbox": [x1, y1, x2 - x1, y2 - y1],
+                            "confidence": box.conf.item(),
+                            "detection_class": int(box.cls.item()),
+                            "tracking_id": tracking_id,
+                            "timestamp": image["time_posix"],
+                            "image_path": image["uri_original"],
+                        }
+                    )
+
+                    # For images, assign unique tracking ids to every image
+                    tracking_id += 1
     
     print(", done.")
     return annotations
@@ -147,7 +140,7 @@ def main(args):
 
     os.makedirs(dt_dir, exist_ok=True)
     
-    predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size_img"])
+    predictions = detect_images(image_data, detector, config["confidence_threshold"], config["img_size_img"], args.cp_freq, args.cp_path)
 
     print("Splitting annotations...")
     df = pd.DataFrame(predictions)
@@ -188,12 +181,16 @@ def main(args):
 
 
 if __name__ == "__main__":
+    
+    # args.cp_freq, args.dt_cp_path
 
     parser = argparse.ArgumentParser(description="Detect bounding boxes for database of animal images")
     parser.add_argument("image_data", type=str, help="The image metadata file")
     parser.add_argument("dt_dir", type=str, help="The directory to export models and annots to")
     parser.add_argument("model_path", type=str, help="YOLO model path (or path to create)")
     parser.add_argument("out_json_path", type=str, help="The name of the output annotations json file")
+    parser.add_argument("cp_freq", type=int, help="The checkpoint frequency for safe exiting")
+    parser.add_argument("cp_path", type=str, help="The checkpoint path for safe exiting")
     parser.add_argument("--gt_path", type=str, default=None, help="The full path to the ground truth file.")
     parser.add_argument("--gt_filtered_annots", type=str, default=None, help="The name of the output annots filted by gt data.")
 

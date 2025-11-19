@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import json
 import os
+from typing import Any, Callable, Dict
 
 import torch
 import yaml
@@ -14,10 +15,11 @@ import torch.nn.functional as F
 
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader, Sampler
 
 from transformers import AutoModel
 
+from VAREID.libraries.io.checkpoint import DataLoaderCheckpointManager
 from VAREID.libraries.utils import path_from_file
 from VAREID.libraries.io.format_funcs import load_config, load_json, join_dataframe
 
@@ -102,22 +104,49 @@ def download_model(model_url, device):
     return model
 
 
-def get_embeddings(loader, model, device):
+def get_embeddings(dataset, model, device, cp_int, cp_path, batch_size, num_workers):
     model.eval()
 
     all_embeddings = []
     all_uuids = []
 
-    with torch.no_grad():
-        with tqdm(loader, total=len(loader), desc="Running model...") as pbar:
-            for imgs, uuids in pbar:
-                imgs = imgs.to(device).float()
-                img_embeds = model(imgs)
-                all_embeddings.append(img_embeds.detach().cpu())
-                all_uuids.append(uuids)
-    all_embeddings = torch.cat(all_embeddings, dim=0).numpy()
-    all_uuids = [i for sub in all_uuids for i in sub]
+    def get_current_state():
+        return {
+            "embeddings": all_embeddings,
+            "uuids": all_uuids
+        }
 
+    manager = DataLoaderCheckpointManager(
+        dataset=dataset,
+        state_getter=get_current_state,
+        checkpoint_interval=cp_int,
+        save_path=cp_path,
+        batch_size=batch_size,
+        num_workers=num_workers
+    )
+
+    with manager as runner:
+        if runner.iteration > 0:
+            all_embeddings = runner.external_state.get("embeddings", [])
+            all_uuids = runner.external_state.get("uuids", [])
+
+        for imgs, uuids in tqdm(runner, desc="Running model..."):
+            imgs = imgs.to(device).float()
+            
+            with torch.no_grad():
+                img_embeds = model(imgs)
+                
+                # Store as list of floats/lists to save memory/pickle safely
+                batch_embeds = img_embeds.detach().cpu().numpy().tolist()
+                all_embeddings.extend(batch_embeds)
+                
+                # uuids is already a tuple/list of strings from the collate
+                all_uuids.extend(uuids)
+    
+    # Convert lists back to expected return format (numpy array for embeddings)
+    all_embeddings = np.array(all_embeddings)
+    # all_uuids is already a flat list of strings here
+    
     return (all_embeddings, all_uuids)
 
 
@@ -256,6 +285,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "out_file", type=str, help="The full path to the output pickle file"
     )
+    parser.add_argument(
+        "cp_freq", type=int, help="The checkpoint frequency for safe exiting"
+    )
+    parser.add_argument(
+        "cp_path", type=str, help="The checkpoint path for safe exiting"
+    )
     args = parser.parse_args()
 
     data = load_json(args.in_json_path)
@@ -286,15 +321,16 @@ if __name__ == "__main__":
     print("Building dataset and loader...")
     ds = MiewIDDataset(df, preprocess)
 
-    dl = torch.utils.data.DataLoader(
-        ds,
+    # Note: DataLoader creation moved inside get_embeddings via the Manager
+    embeddings = get_embeddings(
+        dataset=ds, 
+        model=model, 
+        device=device,
+        cp_int=args.cp_freq,
+        cp_path=args.cp_path,
         batch_size=config["valid_bs"],
         num_workers=config["num_workers"],
-        shuffle=False,
-        pin_memory=False,
     )
-
-    embeddings = get_embeddings(dl, model, device)
 
     if "eval_file" in config.keys():
         print("Evaluating Top-K miewid precision...")
@@ -305,5 +341,9 @@ if __name__ == "__main__":
     print(f"Saving embeddings file {args.out_file}...")
     with open(args.out_file, "wb") as f:
         pickle.dump(embeddings, f)
+
+    # Clean up checkpoint
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
 
     print("Done!")
