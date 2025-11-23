@@ -2,7 +2,7 @@
 """
 Representative Selection Algorithm
 
-For each group of annotations with the same intra_cluster_id,
+For each group of annotations with the same encounter_id,
 selects the annotation with the highest IA score as the representative.
 All other annotations in the group are marked as non-representative.
 """
@@ -12,14 +12,15 @@ import logging
 import sys
 from pathlib import Path
 
-from VAREID.libraries.io.format_funcs import load_json, save_json
+from VAREID.libraries.io.format_funcs import load_config, load_json, save_json
+from VAREID.libraries.utils import path_from_file
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-def select_representatives(annotations, cluster_field='intra_cluster_id', ia_field='ia_score'):
+def select_representatives(annotations, cluster_field='encounter_id', ia_field='ia_score'):
     """
     Select representative annotations based on highest IA score within each cluster.
 
@@ -88,7 +89,7 @@ def select_representatives(annotations, cluster_field='intra_cluster_id', ia_fie
     return annotations
 
 
-def process_annotations_file(input_path, output_path, cluster_field='intra_cluster_id', ia_field='ia_score'):
+def process_annotations_file(input_path, output_path, cluster_field='encounter_id', ia_field='ia_score'):
     """
     Process an annotations file to select representatives.
 
@@ -155,58 +156,49 @@ def process_annotations_file(input_path, output_path, cluster_field='intra_clust
     logger.info("=" * 60)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Select representative annotations based on highest IA score within each cluster"
-    )
-
-    parser.add_argument(
-        "input_path",
-        type=str,
-        help="Path to input JSON file with annotations containing cluster IDs and IA scores"
-    )
-    parser.add_argument(
-        "output_path",
-        type=str,
-        help="Path to save output JSON file with representative field added"
-    )
-    parser.add_argument(
-        "--ia_field",
-        type=str,
-        default="ia_score",
-        help="Name of the field containing IA scores (default: ia_score)"
-    )
-    parser.add_argument(
-        "--cluster_field",
-        type=str,
-        default="intra_cluster_id",
-        help="Name of the field containing cluster IDs (default: intra_cluster_id)"
-    )
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Select representative annotations based on highest IA score")
+    parser.add_argument("input_file", type=str, help="Path to input annotation JSON file")
+    parser.add_argument("output_file", type=str, help="Path to output annotation JSON file")
+    parser.add_argument("--config", type=str, help="Path to configuration file",
+                       default=None)
 
     args = parser.parse_args()
 
+    # Load configuration
+    if args.config and Path(args.config).exists():
+        config = load_config(args.config)
+    else:
+        # Use default config if not provided
+        config_path = path_from_file(__file__, "representative_selection_config.yaml")
+        if Path(config_path).exists():
+            config = load_config(config_path)
+        else:
+            # Default parameters
+            config = {
+                'cluster_field': 'encounter_id',
+                'ia_field': 'CA_score'
+            }
+            print("Using default configuration parameters")
+
     # Validate input file exists
-    if not Path(args.input_path).exists():
-        logger.error(f"Input file not found: {args.input_path}")
+    if not Path(args.input_file).exists():
+        logger.error(f"Input file not found: {args.input_file}")
         sys.exit(1)
 
     # Create output directory if needed
-    output_dir = Path(args.output_path).parent
+    output_dir = Path(args.output_file).parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         process_annotations_file(
-            args.input_path,
-            args.output_path,
-            cluster_field=args.cluster_field,
-            ia_field=args.ia_field
+            args.input_file,
+            args.output_file,
+            cluster_field=config.get('cluster_field', 'encounter_id'),
+            ia_field=config.get('ia_field', 'ia_score')
         )
     except Exception as e:
         logger.error(f"Error processing annotations: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

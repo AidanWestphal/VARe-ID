@@ -3,11 +3,11 @@ species: Grevys zebra
 algorithm_type: gc
 data:
   name_keys:
-  - tracking_id
+  - occurence_id
   # - individual_id
   id_key: "uuid"
   n_filter_min: 1
-  n_filter_max: 100
+  n_filter_max: 1000
   # annotation_file: ./zebra_annotations.json <-- provided by lca.py
   # embedding_file: ./zebra_embeddings.pickle <-- provided by lca.py
   # output_path: ./output <-- provided by lca.py
@@ -17,6 +17,8 @@ data:
   viewpoint_list:
   - left
   - right
+  category_id_list:
+  - 0
   representative_list:
   - true
   output_key: inter_cluster_id
@@ -33,7 +35,7 @@ logging:
   # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py
   update_log_file: false
   histogram_path: ""
-  auto_threshold_plot_path: ""
+  auto_threshold_plot_path: "/fs/ess/PAS2136/ggr_data/results/GGR2020_subset_encounter_grouping/logs/hist_inter.png"
   file_mode: w # or a for append
 gc:
   verifier_name: miewid

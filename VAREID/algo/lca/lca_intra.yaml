@@ -3,22 +3,24 @@ species: Grevys zebra
 algorithm_type: gc
 data:
   name_keys:
-  - tracking_id
+  - occurence_id
   # - individual_id
   id_key: "uuid"
   n_filter_min: 1
-  n_filter_max: 100
+  n_filter_max: 1000
   # annotation_file: ./zebra_annotations.json <-- provided by lca.py
   # embedding_file: ./zebra_embeddings.pickle <-- provided by lca.py
   # output_path: ./output <-- provided by lca.py
   # separate_viewpoints: true <-- provided by lca.py
   separate_by_fields:
   - viewpoint
-  - encounter_id
+  - occurence_id
   viewpoint_list:
   - left
   - right
-  output_key: intra_cluster_id
+  category_id_list:
+  - 0
+  output_key: encounter_id
 algorithm:
   target_edges: 0
   initial_topk: 10

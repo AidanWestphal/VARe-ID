@@ -63,8 +63,8 @@ def save_lca_results(input_dir, anno_file, output_path, prefix, suffix, field_fi
         filtered_annotations = data['annotations']
 
     # Add LCA_clustering_id to each annotation
-    for ann in filtered_annotations:
-        ann['LCA_clustering_id'] = uuid_to_cluster.get(ann[uuid_key], None)
+    # for ann in filtered_annotations:
+    #     ann['LCA_clustering_id'] = uuid_to_cluster.get(ann[uuid_key], None)
 
     # Build output path
     if field_filters:
@@ -158,10 +158,10 @@ def save_lca_results_unified(combinations, anno_file, output_path, prefix, suffi
     for ann in data['annotations']:
         cluster_id = all_uuid_to_cluster.get(ann[uuid_key])
         if cluster_id is not None:
-            ann['LCA_clustering_id'] = cluster_id
+            ann[output_key] = cluster_id
             annotations_with_clusters += 1
         else:
-            ann['LCA_clustering_id'] = None
+            ann[output_key] = None
 
     print(f"Added cluster IDs to {annotations_with_clusters} annotations out of {len(data['annotations'])} total")
 
@@ -193,6 +193,8 @@ if __name__ == "__main__":
     parser.add_argument("log_subunit_file", type=str, help="The path to the log file for the LCA algorithm itself.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
     parser.add_argument("--video", action="store_true", help="True if LCA should run on the video (drone) config file.")
+    parser.add_argument("--intra", action="store_true", help="True if LCA should run on the intra config file.")
+    parser.add_argument("--inter", action="store_true", help="True if LCA should run on the inter config file.")
     parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right. (Legacy - use --separate_by_fields instead)")
     parser.add_argument("--separate_by_fields", nargs="+", help="List of fields to separate runs by, e.g., viewpoint encounter")
 
@@ -260,7 +262,7 @@ if __name__ == "__main__":
         subprocess.run(["python3", f"{lca_github_loc}/lca/run_hdbscan.py", "--config", config_loc])
     else:
         print('run lca')
-        subprocess.run(["python3", f"{lca_github_loc}/lca/run.py", "--config", config_loc])
+        subprocess.run(["python3", f"{lca_github_loc}/lca/run_clustering_with_save.py", "--config", config_loc])
 
     output_path = args.lca_dir
     anno_file = args.annots
@@ -303,10 +305,10 @@ if __name__ == "__main__":
         combinations.append((input_dir, None))
 
     # Save unified results
-    if len(combinations) > 0:
-        save_lca_results_unified(combinations, anno_file, output_path, args.output_prefix, args.output_suffix,
-                                uuid_key=uuid_key)
-    else:
-        print("Warning: No clustering results found to save!")
+    # if len(combinations) > 0:
+    #     save_lca_results_unified(combinations, anno_file, output_path, args.output_prefix, args.output_suffix,
+    #                             uuid_key=uuid_key)
+    # else:
+    #     print("Warning: No clustering results found to save!")
 
     exit()

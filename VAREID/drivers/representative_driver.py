@@ -6,15 +6,11 @@ from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 
 def get_inputs(config):
-    """Get input paths based on configuration."""
-    # Input should be the LCA output path with inter_cluster_id assignments
-    return [config["lca_out_path"]]
+    return [config["encounter_lca_out_path"]]
 
 
 def get_outputs(config):
-    """Get output paths based on configuration."""
-    # Output path for annotations with representative field added
-    return [config.get("rep_out_path", config["lca_out_path"].replace("lca_", "rep_"))]
+    return [config["representative_out_path"]]
 
 
 def main(args):
@@ -24,22 +20,11 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    # Get paths
-    input_path = get_inputs(config)[0]
-    output_path = get_outputs(config)[0]
+    input = config["encounter_lca_out_path"]
 
-    # Get the IA score field name from config (default to 'ia_score')
-    ia_field = config.get("rep_ia_field", "ia_score")
+    command = f'python -u -m VAREID.algo.representative_selection.representative_selection {input} {config["representative_out_path"]}'
 
-    # Get the cluster field name from config (default to 'inter_cluster_id')
-    cluster_field = config.get("rep_cluster_field", "inter_cluster_id")
-
-    # Build command to run the representative selection algorithm
-    command = f'python -u -m VAREID.algo.representative_selection.representative_selection {input_path} {output_path} --ia_field {ia_field} --cluster_field {cluster_field}'
-
-    # Setup logging
-    log_path = config.get("rep_logs", "logs/representative.log")
-    logger = setup_logging(log_path)
+    logger = setup_logging(config["representative_logs"])
     log_subprocess(command, logger)
 
 

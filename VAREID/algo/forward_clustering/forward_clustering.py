@@ -2,10 +2,10 @@
 """
 Forward Clustering Algorithm
 
-For each intra_cluster_id group:
+For each encounter_id group:
 - Find the representative annotation (representative=True) and its inter_cluster_id
 - Assign that same inter_cluster_id to all non-representative annotations (representative=False)
-  in the same intra_cluster_id group
+  in the same encounter_id group
 """
 
 import argparse
@@ -14,20 +14,21 @@ import sys
 from pathlib import Path
 import uuid
 
-from VAREID.libraries.io.format_funcs import load_json, save_json
+from VAREID.libraries.io.format_funcs import load_config, load_json, save_json
+from VAREID.libraries.utils import path_from_file
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-def assign_inter_cluster_ids(annotations, cluster_field='intra_cluster_id',
+def assign_inter_cluster_ids(annotations, cluster_field='encounter_id',
                             inter_field='inter_cluster_id', rep_field='representative'):
     """
     Forward cluster inter_cluster_id from representative to non-representative annotations.
 
     Logic:
-    - For each intra_cluster_id group, find the representative annotation
+    - For each encounter_id group, find the representative annotation
     - Take the inter_cluster_id from the representative
     - Assign that same inter_cluster_id to all non-representative annotations in the group
 
@@ -40,7 +41,7 @@ def assign_inter_cluster_ids(annotations, cluster_field='intra_cluster_id',
     Returns:
         List of annotations with inter_cluster_id propagated from representatives
     """
-    # Group annotations by intra_cluster_id
+    # Group annotations by encounter_id
     clusters = {}
     representatives = {}
 
@@ -112,7 +113,7 @@ def assign_inter_cluster_ids(annotations, cluster_field='intra_cluster_id',
     logger.info(f"  - Total annotations processed: {len(annotations)}")
     logger.info(f"  - Representatives (already had inter_cluster_id): {rep_count}")
     logger.info(f"  - Forward clustered (assigned from representative): {forward_count}")
-    logger.info(f"  - No intra_cluster_id (skipped): {null_count}")
+    logger.info(f"  - No encounter_id (skipped): {null_count}")
     logger.info(f"  - Skipped (no representative): {skipped_no_rep}")
     logger.info(f"  - Skipped (representative has no inter_cluster_id): {skipped_no_inter}")
 
@@ -164,7 +165,7 @@ def validate_data(annotations, cluster_field, rep_field):
     return True
 
 
-def process_annotations_file(input_path, output_path, cluster_field='intra_cluster_id',
+def process_annotations_file(input_path, output_path, cluster_field='encounter_id',
                             inter_field='inter_cluster_id', rep_field='representative'):
     """
     Process an annotations file to assign inter cluster IDs.
@@ -273,71 +274,57 @@ def process_annotations_file(input_path, output_path, cluster_field='intra_clust
     logger.info(f"Unique inter clusters:             {len(inter_clusters)}")
     logger.info(f"Representative annotations:        {rep_annotations}")
     logger.info(f"Forward clustered:                 {forward_annotations}")
-    logger.info(f"No intra_cluster_id (null):       {null_intra}")
+    logger.info(f"No encounter_id (null):       {null_intra}")
     logger.info(f"No inter_cluster_id (null):       {null_inter}")
     logger.info(f"Average intra cluster size:        {avg_intra_cluster_size:.1f}")
     logger.info("=" * 60)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Forward inter_cluster_id from representative to non-representative annotations within each intra_cluster_id group"
-    )
-
-    parser.add_argument(
-        "input_path",
-        type=str,
-        help="Path to input JSON file with annotations containing cluster IDs and representative field"
-    )
-    parser.add_argument(
-        "output_path",
-        type=str,
-        help="Path to save output JSON file with inter_cluster_id field added"
-    )
-    parser.add_argument(
-        "--cluster_field",
-        type=str,
-        default="intra_cluster_id",
-        help="Name of the field containing intra cluster IDs (default: intra_cluster_id)"
-    )
-    parser.add_argument(
-        "--inter_field",
-        type=str,
-        default="inter_cluster_id",
-        help="Name of the field to store inter cluster IDs (default: inter_cluster_id)"
-    )
-    parser.add_argument(
-        "--rep_field",
-        type=str,
-        default="representative",
-        help="Name of the field indicating representative status (default: representative)"
-    )
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Forward inter_cluster_id from representative to non-representative annotations")
+    parser.add_argument("input_file", type=str, help="Path to input annotation JSON file")
+    parser.add_argument("output_file", type=str, help="Path to output annotation JSON file")
+    parser.add_argument("--config", type=str, help="Path to configuration file",
+                       default=None)
 
     args = parser.parse_args()
 
+    # Load configuration
+    if args.config and Path(args.config).exists():
+        config = load_config(args.config)
+    else:
+        # Use default config if not provided
+        config_path = path_from_file(__file__, "forward_clustering_config.yaml")
+        if Path(config_path).exists():
+            config = load_config(config_path)
+        else:
+            # Default parameters
+            config = {
+                'cluster_field': 'encounter_id',
+                'inter_field': 'inter_cluster_id',
+                'rep_field': 'representative'
+            }
+            print("Using default configuration parameters")
+
     # Validate input file exists
-    if not Path(args.input_path).exists():
-        logger.error(f"Input file not found: {args.input_path}")
+    if not Path(args.input_file).exists():
+        logger.error(f"Input file not found: {args.input_file}")
         sys.exit(1)
 
     # Create output directory if needed
-    output_dir = Path(args.output_path).parent
+    output_dir = Path(args.output_file).parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         process_annotations_file(
-            args.input_path,
-            args.output_path,
-            cluster_field=args.cluster_field,
-            inter_field=args.inter_field,
-            rep_field=args.rep_field
+            args.input_file,
+            args.output_file,
+            cluster_field=config.get('cluster_field', 'encounter_id'),
+            inter_field=config.get('inter_field', 'inter_cluster_id'),
+            rep_field=config.get('rep_field', 'representative')
         )
     except Exception as e:
         logger.error(f"Error processing annotations: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

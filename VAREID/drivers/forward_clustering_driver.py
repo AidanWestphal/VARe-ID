@@ -6,15 +6,11 @@ from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 
 def get_inputs(config):
-    """Get input paths based on configuration."""
-    # Input should be the representative selection output with representative field
-    return [config.get("rep_out_path", config["lca_out_path"].replace("lca_", "rep_"))]
+    return [config["inter_lca_out_path"]]
 
 
 def get_outputs(config):
-    """Get output paths based on configuration."""
-    # Output path for annotations with intra_cluster_id assigned
-    return [config.get("fc_out_path", config.get("rep_out_path", config["lca_out_path"]).replace("rep_", "fc_"))]
+    return [config["lca_out_path"]]
 
 
 def main(args):
@@ -24,32 +20,18 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    # Get paths
-    input_path = get_inputs(config)[0]
-    output_path = get_outputs(config)[0]
+    input = config["inter_lca_out_path"]
 
-    # Get the cluster field name from config (default to 'inter_cluster_id')
-    cluster_field = config.get("fc_cluster_field", "inter_cluster_id")
+    command = f'python -u -m VAREID.algo.forward_clustering.forward_clustering {input} {config["lca_out_path"]}'
 
-    # Get the intra cluster field name from config (default to 'intra_cluster_id')
-    intra_field = config.get("fc_intra_field", "intra_cluster_id")
-
-    # Get the representative field name from config (default to 'representative')
-    rep_field = config.get("fc_rep_field", "representative")
-
-    # Build command to run the forward clustering algorithm
-    command = f'python -u -m VAREID.algo.forward_clustering.forward_clustering {input_path} {output_path} --cluster_field {cluster_field} --intra_field {intra_field} --rep_field {rep_field}'
-
-    # Setup logging
-    log_path = config.get("fc_logs", "logs/forward_clustering.log")
-    logger = setup_logging(log_path)
+    logger = setup_logging(config["forward_clustering_logs"])
     log_subprocess(command, logger)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Driver script to run the forward clustering component of the pipeline. Assigns intra_cluster_id to non-representative annotations based on their representative annotation."
+        description="Driver script to run the forward clustering component of the pipeline. Propagates inter_cluster_id from representatives to non-representatives."
     )
     group = parser.add_mutually_exclusive_group(required=True)
 

@@ -1,0 +1,7 @@
+# Configuration for Representative Selection Algorithm
+# This algorithm selects the annotation with the highest IA score
+# as representative for each cluster
+
+# Field names configuration
+cluster_field: "encounter_id"  # Field containing cluster IDs to group by
+ia_field: "CA_score"               # Field containing IA scores for selection

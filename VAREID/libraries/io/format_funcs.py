@@ -20,8 +20,13 @@ ANNOTATION_COLNAMES = [
     "CA_score",
     "category_id",
     "LCA_clustering_id",
-    "gt_iou",
+    "cluster_id",
     "encounter_id",
+    "inter_cluster_id",
+    "gt_iou",
+    # "occurence_id",  # Removed - should only be in IMAGE_COLNAMES to avoid duplicates
+    "intra_cluster_id",
+    "representative",
 ]
 
 # COLUMNS TO BE KEPT IN CATEGORIES (as found in annotations)
@@ -45,7 +50,7 @@ IMAGE_COLNAMES = [
     "video_path",
     "timestamp",
     "frame_number",
-    "encounter_id",
+    "occurence_id",
 ]
 
 # RENAME PATTERNS FOR IMAGES (to be converted from above)
@@ -178,7 +183,7 @@ def join_dataframe(annots):
     df_images = pd.DataFrame(annots["images"])
     df_annots = pd.DataFrame(annots["annotations"])
 
-    # UNDO COLUMN RENAMING
+    # UNDO COLUMN RENAMING (images have 'uuid' which should be 'image_uuid' for merging)
     image_renames = {value: key for key, value in IMAGE_COL_RENAMES.items() if value in df_images.columns}
     df_images = df_images.rename(columns=image_renames)
 
@@ -186,13 +191,18 @@ def join_dataframe(annots):
     df_categories = df_categories.rename(columns=category_renames)
 
     # MERGE SECTIONS
-    # NOTE: Only merge if there is SPLIT DATA, e.g. some data may not be generated yet (like categories)
-    m1_criterion = list(df_annots.columns.intersection(df_images.columns))
-    if m1_criterion:
-        m1 = df_annots.merge(df_images, on=m1_criterion, how='left')
+    # FIX: Merge annotations with images on image_uuid (after renaming, images.uuid -> images.image_uuid)
+    if 'image_uuid' in df_annots.columns and 'image_uuid' in df_images.columns:
+        # Merge on image_uuid to properly join image data to annotations
+        m1 = df_annots.merge(df_images, on='image_uuid', how='left', suffixes=('', '_img'))
+        # Drop any duplicate columns that came from images with _img suffix
+        duplicate_cols = [col for col in m1.columns if col.endswith('_img')]
+        if duplicate_cols:
+            m1 = m1.drop(columns=duplicate_cols)
     else:
         m1 = df_annots
-    
+
+    # Merge with categories
     m2_criterion = list(m1.columns.intersection(df_categories.columns))
     if m2_criterion:
         m2 = m1.merge(df_categories, on=m2_criterion, how='left')
@@ -207,8 +217,8 @@ def join_dataframe_dict(annots):
     '''
     Joins a record-based annotations json object into a pandas dataframe.
 
-    Returns a record-based annotations json object with the "annotations" 
-    entry being replaced with the joined element. This function exists as 
+    Returns a record-based annotations json object with the "annotations"
+    entry being replaced with the joined element. This function exists as
     some functions may be heavily dependent on non-pandas-formatted data.
     '''
 
@@ -217,7 +227,7 @@ def join_dataframe_dict(annots):
     df_images = pd.DataFrame(annots["images"])
     df_annots = pd.DataFrame(annots["annotations"])
 
-    # UNDO COLUMN RENAMING
+    # UNDO COLUMN RENAMING (images have 'uuid' which should be 'image_uuid' for merging)
     image_renames = {value: key for key, value in IMAGE_COL_RENAMES.items() if value in df_images.columns}
     df_images = df_images.rename(columns=image_renames)
 
@@ -225,13 +235,18 @@ def join_dataframe_dict(annots):
     df_categories = df_categories.rename(columns=category_renames)
 
     # MERGE SECTIONS
-    # NOTE: Only merge if there is SPLIT DATA, e.g. some data may not be generated yet (like categories)
-    m1_criterion = list(df_annots.columns.intersection(df_images.columns))
-    if m1_criterion:
-        m1 = df_annots.merge(df_images, on=m1_criterion, how='left')
+    # FIX: Merge annotations with images on image_uuid (after renaming, images.uuid -> images.image_uuid)
+    if 'image_uuid' in df_annots.columns and 'image_uuid' in df_images.columns:
+        # Merge on image_uuid to properly join image data to annotations
+        m1 = df_annots.merge(df_images, on='image_uuid', how='left', suffixes=('', '_img'))
+        # Drop any duplicate columns that came from images with _img suffix
+        duplicate_cols = [col for col in m1.columns if col.endswith('_img')]
+        if duplicate_cols:
+            m1 = m1.drop(columns=duplicate_cols)
     else:
         m1 = df_annots
-    
+
+    # Merge with categories
     m2_criterion = list(m1.columns.intersection(df_categories.columns))
     if m2_criterion:
         df_annots = m1.merge(df_categories, on=m2_criterion, how='left')

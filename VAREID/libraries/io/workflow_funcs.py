@@ -154,11 +154,15 @@ def build_config(config):
 
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
-    intra_lca_dir = os.path.join(out_dir, f'intra_{config["lca_dirname"]}')
-    inter_lca_dir = os.path.join(out_dir, f'inter_{config["lca_dirname"]}')
-    lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifiers_probs"])
+    encounter_lca_dir = os.path.join(out_dir, config["encounter_lca_dirname"])
+    inter_lca_dir = os.path.join(out_dir, config["inter_lca_dirname"])
+    # lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifiers_probs"])
     lca_subunit_logs = os.path.join(log_dir, config["lca_subunit_logfile"])
+    encounter_lca_subunit_logs = os.path.join(log_dir, config["encounter_lca_subunit_logfile"])
+    inter_lca_subunit_logs = os.path.join(log_dir, config["inter_lca_subunit_logfile"])
     lca_logs = os.path.join(log_dir, config["lca_logfile"])
+    encounter_lca_logs = os.path.join(log_dir, config["encounter_lca_logfile"])
+    inter_lca_logs = os.path.join(log_dir, config["inter_lca_logfile"])
 
     # In video mode, post expects specifically left and right viewpoints. Build the paths to these files here:
     # Format is lca_dir/{prefix}_{left/right}_{suffix}.json
@@ -166,9 +170,9 @@ def build_config(config):
     post_right_in_path = os.path.join(lca_dir, f'{config["lca_out_prefix"]}_right_{config["lca_out_suffix"]}.json')
     # In image mode, we expect the following output to the entire pipeline:
     lca_out_path = os.path.join(lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
-    intra_lca_out_path = os.path.join(intra_lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
+    encounter_lca_out_path = os.path.join(encounter_lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
     inter_lca_out_path = os.path.join(inter_lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
-
+    
     # POST PROCESSING STEP
     post_dir = os.path.join(out_dir, config["post_dirname"])
     post_db_path = os.path.join(post_dir, config["post_db_file"])
@@ -219,14 +223,20 @@ def build_config(config):
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs
     config["lca_dir"] = lca_dir
-    config["lca_verifiers_probs_path"] = lca_verifiers_probs_path
+    config["encounter_lca_dir"] = encounter_lca_dir
+    config["inter_lca_dir"] = inter_lca_dir
+    # config["lca_verifiers_probs_path"] = lca_verifiers_probs_path
     config["post_left_in_path"] = post_left_in_path
     config["post_right_in_path"] = post_right_in_path
     config["lca_subunit_logs"] = lca_subunit_logs
     config["lca_logs"] = lca_logs
     config["lca_out_path"] = lca_out_path
-    config["intra_lca_out_path"] = intra_lca_out_path
+    config["encounter_lca_out_path"] = encounter_lca_out_path
     config["inter_lca_out_path"] = inter_lca_out_path
+    config["encounter_lca_logs"] = encounter_lca_logs
+    config["inter_lca_logs"] = inter_lca_logs
+    config["encounter_lca_subunit_logs"] = encounter_lca_subunit_logs
+    config["inter_lca_subunit_logs"] = inter_lca_subunit_logs
     config["post_dir"] = post_dir
     config["post_db_path"] = post_db_path
     config["post_left_out_path"] = post_left_out_path

@@ -123,7 +123,7 @@ if encounter_grouping:
         shell:
             "python -m VAREID.drivers.eg_driver --config {config_str}"
 
-    rule intra_lca:
+    rule encounter_lca:
         input:
             *get_lca_inputs(config, intra=True)
         output:
@@ -133,7 +133,7 @@ if encounter_grouping:
 
     rule get_representative:
         input:
-            config["intra_lca_out_path"]
+            config["encounter_lca_out_path"]
         output:
             config["representative_out_path"]
         shell:
