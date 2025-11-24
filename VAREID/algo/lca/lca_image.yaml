@@ -27,7 +27,8 @@ edge_weights:
   prob_human_correct: 1.0
   classifier_thresholds:
     miewid: auto(0.05)
-  verifier_names: miewid no_human
+  # verifier_names: miewid no_human
+  verifier_names: miewid ui_human
 logging:
   log_level: INFO
   # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py

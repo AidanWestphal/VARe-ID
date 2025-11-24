@@ -61,7 +61,7 @@ def init_db(db_path="./zebra_verification.db"):
 
 def add_image_pairs(pairs, db_path="./zebra_verification.db"):
     """
-    Batch insert image pairs.
+    Batch insert image pairs, preventing duplicates based on uuid1 and uuid2.
     Backward compatible:
       - 9-field tuples (no score): (id, uuid1, path1, bbox1, cluster1, uuid2, path2, bbox2, cluster2)
       - 10-field tuples (with score): same as above + score
@@ -74,28 +74,58 @@ def add_image_pairs(pairs, db_path="./zebra_verification.db"):
         # Detect tuple width from the first item
         tpl_len = len(pairs[0])
 
-        if tpl_len == 10:
-            # with score
-            cursor.executemany("""
-                INSERT OR IGNORE INTO image_verification 
-                (id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, score, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting')
-            """, pairs)
-        elif tpl_len == 9:
-            # without score
-            cursor.executemany("""
-                INSERT OR IGNORE INTO image_verification 
-                (id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting')
-            """, pairs)
-        else:
-            raise ValueError(
-                "Each tuple must have 9 fields (no score) or 10 fields (with score)."
-            )
-        inserted_count = cursor.rowcount
+        inserted_count = 0
+        skipped_count = 0
+
+        for pair in pairs:
+            if tpl_len == 10:
+                # with score: (id, uuid1, path1, bbox1, cluster1, uuid2, path2, bbox2, cluster2, score)
+                pair_id, uuid1, path1, bbox1, cluster1, uuid2, path2, bbox2, cluster2, score = pair
+            elif tpl_len == 9:
+                # without score
+                pair_id, uuid1, path1, bbox1, cluster1, uuid2, path2, bbox2, cluster2 = pair
+                score = None
+            else:
+                raise ValueError(
+                    "Each tuple must have 9 fields (no score) or 10 fields (with score)."
+                )
+
+            # Check if a pair with these UUIDs already exists (in either order)
+            cursor.execute("""
+                SELECT id FROM image_verification
+                WHERE (uuid1 = ? AND uuid2 = ?) OR (uuid1 = ? AND uuid2 = ?)
+            """, (uuid1, uuid2, uuid2, uuid1))
+
+            existing = cursor.fetchone()
+
+            if existing:
+                skipped_count += 1
+                print(f"Skipping duplicate pair: uuid1={uuid1[:8]}..., uuid2={uuid2[:8]}... (existing id: {existing[0]})")
+            else:
+                # Insert the new pair
+                if score is not None:
+                    cursor.execute("""
+                        INSERT INTO image_verification
+                        (id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, score, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting')
+                    """, (pair_id, uuid1, path1, bbox1, cluster1, uuid2, path2, bbox2, cluster2, score))
+                else:
+                    cursor.execute("""
+                        INSERT INTO image_verification
+                        (id, uuid1, image1_path, bbox1, cluster1, uuid2, image2_path, bbox2, cluster2, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting')
+                    """, (pair_id, uuid1, path1, bbox1, cluster1, uuid2, path2, bbox2, cluster2))
+
+                if cursor.rowcount > 0:
+                    inserted_count += 1
+
+        conn.commit()
 
     if inserted_count > 0:
-        print(f"Added {inserted_count} image pair(s) successfully.")
+        print(f"Added {inserted_count} new image pair(s) successfully.")
+    if skipped_count > 0:
+        print(f"Skipped {skipped_count} duplicate pair(s).")
+
     return inserted_count
 
 
@@ -190,7 +220,8 @@ def reset_instance_pairs(db_path="./zebra_verification.db"):
         SET status='awaiting', started_at=NULL, instance_id=NULL, heartbeat=NULL
         WHERE status='in_progress' AND instance_id=?
     """, (INSTANCE_IDENTIFIER,))
-    
+
+
     reset_count = cursor.rowcount
     if reset_count > 0:
         print(f"Reset {reset_count} pairs from previous instance {INSTANCE_IDENTIFIER}")
