@@ -17,7 +17,7 @@ config = build_config(config)
 # SERIALIZE CONFIG DICT AS STRING (and add quotes to either side s.t. its passed as a param)
 config_str = encode_config(config)
 
-encounter_grouping = config["encounter_grouping"]
+encounter_grouping = config.get("encounter_grouping", False)
 
 # WORKFLOW IS ORGANIZED BY DRIVERS
 

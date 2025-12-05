@@ -134,17 +134,17 @@ def build_config(config):
 
     # ENCOUNTER GROUPING STEP
     encounter_grouping = config.get("encounter_grouping", False)
-    eg_dir = os.path.join(out_dir, config["eg_dirname"])
-    eg_out_path = os.path.join(eg_dir, config["eg_out_file"])
-    eg_logs = os.path.join(log_dir, config["eg_logfile"])
+    eg_dir = os.path.join(out_dir, config.get("eg_dirname", ""))
+    eg_out_path = os.path.join(eg_dir, config.get("eg_out_file", ""))
+    eg_logs = os.path.join(log_dir, config.get("eg_logfile", ""))
 
-    representative_dir = os.path.join(out_dir, config["representative_dirname"])
-    representative_out_path = os.path.join(representative_dir, config["representative_out_file"])
-    representative_logs = os.path.join(log_dir, config["representative_logfile"])
+    representative_dir = os.path.join(out_dir, config.get("representative_dirname", ""))
+    representative_out_path = os.path.join(representative_dir, config.get("representative_out_file", ""))
+    representative_logs = os.path.join(log_dir, config.get("representative_logfile", ""))
 
-    forward_clustering_dir = os.path.join(out_dir, config["forward_clustering_dirname"])
-    forward_clustering_out_path = os.path.join(forward_clustering_dir, config["forward_clustering_out_file"])
-    forward_clustering_logs = os.path.join(log_dir, config["forward_clustering_logfile"])
+    forward_clustering_dir = os.path.join(out_dir, config.get("forward_clustering_dirname", ""))
+    forward_clustering_out_path = os.path.join(forward_clustering_dir, config.get("forward_clustering_out_file", ""))
+    forward_clustering_logs = os.path.join(log_dir, config.get("forward_clustering_logfile", ""))
 
 
     # MIEWID EMBEDDING STEP
@@ -154,15 +154,15 @@ def build_config(config):
 
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
-    encounter_lca_dir = os.path.join(out_dir, config["encounter_lca_dirname"])
-    inter_lca_dir = os.path.join(out_dir, config["inter_lca_dirname"])
+    encounter_lca_dir = os.path.join(out_dir, config.get("encounter_lca_dirname", ""))
+    inter_lca_dir = os.path.join(out_dir, config.get("inter_lca_dirname", ""))
     # lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifiers_probs"])
     lca_subunit_logs = os.path.join(log_dir, config["lca_subunit_logfile"])
-    encounter_lca_subunit_logs = os.path.join(log_dir, config["encounter_lca_subunit_logfile"])
-    inter_lca_subunit_logs = os.path.join(log_dir, config["inter_lca_subunit_logfile"])
+    encounter_lca_subunit_logs = os.path.join(log_dir, config.get("encounter_lca_subunit_logfile", ""))
+    inter_lca_subunit_logs = os.path.join(log_dir, config.get("inter_lca_subunit_logfile", ""))
     lca_logs = os.path.join(log_dir, config["lca_logfile"])
-    encounter_lca_logs = os.path.join(log_dir, config["encounter_lca_logfile"])
-    inter_lca_logs = os.path.join(log_dir, config["inter_lca_logfile"])
+    encounter_lca_logs = os.path.join(log_dir, config.get("encounter_lca_logfile", ""))
+    inter_lca_logs = os.path.join(log_dir, config.get("inter_lca_logfile", ""))
 
     # In video mode, post expects specifically left and right viewpoints. Build the paths to these files here:
     # Format is lca_dir/{prefix}_{left/right}_{suffix}.json

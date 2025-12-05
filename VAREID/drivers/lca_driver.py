@@ -71,6 +71,7 @@ def main(args):
     lca_dir = config["lca_dir"]
     lca_subunit_logs = config["lca_subunit_logs"]
     intra_flag = ""
+    log_path = config["lca_logs"]
     if intra:
         lca_dir = config["encounter_lca_dir"]
         intra_flag = " --intra"

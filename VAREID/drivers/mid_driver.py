@@ -7,7 +7,7 @@ from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 
 def get_inputs(config):
-    if config["encounter_grouping"]:
+    if config.get("encounter_grouping", False):
         return [config["eg_out_path"]]
     elif config["data_video"]:
         return [config["fs_out_path"]]
