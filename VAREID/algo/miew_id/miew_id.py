@@ -89,7 +89,12 @@ def get_chip(row):
     w = row["bbox"][2]
     h = row["bbox"][3]
     theta = 0.0
-    img = cv2.imread(row["image_path"])[:, :, ::-1]
+    try:
+        img = cv2.imread(row["image_path"])[:, :, ::-1]
+    except:
+        print(f"Failed to read image: {row['image_path']}")
+        print(f"Row: {row}")
+        return None
     x2 = x1 + w
     y2 = y1 + h
     xm = (x1 + x2) // 2

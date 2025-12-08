@@ -1,0 +1,15 @@
+# Configuration for encounter grouping algorithm
+
+# Maximum distance in kilometers for images to be considered in the same encounter
+max_distance_km: 1.0
+
+# Maximum time difference in hours for images to be considered in the same encounter  
+max_time_hours: 0.5
+
+# Minimum number of images required to form a cluster (encounter)
+# Set to 1 to allow single-image encounters
+min_samples_per_encounter: 1
+
+# Images are grouped into the same encounter if they are within BOTH the distance 
+# AND time thresholds. This is a simple, interpretable approach where both conditions
+# must be satisfied for images to be considered part of the same encounter.

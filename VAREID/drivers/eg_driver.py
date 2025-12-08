@@ -7,12 +7,11 @@ from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 
 def get_inputs(config):
-    if config.get("encounter_grouping", False):
-        return [config["eg_out_path"]]
-    elif config["data_video"]:
-        return [config["fs_out_path"]]
-    else:
-        return [config["ia_filtered_out_path"]]
+    return [config["fs_out_path"]] if config["data_video"] else [config["ia_filtered_out_path"]]
+
+
+def get_outputs(config):
+    return [config["eg_out_path"]]
 
 
 def main(args):
@@ -22,18 +21,18 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
     
-    input = get_inputs(config)[0]
+    input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
 
-    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model"]} {config["mid_out_path"]} {config["cp_freq"]} {config["mid_cp_path"]}'
+    command = f'python -u -m VAREID.algo.encounter_grouping.encounter_grouping {input} {config["eg_out_path"]}'
 
-    logger = setup_logging(config["mid_logs"])
+    logger = setup_logging(config["eg_logs"])
     log_subprocess(command, logger)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Driver script to run the miew-id embedding component of the pipeline. Generates embeddings for annotations."
+        description="Driver script to run the encounter grouping component of the pipeline. Groups images into encounters based on GPS location and time proximity."
     )
     group = parser.add_mutually_exclusive_group(required=True)
 

@@ -57,10 +57,10 @@ def generate_targets(config):
     else:
         targets.append([config["image_out_path"], config["dt_image_out_path"]])
 
-    if config["lca_separate_viewpoints"]:
-        targets.append([config["post_left_in_path"], config["post_right_in_path"]])
-    else:
-        targets.append([config["lca_out_path"]])
+    # if config["lca_separate_viewpoints"]:
+    #     targets.append([config["post_left_in_path"], config["post_right_in_path"]])
+    # else:
+    targets.append([config["lca_out_path"]])
 
     return targets
 
@@ -137,6 +137,21 @@ def build_config(config):
     # Optional stage1 frame sampling output, generate path iff not none
     fs_stage1_out_path = os.path.join(fs_dir, config["fs_stage1_out_file"]) if config["fs_stage1_out_file"] is not None else None
 
+    # ENCOUNTER GROUPING STEP
+    encounter_grouping = config.get("encounter_grouping", False)
+    eg_dir = os.path.join(out_dir, config.get("eg_dirname", ""))
+    eg_out_path = os.path.join(eg_dir, config.get("eg_out_file", ""))
+    eg_logs = os.path.join(log_dir, config.get("eg_logfile", ""))
+
+    representative_dir = os.path.join(out_dir, config.get("representative_dirname", ""))
+    representative_out_path = os.path.join(representative_dir, config.get("representative_out_file", ""))
+    representative_logs = os.path.join(log_dir, config.get("representative_logfile", ""))
+
+    forward_clustering_dir = os.path.join(out_dir, config.get("forward_clustering_dirname", ""))
+    forward_clustering_out_path = os.path.join(forward_clustering_dir, config.get("forward_clustering_out_file", ""))
+    forward_clustering_logs = os.path.join(log_dir, config.get("forward_clustering_logfile", ""))
+
+
     # MIEWID EMBEDDING STEP
     mid_dir = os.path.join(out_dir, config["mid_dirname"])
     mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
@@ -145,9 +160,15 @@ def build_config(config):
 
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
-    lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifiers_probs"])
+    encounter_lca_dir = os.path.join(out_dir, config.get("encounter_lca_dirname", ""))
+    inter_lca_dir = os.path.join(out_dir, config.get("inter_lca_dirname", ""))
+    # lca_verifiers_probs_path = os.path.join(model_dir, config["lca_verifiers_probs"])
     lca_subunit_logs = os.path.join(log_dir, config["lca_subunit_logfile"])
+    encounter_lca_subunit_logs = os.path.join(log_dir, config.get("encounter_lca_subunit_logfile", ""))
+    inter_lca_subunit_logs = os.path.join(log_dir, config.get("inter_lca_subunit_logfile", ""))
     lca_logs = os.path.join(log_dir, config["lca_logfile"])
+    encounter_lca_logs = os.path.join(log_dir, config.get("encounter_lca_logfile", ""))
+    inter_lca_logs = os.path.join(log_dir, config.get("inter_lca_logfile", ""))
 
     # In video mode, post expects specifically left and right viewpoints. Build the paths to these files here:
     # Format is lca_dir/{prefix}_{left/right}_{suffix}.json
@@ -155,7 +176,9 @@ def build_config(config):
     post_right_in_path = os.path.join(lca_dir, f'{config["lca_out_prefix"]}_right_{config["lca_out_suffix"]}.json')
     # In image mode, we expect the following output to the entire pipeline:
     lca_out_path = os.path.join(lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
-
+    encounter_lca_out_path = os.path.join(encounter_lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
+    inter_lca_out_path = os.path.join(inter_lca_dir, f'{config["lca_out_prefix"]}_{config["lca_out_suffix"]}.json')
+    
     # POST PROCESSING STEP
     post_dir = os.path.join(out_dir, config["post_dirname"])
     post_db_path = os.path.join(post_dir, config["post_db_file"])
@@ -197,17 +220,34 @@ def build_config(config):
     config["fs_out_path"] = fs_out_path
     config["fs_logs"] = fs_logs
     config["fs_stage1_out_path"] = fs_stage1_out_path
+    config["eg_dir"] = eg_dir
+    config["eg_out_path"] = eg_out_path
+    config["eg_logs"] = eg_logs
+    config["representative_dir"] = representative_dir
+    config["representative_logs"] = representative_logs
+    config["representative_out_path"] = representative_out_path
+    config["forward_clustering_dir"] = forward_clustering_dir
+    config["forward_clustering_out_path"] = forward_clustering_out_path
+    config["forward_clustering_logs"] = forward_clustering_logs
     config["mid_dir"] = mid_dir
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs
     config["mid_cp_path"] = mid_cp_path
     config["lca_dir"] = lca_dir
-    config["lca_verifiers_probs_path"] = lca_verifiers_probs_path
+    config["encounter_lca_dir"] = encounter_lca_dir
+    config["inter_lca_dir"] = inter_lca_dir
+    # config["lca_verifiers_probs_path"] = lca_verifiers_probs_path
     config["post_left_in_path"] = post_left_in_path
     config["post_right_in_path"] = post_right_in_path
     config["lca_subunit_logs"] = lca_subunit_logs
     config["lca_logs"] = lca_logs
     config["lca_out_path"] = lca_out_path
+    config["encounter_lca_out_path"] = encounter_lca_out_path
+    config["inter_lca_out_path"] = inter_lca_out_path
+    config["encounter_lca_logs"] = encounter_lca_logs
+    config["inter_lca_logs"] = inter_lca_logs
+    config["encounter_lca_subunit_logs"] = encounter_lca_subunit_logs
+    config["inter_lca_subunit_logs"] = inter_lca_subunit_logs
     config["post_dir"] = post_dir
     config["post_db_path"] = post_db_path
     config["post_left_out_path"] = post_left_out_path

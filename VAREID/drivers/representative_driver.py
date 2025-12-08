@@ -1,5 +1,4 @@
 import argparse
-import subprocess
 
 from VAREID.libraries.io.format_funcs import load_config
 from VAREID.libraries.io.logging import log_subprocess, setup_logging
@@ -7,12 +6,11 @@ from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 
 def get_inputs(config):
-    if config.get("encounter_grouping", False):
-        return [config["eg_out_path"]]
-    elif config["data_video"]:
-        return [config["fs_out_path"]]
-    else:
-        return [config["ia_filtered_out_path"]]
+    return [config["encounter_lca_out_path"]]
+
+
+def get_outputs(config):
+    return [config["representative_out_path"]]
 
 
 def main(args):
@@ -21,19 +19,19 @@ def main(args):
         config = decode_config(args.config)
     else:
         config = build_config(load_config(args.config_path))
-    
-    input = get_inputs(config)[0]
 
-    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model"]} {config["mid_out_path"]} {config["cp_freq"]} {config["mid_cp_path"]}'
+    input = config["encounter_lca_out_path"]
 
-    logger = setup_logging(config["mid_logs"])
+    command = f'python -u -m VAREID.algo.representative_selection.representative_selection {input} {config["representative_out_path"]}'
+
+    logger = setup_logging(config["representative_logs"])
     log_subprocess(command, logger)
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Driver script to run the miew-id embedding component of the pipeline. Generates embeddings for annotations."
+        description="Driver script to run the representative selection component of the pipeline. Selects the annotation with highest IA score as representative for each cluster."
     )
     group = parser.add_mutually_exclusive_group(required=True)
 
@@ -52,4 +50,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args)
-    

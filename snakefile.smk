@@ -9,13 +9,15 @@ from VAREID.libraries.io.workflow_funcs import build_config, generate_targets, e
 from VAREID.libraries.utils import path_from_file
 
 # Default configfile, can supply alternative with --configfile
-configfile: "config.yaml"
+configfile: "config_GGR.yaml"
 
 # BUILD THE CONFIG FILE
 config = build_config(config)
 
 # SERIALIZE CONFIG DICT AS STRING (and add quotes to either side s.t. its passed as a param)
 config_str = encode_config(config)
+
+encounter_grouping = config.get("encounter_grouping", False)
 
 # WORKFLOW IS ORGANIZED BY DRIVERS
 
@@ -112,11 +114,51 @@ rule miew_id:
     shell:
         "python -m VAREID.drivers.mid_driver --config {config_str}"
 
+if encounter_grouping:
+    rule encounter_grouping:
+        input:
+            config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
+        output:
+            config["eg_out_path"]
+        shell:
+            "python -m VAREID.drivers.eg_driver --config {config_str}"
 
-rule lca:
-    input:
-        *get_lca_inputs(config)
-    output:
-        *get_lca_outputs(config)
-    shell:
-        "python -m VAREID.drivers.lca_driver --config {config_str}"
+    rule encounter_lca:
+        input:
+            *get_lca_inputs(config, intra=True)
+        output:
+            *get_lca_outputs(config, intra=True)
+        shell:
+            "python -m VAREID.drivers.lca_driver --config {config_str} --intra"
+
+    rule get_representative:
+        input:
+            config["encounter_lca_out_path"]
+        output:
+            config["representative_out_path"]
+        shell:
+            "python -m VAREID.drivers.representative_driver --config {config_str}"
+
+    rule inter_lca:
+        input:
+            *get_lca_inputs(config, inter=True)
+        output:
+            *get_lca_outputs(config, inter=True)
+        shell:
+            "python -m VAREID.drivers.lca_driver --config {config_str} --inter"
+
+    rule forward_clustering:
+        input:
+            config["inter_lca_out_path"]
+        output:
+            *get_lca_outputs(config)
+        shell:
+            "python -m VAREID.drivers.forward_clustering_driver --config {config_str}"
+else:
+    rule lca:
+        input:
+            *get_lca_inputs(config)
+        output:
+            *get_lca_outputs(config)
+        shell:
+            "python -m VAREID.drivers.lca_driver --config {config_str}"
