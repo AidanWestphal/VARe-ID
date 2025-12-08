@@ -24,7 +24,7 @@ def main(args):
     
     input = get_inputs(config)[0]
 
-    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model"]} {config["mid_out_path"]}'
+    command = f'python -u -m VAREID.algo.miew_id.miew_id {input} {config["mid_model"]} {config["mid_out_path"]} {config["cp_freq"]} {config["mid_cp_path"]}'
 
     logger = setup_logging(config["mid_logs"])
     log_subprocess(command, logger)

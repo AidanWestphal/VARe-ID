@@ -89,6 +89,7 @@ def build_config(config):
     # MAJOR OUTPUT DIRECTORIES
     image_dir = os.path.join(out_dir, config["image_dirname"])
     log_dir = os.path.join(out_dir, config["log_dirname"])
+    cp_dir = os.path.join(out_dir, config["cp_dir"])
 
     # IMPORT STEP
     image_out_path = os.path.join(out_dir, config["image_out_file"])
@@ -101,6 +102,7 @@ def build_config(config):
     dt_video_out_path = os.path.join(dt_dir, config["dt_video_out_file"])
     dt_image_out_path = os.path.join(dt_dir, config["dt_image_out_file"])
     dt_logs = os.path.join(log_dir, config["dt_logfile"])
+    dt_cp_path = os.path.join(cp_dir, config["dt_cpname"])
 
     # If a GT file was provided, build it to a path, otherwise set path to none
     dt_gt_path = os.path.join(dt_dir, config["dt_gt_file"]) if config["dt_gt_file"] is not None else None
@@ -110,12 +112,14 @@ def build_config(config):
     si_dir = os.path.join(out_dir, config["si_dirname"])
     si_out_path = os.path.join(si_dir, config["si_out_file"])
     si_logs = os.path.join(log_dir, config["si_logfile"])
+    si_cp_path = os.path.join(cp_dir, config["si_cpname"])
 
     # VIEWPOINT CLASSIFICATION STEP
     vc_dir = os.path.join(out_dir, config["vc_dirname"])
     vc_model_path = os.path.join(model_dir, config["vc_model"])
     vc_out_path = os.path.join(vc_dir, config["vc_out_file"])
     vc_logs = os.path.join(log_dir, config["vc_logfile"])
+    vc_cp_path = os.path.join(cp_dir, config["vc_cpname"])
 
     # IDENTIFIABLE ANNOTATION CLASSIFICATION STEP
     ia_dir = os.path.join(out_dir, config["ia_dirname"])
@@ -123,6 +127,7 @@ def build_config(config):
     ia_out_path = os.path.join(ia_dir, config["ia_out_file"])
     ia_filtered_out_path = os.path.join(ia_dir, config["ia_filtered_out_file"])
     ia_logs = os.path.join(log_dir, config["ia_logfile"])
+    ia_cp_path = os.path.join(cp_dir, config["ia_cpname"])
 
     # FRAME SAMPLING STEP
     fs_dir = os.path.join(out_dir, config["fs_dirname"])
@@ -151,6 +156,7 @@ def build_config(config):
     mid_dir = os.path.join(out_dir, config["mid_dirname"])
     mid_out_path = os.path.join(mid_dir, config["mid_out_file"])
     mid_logs = os.path.join(log_dir, config["mid_logfile"])
+    mid_cp_path = os.path.join(cp_dir, config["mid_cpname"])
 
     # LCA STEP
     lca_dir = os.path.join(out_dir, config["lca_dirname"])
@@ -192,20 +198,24 @@ def build_config(config):
     config["dt_video_out_path"] = dt_video_out_path
     config["dt_image_out_path"] = dt_image_out_path
     config["dt_logs"] = dt_logs
+    config["dt_cp_path"] = dt_cp_path
     config["dt_gt_path"] = dt_gt_path
     config["dt_filtered_out_path"] = dt_filtered_out_path
     config["si_dir"] = si_dir
     config["si_out_path"] = si_out_path
     config["si_logs"] = si_logs
+    config["si_cp_path"] = si_cp_path
     config["vc_dir"] = vc_dir
     config["vc_model_path"] = vc_model_path
     config["vc_out_path"] = vc_out_path
     config["vc_logs"] = vc_logs
+    config["vc_cp_path"] = vc_cp_path
     config["ia_dir"] = ia_dir
     config["ia_model_path"] = ia_model_path
     config["ia_out_path"] = ia_out_path
     config["ia_filtered_out_path"] = ia_filtered_out_path
     config["ia_logs"] = ia_logs
+    config["ia_cp_path"] = ia_cp_path
     config["fs_dir"] = fs_dir
     config["fs_out_path"] = fs_out_path
     config["fs_logs"] = fs_logs
@@ -222,6 +232,7 @@ def build_config(config):
     config["mid_dir"] = mid_dir
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs
+    config["mid_cp_path"] = mid_cp_path
     config["lca_dir"] = lca_dir
     config["encounter_lca_dir"] = encounter_lca_dir
     config["inter_lca_dir"] = inter_lca_dir
