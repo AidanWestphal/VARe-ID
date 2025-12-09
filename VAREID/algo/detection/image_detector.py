@@ -62,6 +62,8 @@ def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
                             "detection_class": int(box.cls.item()),
                             "tracking_id": tracking_id,
                             "timestamp": image["time_posix"],
+                            "gps_lat": image["gps_lat"],
+                            "gps_lon": image["gps_lon"],
                             "image_path": image["uri_original"],
                         }
                     )
