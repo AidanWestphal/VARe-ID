@@ -184,6 +184,172 @@ def visualize_image_by_index(idx):
     return img, annotation_text
 
 
+#######################################################################
+
+
+import gradio as gr
+from collections import defaultdict
+
+
+grouped = {
+    uri: df[df["uri"] == uri].reset_index(drop=True)
+    for uri in df["uri"].unique()
+}
+
+uris = list(grouped.keys())
+
+
+state = {
+    "idx": 0,
+    "box_states": defaultdict(dict),  # uri -> box_idx -> "green"/"blue"
+    "missed": defaultdict(list),       # uri -> list of (x,y)
+}
+
+
+def render_image():
+    uri = uris[state["idx"]]
+    rows = grouped[uri]
+
+    img = cv2.imread(uri)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    h, w, _ = img.shape
+
+    for i, row in rows.iterrows():
+        bbox = np.array(row["bbox"]).astype(int)
+        x1, y1, bw, bh = bbox
+        x2, y2 = x1 + bw, y1 + bh
+
+        # Initialize state
+        if i not in state["box_states"][uri]:
+            # Positive census = green, negative = blue
+            state["box_states"][uri][i] = "green" if row["annotations_census"] else "blue"
+
+        color = (0,255,0) if state["box_states"][uri][i] == "green" else (0,0,255)
+        img = cv2.rectangle(img, (x1,y1), (x2,y2), color, 4)
+
+        # Annotation text
+        y_offset = y1 - 10 if y1 > 20 else y2 + 30
+        text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
+        img = cv2.putText(
+            img, text, (x1, y_offset),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2
+        )
+
+    # Draw missed detections
+    for (x,y) in state["missed"][uri]:
+        img = cv2.circle(img, (x,y), 8, (255,0,0), -1)
+
+    return img
+
+'''
+def toggle_box(evt: gr.SelectData):
+    uri = uris[state["idx"]]
+    x, y = evt.index
+
+    rows = grouped[uri]
+    for i, row in rows.iterrows():
+        x1,y1,w,h = row["bbox"]
+        if x1 <= x <= x1+w and y1 <= y <= y1+h:
+            cur = state["box_states"][uri][i]
+            state["box_states"][uri][i] = "blue" if cur == "green" else "green"
+            break
+
+    return render_image()
+
+
+def add_missed(evt: gr.SelectData):
+    uri = uris[state["idx"]]
+    state["missed"][uri].append(evt.index)
+    return render_image()
+'''
+
+def handle_click(evt: gr.SelectData, mode):
+    if evt.index is None:
+        return render_image()
+
+    # Guard against None events
+    if evt is None:
+        return render_image()
+
+    uri = uris[state["idx"]]
+    x, y = evt.index
+
+    if mode == "Edit Boxes":
+        rows = grouped[uri]
+        for i, row in rows.iterrows():
+            x1, y1, w, h = row["bbox"]
+            if x1 <= x <= x1 + w and y1 <= y <= y1 + h:
+                cur = state["box_states"][uri][i]
+                state["box_states"][uri][i] = (
+                    "blue" if cur == "green" else "green"
+                )
+                break
+
+    elif mode == "Missed Detection":
+        state["missed"][uri].append((x, y))
+
+    return render_image()
+
+
+def next_img():
+    state["idx"] = min(state["idx"] + 1, len(uris)-1)
+    return render_image()
+
+def prev_img():
+    state["idx"] = max(state["idx"] - 1, 0)
+    return render_image()
+
+
+def compute_stats():
+    TP = FP = FN = 0
+
+    for uri, boxes in state["box_states"].items():
+        rows = grouped[uri]
+        for i, final in boxes.items():
+            started_green = rows.loc[i, "annotations_census"]
+            if started_green and final == "green":
+                TP += 1
+            elif started_green and final == "blue":
+                FP += 1
+            elif (not started_green) and final == "green":
+                FN += 1
+
+        FN += len(state["missed"][uri])
+
+    return f"TP: {TP}\nFP: {FP}\nFN: {FN}"
+
+
+with gr.Blocks() as demo:
+    img = gr.Image(label="Annotated Image", interactive=True)
+    mode = gr.Radio(["Edit Boxes", "Missed Detection"], value="Edit Boxes")
+
+    with gr.Row():
+        prev_btn = gr.Button("Previous")
+        next_btn = gr.Button("Next")
+
+    stats_btn = gr.Button("Compute Stats")
+    stats_out = gr.Textbox()
+
+    img.select(
+        fn=handle_click,
+        inputs=mode,
+        outputs=img
+    )
+
+
+    prev_btn.click(prev_img, outputs=img)
+    next_btn.click(next_img, outputs=img)
+    stats_btn.click(compute_stats, outputs=stats_out)
+
+    demo.load(render_image, outputs=img)
+
+demo.launch(share=True)
+
+
+
+#######################################################################
+'''
 
 import gradio as gr
 
@@ -300,3 +466,4 @@ with gr.Blocks() as demo:
     finish_btn.click(finish, state, summary)
 
 demo.launch(share=True)
+'''
