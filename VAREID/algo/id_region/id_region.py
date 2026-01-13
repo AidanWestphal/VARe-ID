@@ -157,12 +157,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "out_json_path", type=str, help="The full path to the output json file"
     )
-    parser.add_argument(
-        "cp_freq", type=int, help="The checkpoint frequency for safe exiting"
-    )
-    parser.add_argument(
-        "cp_path", type=str, help="The checkpoint path for safe exiting"
-    )
+    
     args = parser.parse_args()
 
     main(args)

@@ -96,6 +96,14 @@ rule ia_filtering:
     shell:
         "python -m VAREID.drivers.iaf_driver --config {config_str}"
 
+rule id_region:
+    input:
+        config["ia_filtered_out_path"]
+    output:
+        config["id_region_out"]
+    shell:
+        "python -m VAREID.drivers.iaf_driver --config {config_str}"
+
 
 rule frame_sampling:
     input:

@@ -63,6 +63,11 @@ ia_filtered_out_file: "ia_filtered_annots.json"
 ia_logfile: "ia_classify_and_filter.txt"
 ia_cpname: "ia_cp.pkl"
 
+# Identifiable region step fields
+id_region_dirname: "id_region"
+id_region_model: "finetuned_yolo.pt"
+id_region_out: "id_regions.json"
+
 # Frame sampling step fields
 fs_dirname: "frame_sampling"
 fs_out_file: "fs_annots.json"

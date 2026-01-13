@@ -11,10 +11,10 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    command = f'python -u -m VAREID.algo.id_region.id_region {config["ia_filtered_out_file"]} {config["id_region_out"]}'
+    command = f'python -u -m VAREID.algo.id_region.id_region {config["ia_filtered_out_file"]} VAREID/models/{config["id_region_model"]} {config["id_region_out"]}'
 
-    # logger = setup_logging(config["import_logs"])
-    # log_subprocess(command, logger)
+    logger = setup_logging(config["id_region_logs"])
+    log_subprocess(command, logger)
 
 
 if __name__ == "__main__":
