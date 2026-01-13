@@ -37,6 +37,7 @@ if VIDEO_MODE:
 else:
     image_metadata = metadata["images"]
 
+
 uri_list = []
 uri_uuid_mapping = {}
 for image in image_metadata:
@@ -45,9 +46,31 @@ for image in image_metadata:
 
 # Step 2: Get the list of appropriate URIs to display
 
+
+if ANNOT_METHOD == "all":
+    images = uri_list
+
+elif IMAGE_PATHS is not None:
+    #df = df[df["uri"].isin(IMAGE_PATHS)]
+    images_input = [path for path in IMAGE_PATHS if isinstance(path,str)]
+    images = list(set(images_input) & set(uri_list))
+
+elif NUM_IMAGES is not None:
+    #num = min(NUM_IMAGES, len(df))
+    #df = df.sample(n=num)
+    rands = np.random.choice(len(uri_list), NUM_IMAGES, replace=False)
+    images = list(np.array(uri_list)[rands])
+
+else:
+    raise Exception("Invalid inputs. Must specify either num_images, image_paths, or all.")
+
+
+
 # GET THE ANNOTATIONS CORRESPONDING TO EACH URI
-images = uri_list
+
+
 images_df = pd.DataFrame(images, columns=["uri"])
+
 images_df["image_uuid"] = images_df["uri"].map(uri_uuid_mapping)
 
 with open(ANNOTS_DIR, "r") as f:
@@ -56,22 +79,12 @@ with open(ANNOTS_DIR, "r") as f:
 
 # Inner join because we can process this via a select w/ no returns
 df = pd.merge(images_df, annot_df, on="image_uuid", how="inner")
+print("images_df:", len(images_df))
+print("annots_df:", len(images_df))
+print("df:", len(images_df))
+
 if SORT_BY is not None:
     df = df.sort_values(by=SORT_BY)
-
-if ANNOT_METHOD == "all":
-    pass  # keep all rows
-
-elif IMAGE_PATHS is not None:
-    df = df[df["uri"].isin(IMAGE_PATHS)]
-
-elif NUM_IMAGES is not None:
-    num = min(NUM_IMAGES, len(df))
-    df = df.sample(n=num)
-
-else:
-    raise Exception("Invalid inputs. Must specify either num_images, image_paths, or all.")
-
 
 print(len(df))
 
@@ -196,6 +209,7 @@ grouped = {
     for uri in df["uri"].unique()
 }
 
+print("grouped:", len(grouped))
 uris = list(grouped.keys())
 
 
@@ -207,62 +221,101 @@ state = {
 
 
 def render_image():
-    uri = uris[state["idx"]]
+    idx = state["idx"]
+    uri = uris[idx]
     rows = grouped[uri]
 
     img = cv2.imread(uri)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+    total = len(uris)
+
+
     h, w, _ = img.shape
 
+    # ============================
+    # 🔹 Draw image UUID header
+    # ============================
+    image_uuid = rows.loc[0, "image_uuid"]
+
+    header_height = 60
+    header_color = (30, 30, 30)  # dark gray
+    text_color = (255, 255, 255)
+
+    img = cv2.rectangle(
+        img,
+        (0, 0),
+        (w, header_height),
+        header_color,
+        -1
+    )
+
+    cv2.putText(
+        img,
+        f"Image UUID: {image_uuid}",
+        (15, 42),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.1,
+        text_color,
+        2,
+        cv2.LINE_AA
+    )
+
+    # ============================
+    # Bounding boxes
+    # ============================
     for i, row in rows.iterrows():
         bbox = np.array(row["bbox"]).astype(int)
         x1, y1, bw, bh = bbox
         x2, y2 = x1 + bw, y1 + bh
 
-        # Initialize state
         if i not in state["box_states"][uri]:
-            # Positive census = green, negative = blue
-            state["box_states"][uri][i] = "green" if row["annotations_census"] else "blue"
+            state["box_states"][uri][i] = (
+                "green" if row["annotations_census"] else "blue"
+            )
 
         color = (0,255,0) if state["box_states"][uri][i] == "green" else (0,0,255)
+
         img = cv2.rectangle(img, (x1,y1), (x2,y2), color, 4)
 
         # Annotation text
-        y_offset = y1 - 10 if y1 > 20 else y2 + 30
+        y_offset = max(y1 - 10, header_height + 25)
         text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
+
         img = cv2.putText(
-            img, text, (x1, y_offset),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2
+            img,
+            text,
+            (x1, y_offset),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            color,
+            2,
+            cv2.LINE_AA
         )
 
-    # Draw missed detections
-    for (x,y) in state["missed"][uri]:
-        img = cv2.circle(img, (x,y), 8, (255,0,0), -1)
+    # ============================
+    # Missed detections
+    # ============================
+    for (x, y) in state["missed"][uri]:
+        img = cv2.circle(img, (x, y), 8, (255, 0, 0), -1)
 
-    return img
+    
+    TP, FP, FN = compute_image_stats(uri)
 
-'''
-def toggle_box(evt: gr.SelectData):
-    uri = uris[state["idx"]]
-    x, y = evt.index
+    header_text = (
+        f"### 🆔 Image UUID: `{image_uuid}`  \n"
+        f"### 🖼️ Image: **{idx + 1} / {total}**"
+    )
 
-    rows = grouped[uri]
-    for i, row in rows.iterrows():
-        x1,y1,w,h = row["bbox"]
-        if x1 <= x <= x1+w and y1 <= y <= y1+h:
-            cur = state["box_states"][uri][i]
-            state["box_states"][uri][i] = "blue" if cur == "green" else "green"
-            break
+    stats_text = (
+        f"### 📊 Per-Image Stats\n"
+        f"- ✅ **TP:** {TP}\n"
+        f"- ❌ **FP:** {FP}\n"
+        f"- ⚠️ **FN:** {FN}"
+    )
 
-    return render_image()
+    return img, header_text, stats_text
 
-
-def add_missed(evt: gr.SelectData):
-    uri = uris[state["idx"]]
-    state["missed"][uri].append(evt.index)
-    return render_image()
-'''
 
 def handle_click(evt: gr.SelectData, mode):
     if evt.index is None:
@@ -301,169 +354,72 @@ def prev_img():
     return render_image()
 
 
-def compute_stats():
+def compute_image_stats(uri):
+    TP = FP = FN = 0
+    rows = grouped[uri]
+
+    for i, row in rows.iterrows():
+        started_green = bool(row["annotations_census"])
+        final_state = state["box_states"][uri].get(i)
+
+        if started_green and final_state == "green":
+            TP += 1
+        elif started_green and final_state == "blue":
+            FP += 1
+        elif (not started_green) and final_state == "green":
+            FN += 1
+
+    FN += len(state["missed"][uri])
+    return TP, FP, FN
+
+def compute_global_stats():
     TP = FP = FN = 0
 
-    for uri, boxes in state["box_states"].items():
-        rows = grouped[uri]
-        for i, final in boxes.items():
-            started_green = rows.loc[i, "annotations_census"]
-            if started_green and final == "green":
-                TP += 1
-            elif started_green and final == "blue":
-                FP += 1
-            elif (not started_green) and final == "green":
-                FN += 1
+    for uri in uris:
+        t, f, n = compute_image_stats(uri)
+        TP += t
+        FP += f
+        FN += n
 
-        FN += len(state["missed"][uri])
-
-    return f"TP: {TP}\nFP: {FP}\nFN: {FN}"
+    return (
+        f"## Overall Dataset Statistics\n"
+        f"- **TP:** {TP}\n"
+        f"- **FP:** {FP}\n"
+        f"- **FN:** {FN}"
+    )
 
 
 with gr.Blocks() as demo:
-    img = gr.Image(label="Annotated Image", interactive=True)
+    header_display = gr.Markdown()
+    
+    img = gr.Image(interactive=True)
+
+    
+
+
     mode = gr.Radio(["Edit Boxes", "Missed Detection"], value="Edit Boxes")
+
+    stats_display = gr.Markdown()
 
     with gr.Row():
         prev_btn = gr.Button("Previous")
         next_btn = gr.Button("Next")
 
     stats_btn = gr.Button("Compute Stats")
-    stats_out = gr.Textbox()
+    stats_out = gr.Markdown()
+
+    demo.load(render_image, outputs=[img, header_display, stats_display])
+
+    prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
+    next_btn.click(next_img, outputs=[img, header_display, stats_display])
+    stats_btn.click(compute_global_stats, outputs=stats_out)
+
 
     img.select(
         fn=handle_click,
         inputs=mode,
-        outputs=img
+        outputs=[img, header_display, stats_display]
     )
 
-
-    prev_btn.click(prev_img, outputs=img)
-    next_btn.click(next_img, outputs=img)
-    stats_btn.click(compute_stats, outputs=stats_out)
-
-    demo.load(render_image, outputs=img)
 
 demo.launch(share=True)
-
-
-
-#######################################################################
-'''
-
-import gradio as gr
-
-def init_state():
-    return {
-        "idx": 0,
-        "labels": [None] * NUM_IMAGES
-    }
-
-def load_current(state):
-    img, annot_text = visualize_image_by_index(state["idx"])
-    status = f"Image {state['idx'] + 1} / {NUM_IMAGES}"
-
-    label = state["labels"][state["idx"]]
-    verdict = "Not reviewed" if label is None else ("❌ Error" if label else "✅ Correct")
-
-    return img, annot_text, status, verdict, state
-
-
-def mark_error(state):
-    state["labels"][state["idx"]] = True
-    return load_current(state)
-
-def mark_correct(state):
-    state["labels"][state["idx"]] = False
-    return load_current(state)
-
-def next_image(state):
-    if state["idx"] < NUM_IMAGES - 1:
-        state["idx"] += 1
-    return load_current(state)
-
-def prev_image(state):
-    if state["idx"] > 0:
-        state["idx"] -= 1
-    return load_current(state)
-
-def finish(state):
-    error_uuids = []
-
-    for i, v in enumerate(state["labels"]):
-        if v is True:
-            uri = URI_LIST[i]
-            uuid = df[df["uri"] == uri]["image_uuid"].iloc[0]
-            error_uuids.append(uuid)
-
-    summary = (
-        f"Total images: {NUM_IMAGES}\n"
-        f"Errors: {len(error_uuids)}\n"
-        f"Correct: {state['labels'].count(False)}\n"
-        f"Unreviewed: {state['labels'].count(None)}\n\n"
-        f"Image UUIDs with errors:\n{error_uuids}"
-    )
-
-    return summary
-
-
-
-with gr.Blocks() as demo:
-    gr.Markdown("## Annotation Error Review Tool")
-
-    state = gr.State(init_state())
-
-    with gr.Row():
-        image = gr.Image(label="Annotated Image")
-        annotation_box = gr.Textbox(
-            label="Annotation Details",
-            lines=15,
-            interactive=False
-        )
-
-    status = gr.Textbox(label="Progress")
-    verdict = gr.Textbox(label="Current Label")
-
-    with gr.Row():
-        prev_btn = gr.Button("⬅️ Previous")
-        next_btn = gr.Button("➡️ Next")
-
-    with gr.Row():
-        correct_btn = gr.Button("✅ Correct")
-        error_btn = gr.Button("❌ Error")
-
-    finish_btn = gr.Button("Finish Review")
-    summary = gr.Textbox(label="Summary", lines=10)
-
-    demo.load(
-        load_current,
-        state,
-        [image, annotation_box, status, verdict, state]
-    )
-
-    prev_btn.click(
-        prev_image,
-        state,
-        [image, annotation_box, status, verdict, state]
-    )
-    next_btn.click(
-        next_image,
-        state,
-        [image, annotation_box, status, verdict, state]
-    )
-
-    correct_btn.click(
-        mark_correct,
-        state,
-        [image, annotation_box, status, verdict, state]
-    )
-    error_btn.click(
-        mark_error,
-        state,
-        [image, annotation_box, status, verdict, state]
-    )
-
-    finish_btn.click(finish, state, summary)
-
-demo.launch(share=True)
-'''
