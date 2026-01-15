@@ -69,6 +69,9 @@ class CustomImageDataset(Dataset):
 
         return image
     
+    def get_path(self, idx):
+        return self.img_data.iloc[idx]["image_path"]
+    
 def load_model(model_path, device):
     model = YOLO(model_path)
     model.to(device)
@@ -86,12 +89,15 @@ def expand_bbox_columns(df):
     return df
 
 def get_new_bbox(model, image):
-    results = model.predict(image, classes=[0])
+    results = model.predict(image, classes=[0], conf=0.0)
     first_image_results = results[0]
 
     # Access the bounding boxes data
     boxes = first_image_results.boxes
     # Find the bounding box with the highest confidence
+    
+    x1, y1, x2, y2 = -1, -1, -1, -1
+    
     if len(boxes) > 0:
         # Sort detections by confidence in descending order
         # The .data attribute provides access to the underlying tensor data
@@ -126,14 +132,18 @@ def main(args):
         model = load_model(args.model_checkpoint_path, device)
         
     for idx in range(len(dataset)):
-        df.iloc[idx]["bbox"] = xyxy_to_xywh(list(get_new_bbox(model, dataset[idx])))
+        new_bbox = xyxy_to_xywh(list(get_new_bbox(model, dataset[idx])))
+        if new_bbox[0] != -1:
+            df.iloc[idx]["bbox"] = new_bbox
+        else:
+            print(f"No bbox generated for {dataset.get_path(idx)}")
     
     annotations = split_dataframe(df)
     save_json(annotations,args.out_json_path)
     
-    # Clean up checkpoint
-    if os.path.exists(args.cp_path):
-        os.remove(args.cp_path)
+    # # Clean up checkpoint
+    # if os.path.exists(args.cp_path):
+    #     os.remove(args.cp_path)
 
     print(
         f"JSON with new bbox: {args.out_json_path}"

@@ -60,6 +60,7 @@ def generate_targets(config):
     # if config["lca_separate_viewpoints"]:
     #     targets.append([config["post_left_in_path"], config["post_right_in_path"]])
     # else:
+    targets.append(config["idr_out_path"])
     targets.append([config["lca_out_path"]])
 
     return targets
@@ -171,6 +172,11 @@ def build_config(config):
     forward_clustering_out_path = os.path.join(forward_clustering_dir, config.get("forward_clustering_out_file", ""))
     forward_clustering_logs = os.path.join(log_dir, config.get("forward_clustering_logfile", ""))
 
+    # ID REGION STEP
+    idr_dir = os.path.join(out_dir, config["id_region_dirname"])
+    idr_model_path = os.path.join(model_dir, config['id_region_model'])
+    idr_out_path = os.path.join(idr_dir, config['id_region_out'])
+    idr_logs = os.path.join(log_dir, config["id_logfile"])
 
     # MIEWID EMBEDDING STEP
     mid_dir = os.path.join(out_dir, config["mid_dirname"])
@@ -249,6 +255,10 @@ def build_config(config):
     config["forward_clustering_dir"] = forward_clustering_dir
     config["forward_clustering_out_path"] = forward_clustering_out_path
     config["forward_clustering_logs"] = forward_clustering_logs
+    config['idr_dir'] = idr_dir
+    config['idr_model_path'] = idr_model_path
+    config['idr_out_path'] = idr_out_path
+    config['idr_logs'] = idr_logs
     config["mid_dir"] = mid_dir
     config["mid_out_path"] = mid_out_path
     config["mid_logs"] = mid_logs

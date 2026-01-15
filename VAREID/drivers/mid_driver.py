@@ -12,7 +12,7 @@ def get_inputs(config):
     elif config["data_video"]:
         return [config["fs_out_path"]]
     else:
-        return [config["ia_filtered_out_path"]]
+        return [config["idr_out_path"]]
 
 
 def main(args):

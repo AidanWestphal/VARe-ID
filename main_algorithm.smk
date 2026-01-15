@@ -80,13 +80,14 @@ rule id_region:
     input:
         config["ia_filtered_out_path"]
     output:
-        config["id_region_out"]
+        config["idr_out_path"]
     shell:
-        "python -m VAREID.drivers.iaf_driver --config {config_str}"
+        "python -m VAREID.drivers.id_region_driver --config {config_str}"
+
 
 rule frame_sampling:
     input:
-        config["ia_filtered_out_path"]
+        config["idr_out_path"]
     output:
         config["fs_out_path"]
     shell:

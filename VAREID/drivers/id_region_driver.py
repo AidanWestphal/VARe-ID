@@ -11,9 +11,9 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    command = f'python -u -m VAREID.algo.id_region.id_region {config["ia_filtered_out_file"]} VAREID/models/{config["id_region_model"]} {config["id_region_out"]}'
+    command = f'python -u -m VAREID.algo.id_region.id_region {config["ia_filtered_out_path"]} {config["idr_model_path"]} {config["idr_out_path"]}'
 
-    logger = setup_logging(config["id_region_logs"])
+    logger = setup_logging(config["idr_logs"])
     log_subprocess(command, logger)
 
 
