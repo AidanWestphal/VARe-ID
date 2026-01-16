@@ -252,7 +252,7 @@ def compute_image_stats(uri):
     FN += len(state["missed"][uri])
     return TP, FP, FN
 
-def compute_global_stats():
+def compute_global_metrics():
     TP = FP = FN = 0
 
     for uri in uris:
@@ -261,12 +261,25 @@ def compute_global_stats():
         FP += f
         FN += n
 
+    eps = 1e-8  # numerical safety
+
+    precision = TP / (TP + FP + eps)
+    recall = TP / (TP + FN + eps)
+    f1 = 2 * TP / (2 * TP + FP + FN + eps)
+    accuracy = TP / (TP + FP + FN + eps)
+
     return (
-        f"## Overall Dataset Statistics\n"
-        f"- **TP:** {TP}\n"
-        f"- **FP:** {FP}\n"
-        f"- **FN:** {FN}"
+        f"## 📈 Overall Dataset Metrics\n\n"
+        f"- ✅ **True Positives (TP):** {TP}\n"
+        f"- ❌ **False Positives (FP):** {FP}\n"
+        f"- ⚠️ **False Negatives (FN):** {FN}\n\n"
+        f"### 📊 Performance\n"
+        f"- **Accuracy:** {accuracy:.4f}\n"
+        f"- **Precision:** {precision:.4f}\n"
+        f"- **Recall:** {recall:.4f}\n"
+        f"- **F1 Score:** {f1:.4f}"
     )
+
 
 
 with gr.Blocks() as demo:
@@ -292,7 +305,8 @@ with gr.Blocks() as demo:
 
     prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
     next_btn.click(next_img, outputs=[img, header_display, stats_display])
-    stats_btn.click(compute_global_stats, outputs=stats_out)
+    stats_btn.click(compute_global_metrics, outputs=stats_out)
+
 
 
     img.select(
