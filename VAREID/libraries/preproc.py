@@ -4,7 +4,7 @@ import hashlib
 import time
 import re
 import uuid
-from os.path import basename, splitext
+from os.path import basename, splitext, getsize
 from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
 
@@ -406,6 +406,10 @@ def parse_imageinfo(gpath):
     gpath = gpath.strip()
 
     try:
+        # Check for corrupt files
+        if getsize(gpath) == 0:
+            return None, None
+        
         # Open image with EXIF support to get time, GPS, and the original orientation
         pil_img = Image.open(gpath, "r")
 
