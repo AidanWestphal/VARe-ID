@@ -60,17 +60,23 @@ class CustomImageDataset(Dataset):
         # Crop the image according to bbox
         image = image.crop((int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])))
 
-        # Flip the image if left viewpoint
-        if "left" in self.img_data.iloc[idx]["viewpoint"]:
-            image = F.hflip(image)
+        # # Flip the image if left viewpoint
+        # if "left" in self.img_data.iloc[idx]["viewpoint"]:
+        #     image = F.hflip(image)
 
-        if self.transform:
-            image = self.transform(image)
+        # if self.transform:
+        #     image = self.transform(image)
 
         return image
     
     def get_path(self, idx):
         return self.img_data.iloc[idx]["image_path"]
+    
+    def get_original_img(self, idx):
+        # Read image as PIL Image
+        image = Image.open(self.img_data.iloc[idx]["image_path"]).convert("RGB")
+
+        return image
     
 def load_model(model_path, device):
     model = YOLO(model_path)
@@ -88,8 +94,8 @@ def expand_bbox_columns(df):
     df = pd.concat([df, bbox_data], axis=1)
     return df
 
-def get_new_bbox(model, image):
-    results = model.predict(image, classes=[0], conf=0.0)
+def get_new_bbox(model, image, conf=0.0, x_scale=1, y_scale=1):
+    results = model.predict(image, classes=[0], conf=conf)
     first_image_results = results[0]
 
     # Access the bounding boxes data
@@ -109,6 +115,17 @@ def get_new_bbox(model, image):
         
         # Extract coordinates (xyxy format: top-left x, top-left y, bottom-right x, bottom-right y)
         x1, y1, x2, y2 = map(int, top_box_data[:4])
+        
+    if x_scale != 1:
+        w = x2-x1
+        x_m = (x1+x2)//2
+        x1 = x_m - int((w/2)*x_scale)
+        x2 = x_m + int((w/2)*x_scale)
+    if y_scale != 1:
+        h = y2-y1
+        y_m = (y1+x2)//2
+        y1 = y_m - int((h/2)*y_scale)
+        y2 = y_m + int((h/2)*y_scale)
         
     return (x1, y1, x2, y2)
 
@@ -132,9 +149,12 @@ def main(args):
         model = load_model(args.model_checkpoint_path, device)
         
     for idx in range(len(dataset)):
-        new_bbox = xyxy_to_xywh(list(get_new_bbox(model, dataset[idx])))
+        new_bbox = get_new_bbox(model, dataset[idx], conf=config['confidence_threshold'], x_scale=config['x_scale'], y_scale=config['y_scale'])
+        new_bbox = xyxy_to_xywh(list(new_bbox))
         if new_bbox[0] != -1:
-            df.iloc[idx]["bbox"] = new_bbox
+            original_x1, original_y1 = df.iloc[idx]["bbox"][0], df.iloc[idx]["bbox"][1]
+            adjusted_bbox = [new_bbox[0]+original_x1, new_bbox[1]+original_y1, new_bbox[2], new_bbox[3]]
+            df.at[idx, "bbox"] = adjusted_bbox
         else:
             print(f"No bbox generated for {dataset.get_path(idx)}")
     
@@ -154,7 +174,7 @@ def main(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Run finetuned YOLOv8n to extract focused images of mew-id region"
+        description="Run finetuned YOLOv8n to extract focused images of id region"
     )
     parser.add_argument(
         "in_json_path",

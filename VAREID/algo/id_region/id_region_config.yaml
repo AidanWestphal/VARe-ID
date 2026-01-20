@@ -2,4 +2,4 @@ x_scale: 1
 
 y_scale: 1
 
-confidence_thrreshold: 0.0
+confidence_threshold: 0.6
