@@ -17,7 +17,7 @@ def main(args):
         
     input = config["dt_video_out_path"] if config["data_video"] else config["dt_image_out_path"]
 
-    command = f'python -u -m VAREID.algo.species_identification.species_identifier {input} {config["si_dir"]} {config["si_out_path"]}'
+    command = f'python -u -m VAREID.algo.species_identification.species_identifier {input} {config["si_dir"]} {config["si_out_path"]} {config["cp_freq"]} {config["si_cp_path"]}'
     logger = setup_logging(config["si_logs"])
     log_subprocess(command, logger)
 
