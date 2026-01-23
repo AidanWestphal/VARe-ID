@@ -92,11 +92,17 @@ grouped = {
 
 uris = list(grouped.keys())
 
-
+'''
 state = {
     "idx": 0,
     "box_states": defaultdict(dict),  # uri -> box_idx -> "green"/"blue"
     "missed": defaultdict(list),       # uri -> list of (x,y)
+}'''
+
+state = {
+    "idx": 0,
+    "box_errors": defaultdict(dict),  # uri -> box_idx -> True/False
+    "missed": defaultdict(list)
 }
 
 
@@ -144,7 +150,7 @@ def render_image():
     # ============================
     # Bounding boxes
     # ============================
-    for i, row in rows.iterrows():
+    '''for i, row in rows.iterrows():
         bbox = np.array(row["bbox"]).astype(int)
         x1, y1, bw, bh = bbox
         x2, y2 = x1 + bw, y1 + bh
@@ -157,7 +163,36 @@ def render_image():
         color = (0,255,0) if state["box_states"][uri][i] == "green" else (0,0,255)
 
         img = cv2.rectangle(img, (x1,y1), (x2,y2), color, 4)
+'''
+    for i, row in rows.iterrows():
+        bbox = np.array(row["bbox"]).astype(int)
+        x1, y1, bw, bh = bbox
+        x2, y2 = x1 + bw, y1 + bh
 
+        started_green = bool(row["annotations_census"])
+        base_color = (0,255,0) if started_green else (0,0,255)
+
+        # draw normal box
+        img = cv2.rectangle(img, (x1,y1), (x2,y2), base_color, 4)
+
+        '''
+        # draw RED X if marked wrong
+        if state["box_errors"][uri].get(i, False):
+            cv2.line(img, (x1,y1), (x2,y2), (255,0,0), 6)
+            cv2.line(img, (x1,y2), (x2,y1), (255,0,0), 6)
+        '''
+
+        if state["box_errors"][uri].get(i, False):
+
+            size = 72   # size of small X
+            thickness = 8
+
+            cx, cy = x2 + 8, y1 + 8   # top-right corner offset
+
+            cv2.line(img, (cx-size, cy-size), (cx+size, cy+size), (255,0,0), thickness)
+            cv2.line(img, (cx-size, cy+size), (cx+size, cy-size), (255,0,0), thickness)
+
+    
         # Annotation text
         y_offset = max(y1 - 10, header_height + 25)
         text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
@@ -168,7 +203,7 @@ def render_image():
             (x1, y_offset),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
-            color,
+            base_color,
             2,
             cv2.LINE_AA
         )
@@ -196,7 +231,7 @@ def render_image():
 
     return img, header_text, stats_text
 
-
+'''
 def handle_click(evt: gr.SelectData, mode):
     if evt.index is None:
         return render_image()
@@ -223,6 +258,34 @@ def handle_click(evt: gr.SelectData, mode):
         state["missed"][uri].append((x, y))
 
     return render_image()
+'''
+def handle_click(evt: gr.SelectData, mode):
+    if evt is None:
+        return render_image()
+
+    uri = uris[state["idx"]]
+    x, y = evt.index
+
+    if mode == "Edit Boxes":
+        rows = grouped[uri]
+
+        for i, row in rows.iterrows():
+            x1,y1,w,h = row["bbox"]
+            if x1 <= x <= x1+w and y1 <= y <= y1+h:
+                cur = state["box_errors"][uri].get(i, False)
+                state["box_errors"][uri][i] = not cur
+                break
+
+    elif mode == "Missed Detection":
+        state["missed"][uri].append((x,y))
+
+    return render_image()
+
+def undo_missed():
+    uri = uris[state["idx"]]
+    if state["missed"][uri]:
+        state["missed"][uri].pop()
+    return render_image()
 
 
 def next_img():
@@ -240,17 +303,19 @@ def compute_image_stats(uri):
 
     for i, row in rows.iterrows():
         started_green = bool(row["annotations_census"])
-        final_state = state["box_states"][uri].get(i)
+        is_error = state["box_errors"][uri].get(i, False)
 
-        if started_green and final_state == "green":
+        if started_green and not is_error:
             TP += 1
-        elif started_green and final_state == "blue":
+        elif started_green and is_error:
             FP += 1
-        elif (not started_green) and final_state == "green":
+        elif (not started_green) and is_error:
             FN += 1
 
     FN += len(state["missed"][uri])
+
     return TP, FP, FN
+
 
 def compute_global_metrics():
     TP = FP = FN = 0
@@ -281,16 +346,48 @@ def compute_global_metrics():
     )
 
 
+def save_results():
+    records = []
+
+    for uri in uris:
+        rows = grouped[uri]
+        uuid = rows.loc[0, "image_uuid"]
+
+        TP, FP, FN = compute_image_stats(uri)
+
+        records.append({
+            "image_uuid": uuid,
+            "TP": TP,
+            "FP": FP,
+            "FN": FN
+        })
+
+    df_out = pd.DataFrame(records)
+    save_path = "annotation_results.csv"
+    df_out.to_csv(save_path, index=False)
+
+    return save_path
+
+
 
 with gr.Blocks() as demo:
     header_display = gr.Markdown()
     
     img = gr.Image(interactive=True)
 
+    with gr.Row():
+        mode = gr.Radio(
+        ["Edit Boxes", "Missed Detection"],
+        value="Edit Boxes",
+        scale=4
+        )
+
+        undo_btn = gr.Button(
+            "↩ Undo",
+            scale=1,        # makes it small
+            min_width=90   # keeps compact size
+        )
     
-
-
-    mode = gr.Radio(["Edit Boxes", "Missed Detection"], value="Edit Boxes")
 
     stats_display = gr.Markdown()
 
@@ -301,13 +398,17 @@ with gr.Blocks() as demo:
     stats_btn = gr.Button("Compute Stats")
     stats_out = gr.Markdown()
 
+    save_btn = gr.Button("Save Per-Image Results CSV")
+    file_output = gr.File()
+
     demo.load(render_image, outputs=[img, header_display, stats_display])
+
+    undo_btn.click(undo_missed, outputs=[img, header_display, stats_display])
 
     prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
     next_btn.click(next_img, outputs=[img, header_display, stats_display])
     stats_btn.click(compute_global_metrics, outputs=stats_out)
-
-
+    save_btn.click(save_results, outputs=file_output)
 
     img.select(
         fn=handle_click,
