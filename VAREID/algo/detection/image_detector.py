@@ -40,13 +40,16 @@ def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
             results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
 
             for result in results:
-                # Check if any detection in the image is a person (class 0)
-                if any(box.cls.item() == 0 for box in result.boxes):
-                    # Skip this entire image
-                    continue
+                # Obtain all human detections
+                humans = [box for box in result.boxes if box.cls.item() == 0]
 
                 # Process the image only if no person was detected
                 for box in result.boxes:
+                    
+                    # Make sure the annotation has no intersection with a human
+                    if any(calculate_iou(h.xyxy[0], box.xyxy[0]) > 0 for h in humans):
+                        continue
+
                     x1 = box.xyxy[0][0].item()
                     y1 = box.xyxy[0][1].item()
                     x2 = box.xyxy[0][2].item()
