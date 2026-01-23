@@ -7,7 +7,7 @@
 
 # The file path (dir) to save your output to
 data_dir_out: ~
-# The file path (dir) to read data from
+# The file path (dir) to read data from`
 data_dir_in: ~
 # True/False describing whether the data is in video format (True) or image format (False)
 data_video: True
@@ -62,6 +62,12 @@ ia_out_file: "ia_annots.json"
 ia_filtered_out_file: "ia_filtered_annots.json"
 ia_logfile: "ia_classify_and_filter.txt"
 ia_cpname: "ia_cp.pkl"
+
+# Identifiable region step fields
+id_region_dirname: "id_region"
+id_region_model: "finetuned_yolo.pt"
+id_region_out: "id_regions.json"
+id_logfile: "idr_logs.txt"
 
 # Frame sampling step fields
 fs_dirname: "frame_sampling"
