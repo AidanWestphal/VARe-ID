@@ -15,6 +15,7 @@ with open('config_visualize.yaml', 'r') as f:
     
 IMG_DIR = config["img_dir"]
 ANNOTS_DIR = config["annots_dir"]
+SAVE_DIR = config["save_dir"]
 FIELDS = config['desired_fields']
 FULL_IMAGE = config['full_image']
 SORT_BY = config['sort_by']
@@ -22,6 +23,7 @@ VIDEO_MODE = config['data_video']
 ANNOT_METHOD = config['annot_method']
 IMAGE_PATHS = config['image_paths']
 NUM_IMAGES = config['num_images']
+
 
 
 with open(ANNOTS_DIR, 'r') as file:
@@ -92,13 +94,6 @@ grouped = {
 
 uris = list(grouped.keys())
 
-'''
-state = {
-    "idx": 0,
-    "box_states": defaultdict(dict),  # uri -> box_idx -> "green"/"blue"
-    "missed": defaultdict(list),       # uri -> list of (x,y)
-}'''
-
 state = {
     "idx": 0,
     "box_errors": defaultdict(dict),  # uri -> box_idx -> True/False
@@ -150,20 +145,7 @@ def render_image():
     # ============================
     # Bounding boxes
     # ============================
-    '''for i, row in rows.iterrows():
-        bbox = np.array(row["bbox"]).astype(int)
-        x1, y1, bw, bh = bbox
-        x2, y2 = x1 + bw, y1 + bh
 
-        if i not in state["box_states"][uri]:
-            state["box_states"][uri][i] = (
-                "green" if row["annotations_census"] else "blue"
-            )
-
-        color = (0,255,0) if state["box_states"][uri][i] == "green" else (0,0,255)
-
-        img = cv2.rectangle(img, (x1,y1), (x2,y2), color, 4)
-'''
     for i, row in rows.iterrows():
         bbox = np.array(row["bbox"]).astype(int)
         x1, y1, bw, bh = bbox
@@ -231,34 +213,7 @@ def render_image():
 
     return img, header_text, stats_text
 
-'''
-def handle_click(evt: gr.SelectData, mode):
-    if evt.index is None:
-        return render_image()
 
-    # Guard against None events
-    if evt is None:
-        return render_image()
-
-    uri = uris[state["idx"]]
-    x, y = evt.index
-
-    if mode == "Edit Boxes":
-        rows = grouped[uri]
-        for i, row in rows.iterrows():
-            x1, y1, w, h = row["bbox"]
-            if x1 <= x <= x1 + w and y1 <= y <= y1 + h:
-                cur = state["box_states"][uri][i]
-                state["box_states"][uri][i] = (
-                    "blue" if cur == "green" else "green"
-                )
-                break
-
-    elif mode == "Missed Detection":
-        state["missed"][uri].append((x, y))
-
-    return render_image()
-'''
 def handle_click(evt: gr.SelectData, mode):
     if evt is None:
         return render_image()
@@ -345,9 +300,8 @@ def compute_global_metrics():
         f"- **F1 Score:** {f1:.4f}"
     )
 
-
-def save_results():
-    records = []
+def save_results_json():
+    results = []
 
     for uri in uris:
         rows = grouped[uri]
@@ -355,25 +309,31 @@ def save_results():
 
         TP, FP, FN = compute_image_stats(uri)
 
-        records.append({
-            "image_uuid": uuid,
-            "TP": TP,
-            "FP": FP,
-            "FN": FN
+        results.append({
+            "image_uuid": str(uuid),
+            "TP": int(TP),
+            "FP": int(FP),
+            "FN": int(FN)
         })
 
-    df_out = pd.DataFrame(records)
-    save_path = "annotation_results.csv"
-    df_out.to_csv(save_path, index=False)
+    save_path = SAVE_DIR
+
+    with open(save_path, "w") as f:
+        json.dump(results, f, indent=2)
 
     return save_path
 
 
 
+
 with gr.Blocks() as demo:
     header_display = gr.Markdown()
-    
-    img = gr.Image(interactive=True)
+    '''
+    img = gr.Image(
+        interactive=True,
+        height=650,      # adjust if you want smaller/larger
+        show_label=False
+    )
 
     with gr.Row():
         mode = gr.Radio(
@@ -398,8 +358,31 @@ with gr.Blocks() as demo:
     stats_btn = gr.Button("Compute Stats")
     stats_out = gr.Markdown()
 
-    save_btn = gr.Button("Save Per-Image Results CSV")
+    save_btn = gr.Button("Save Per-Image Results")
     file_output = gr.File()
+
+    '''
+    with gr.Row():
+
+        with gr.Column(scale=4):
+            img = gr.Image(
+                interactive=True,
+                height=650,
+                show_label=False
+            )
+
+        with gr.Column(scale=1):
+            header_display = gr.Markdown()
+            stats_display = gr.Markdown()
+            mode = gr.Radio(["Edit Boxes", "Missed Detection"])
+            next_btn = gr.Button("Next")
+            prev_btn = gr.Button("Previous")
+            undo_btn = gr.Button("↩ Undo")
+
+            stats_btn = gr.Button("Compute Metrics")
+            save_btn = gr.Button("Save JSON")
+    file_output = gr.File()
+
 
     demo.load(render_image, outputs=[img, header_display, stats_display])
 
@@ -407,8 +390,8 @@ with gr.Blocks() as demo:
 
     prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
     next_btn.click(next_img, outputs=[img, header_display, stats_display])
-    stats_btn.click(compute_global_metrics, outputs=stats_out)
-    save_btn.click(save_results, outputs=file_output)
+    stats_btn.click(compute_global_metrics, outputs=stats_btn)
+    save_btn.click(save_results_json, outputs=file_output)
 
     img.select(
         fn=handle_click,
@@ -417,4 +400,9 @@ with gr.Blocks() as demo:
     )
 
 
-demo.launch(share=True)
+#demo.launch(share=True)
+demo.launch(share=True,
+    allowed_paths=[
+        SAVE_DIR
+    ]
+)
