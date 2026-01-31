@@ -140,8 +140,40 @@ def predict_labels_new(dataset, model, device, cp_int, cp_path, batch_size, num_
                 # Convert probabilities to labels based on a threshold
                 threshold = 0.5
                 discrete_labels = (preds_sigmoid > threshold).int()
+
+                B = discrete_labels.shape[0]
+
+                #"back", "front", "left", "right", "up"
+                for i in range(B):
+                    dl = discrete_labels[i]
+                    ps = preds_sigmoid[i]
+
+                    # left / right conflict
+                    if dl[2] == 1 and dl[3] == 1:
+                        dl[2] = int(ps[2] > ps[3])
+                        dl[3] = int(ps[3] > ps[2])
+
+                    # front / back conflict
+                    if dl[0] == 1 and dl[1] == 1:
+                        dl[0] = int(ps[0] > ps[1])
+                        dl[1] = int(ps[1] > ps[0])
+
+                    # no viewpoint at all
+                    if dl.sum() == 0:
+                        dl[ps.argmax()] = 1
+
+                    # up-only case → force left or right
+                    if torch.equal(dl, torch.tensor([0, 0, 0, 0, 1], device=dl.device)):
+                        if ps[2] > ps[3]:
+                            dl[2] = 1
+                        elif ps[3] > ps[2]:
+                            dl[3] = 1
+                        else:    
+                            pass
+                            
                 batch_labels = discrete_labels.detach().cpu().numpy().tolist()
                 all_labels.extend(batch_labels)
+                
 
     # Concatenate all batch results
     return np.array(all_preds), np.array(all_labels)
@@ -223,7 +255,7 @@ def main(args):
 
     print("Running the model...")
     
-    _, all_discrete_labels = predict_labels_new(
+    sigmoid_outputs, all_discrete_labels = predict_labels_new(
         dataset=test_ds,
         model=model,
         device=device,
@@ -232,7 +264,18 @@ def main(args):
         batch_size=config["valid_bs"],
         num_workers=config["num_workers"]
     )
+    
+    preds_sigmoid_df = pd.DataFrame(
+        sigmoid_outputs,
+        columns=config["label_cols"]
+    )
 
+    filtered_test["viewpoint_sigmoid"] = preds_sigmoid_df.apply(
+        lambda row: row.to_dict(), axis=1
+    )
+
+    other_test["viewpoint_sigmoid"] = [{} for _ in range(len(other_test))]
+    
     print("Processing the model predictions...")
     # Create a DataFrame from the binary labels
     preds_bin = pd.DataFrame(all_discrete_labels, columns=config["label_cols"])
