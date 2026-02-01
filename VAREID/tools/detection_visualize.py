@@ -8,7 +8,7 @@ import yaml
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import gradio as gr
 from collections import defaultdict
-
+import random
 
 with open('VAREID/tools/config_visualize.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.SafeLoader)
@@ -25,15 +25,29 @@ ANNOT_METHOD = config['annot_method']
 IMAGE_PATHS = config['image_paths']
 NUM_IMAGES = config['num_images']
 
-with open(IMG_DIR, 'r') as file:
-    metadata = json.load(file)
+with open(os.path.join(ANNOTS_DIR, 'detector/img_annots.json'), 'r') as file:
+        # Use json.load() to convert the file content to a Python dictionary
+        data = json.load(file)
+        
+subset = random.sample(data['images'], 250)
+subset_uuids = [thing['uuid'] for thing in subset]
 
-# Step 1: Get the list of all valid image uris from metadata file
-if VIDEO_MODE:
-    image_metadata = []
-    [image_metadata.extend(video["frame data"]) for video in metadata["videos"]]
-else:
-    image_metadata = metadata["images"]
+with open(os.path.join(ANNOTS_DIR, 'image_data.json'), 'r') as file:
+        # Use json.load() to convert the file content to a Python dictionary
+        data = json.load(file)
+
+new_subset = []
+for thing in data['images']:
+    if thing['uuid'] in subset_uuids:
+        new_subset.append(thing)
+metadata = new_subset
+
+# # Step 1: Get the list of all valid image uris from metadata file
+# if VIDEO_MODE:
+#     image_metadata = []
+#     [image_metadata.extend(video["frame data"]) for video in metadata["videos"]]
+# else:
+#     image_metadata = metadata["images"]
 
 
 uri_list = []
