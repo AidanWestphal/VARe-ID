@@ -74,7 +74,7 @@ with open(ANNOTS_DIR, "r") as f:
     annot_df = pd.DataFrame(data["annotations"])
 
 # Inner join because we can process this via a select w/ no returns
-df = pd.merge(images_df, annot_df, on="image_uuid", how="inner")
+df = pd.merge(images_df, annot_df, on="image_uuid", how="left")
 
 if SORT_BY is not None:
     df = df.sort_values(by=SORT_BY)
@@ -147,75 +147,79 @@ def render_image():
         cv2.LINE_AA
     )
 
-    # ============================
-    # Bounding boxes
-    # ============================
-    '''for i, row in rows.iterrows():
-        bbox = np.array(row["bbox"]).astype(int)
-        x1, y1, bw, bh = bbox
-        x2, y2 = x1 + bw, y1 + bh
+    try:
+        # ============================
+        # Bounding boxes
+        # ============================
+        '''for i, row in rows.iterrows():
+            bbox = np.array(row["bbox"]).astype(int)
+            x1, y1, bw, bh = bbox
+            x2, y2 = x1 + bw, y1 + bh
 
-        if i not in state["box_states"][uri]:
-            state["box_states"][uri][i] = (
-                "green" if row["annotations_census"] else "blue"
+            if i not in state["box_states"][uri]:
+                state["box_states"][uri][i] = (
+                    "green" if row["annotations_census"] else "blue"
+                )
+
+            color = (0,255,0) if state["box_states"][uri][i] == "green" else (0,0,255)
+
+            img = cv2.rectangle(img, (x1,y1), (x2,y2), color, 4)
+    '''
+        for i, row in rows.iterrows():
+            bbox = np.array(row["bbox"]).astype(int)
+            x1, y1, bw, bh = bbox
+            x2, y2 = x1 + bw, y1 + bh
+
+            started_green = bool(row["annotations_census"])
+            base_color = (0,255,0) if started_green else (0,0,255)
+
+            # draw normal box
+            img = cv2.rectangle(img, (x1,y1), (x2,y2), base_color, 4)
+
+            '''
+            # draw RED X if marked wrong
+            if state["box_errors"][uri].get(i, False):
+                cv2.line(img, (x1,y1), (x2,y2), (255,0,0), 6)
+                cv2.line(img, (x1,y2), (x2,y1), (255,0,0), 6)
+            '''
+
+            if state["box_errors"][uri].get(i, False):
+
+                size = 72   # size of small X
+                thickness = 8
+
+                cx, cy = x2 + 8, y1 + 8   # top-right corner offset
+
+                cv2.line(img, (cx-size, cy-size), (cx+size, cy+size), (255,0,0), thickness)
+                cv2.line(img, (cx-size, cy+size), (cx+size, cy-size), (255,0,0), thickness)
+
+        
+            # Annotation text
+            y_offset = max(y1 - 10, header_height + 25)
+            text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
+
+            img = cv2.putText(
+                img,
+                text,
+                (x1, y_offset),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                base_color,
+                2,
+                cv2.LINE_AA
             )
 
-        color = (0,255,0) if state["box_states"][uri][i] == "green" else (0,0,255)
+        # ============================
+        # Missed detections
+        # ============================
+        for (x, y) in state["missed"][uri]:
+            img = cv2.circle(img, (x, y), 8, (255, 0, 0), -1)
 
-        img = cv2.rectangle(img, (x1,y1), (x2,y2), color, 4)
-'''
-    for i, row in rows.iterrows():
-        bbox = np.array(row["bbox"]).astype(int)
-        x1, y1, bw, bh = bbox
-        x2, y2 = x1 + bw, y1 + bh
-
-        started_green = bool(row["annotations_census"])
-        base_color = (0,255,0) if started_green else (0,0,255)
-
-        # draw normal box
-        img = cv2.rectangle(img, (x1,y1), (x2,y2), base_color, 4)
-
-        '''
-        # draw RED X if marked wrong
-        if state["box_errors"][uri].get(i, False):
-            cv2.line(img, (x1,y1), (x2,y2), (255,0,0), 6)
-            cv2.line(img, (x1,y2), (x2,y1), (255,0,0), 6)
-        '''
-
-        if state["box_errors"][uri].get(i, False):
-
-            size = 72   # size of small X
-            thickness = 8
-
-            cx, cy = x2 + 8, y1 + 8   # top-right corner offset
-
-            cv2.line(img, (cx-size, cy-size), (cx+size, cy+size), (255,0,0), thickness)
-            cv2.line(img, (cx-size, cy+size), (cx+size, cy-size), (255,0,0), thickness)
-
-    
-        # Annotation text
-        y_offset = max(y1 - 10, header_height + 25)
-        text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
-
-        img = cv2.putText(
-            img,
-            text,
-            (x1, y_offset),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            base_color,
-            2,
-            cv2.LINE_AA
-        )
-
-    # ============================
-    # Missed detections
-    # ============================
-    for (x, y) in state["missed"][uri]:
-        img = cv2.circle(img, (x, y), 8, (255, 0, 0), -1)
-
-    
-    TP, FP, FN = compute_image_stats(uri)
+        
+        TP, FP, FN = compute_image_stats(uri)
+        
+    except:
+        TP, FP, FN = 0, 0, 0
 
     header_text = (
         f"### 🆔 Image UUID: `{image_uuid}`  \n"
