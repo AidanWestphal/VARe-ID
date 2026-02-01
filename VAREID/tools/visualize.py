@@ -10,7 +10,7 @@ import gradio as gr
 from collections import defaultdict
 
 
-with open('config_visualize.yaml', 'r') as f:
+with open('VAREID/tools/config_visualize.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.SafeLoader)
     
 IMG_DIR = config["img_dir"]
