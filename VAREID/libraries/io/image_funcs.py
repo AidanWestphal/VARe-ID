@@ -77,8 +77,16 @@ def _compute_image_params(gpath_list, sanitize=True, ensure=True, doctest_mode=F
 
     # Create param_iter
     params_list = []
+    failed_list = []
+
     for gpath_idx in range(len(gpath_list)):
-        params_list.append(preproc.parse_imageinfo(gpath_list[gpath_idx]))
+        param_tup = preproc.parse_imageinfo(gpath_list[gpath_idx])
+
+        if param_tup == (None, None):
+            failed_list.append(gpath_list[gpath_idx])
+        else:
+            params_list.append(param_tup)
+
         if doctest_mode:
             print(
                 "[parse_imageinfo] parsing images [%d/%d]\n"
@@ -93,10 +101,6 @@ def _compute_image_params(gpath_list, sanitize=True, ensure=True, doctest_mode=F
             )
 
     # Error reporting
-    failed_list = [
-        gpath for (gpath, params_) in zip(gpath_list, params_list) if not params_
-    ]
-
     print(
         "\n".join(
             [" ! Failed reading gpath={!r}".format(gpath) for gpath in failed_list]
@@ -794,7 +798,7 @@ def add_images(
 
     colnames = IMAGE_COLNAMES + ("original_path", "location_code")
     params_list = [
-        tuple(params) + (gpath, location_for_names) if params is not None else None
+        tuple(params) + (gpath, location_for_names) if params is not (None, None) else None
         for params, gpath in zip(params_list, gpath_list)
     ]
 
