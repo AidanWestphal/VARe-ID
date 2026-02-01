@@ -139,6 +139,7 @@ def main(args):
     
     data = load_json(args.in_json_path)
     df = join_dataframe(data)
+    df['annotations_census'] = False
     
     # Expand bbox column into separate x, y, w, h columns
     dataset = CustomImageDataset(df)
@@ -155,6 +156,7 @@ def main(args):
             original_x1, original_y1 = df.iloc[idx]["bbox"][0], df.iloc[idx]["bbox"][1]
             adjusted_bbox = [new_bbox[0]+original_x1, new_bbox[1]+original_y1, new_bbox[2], new_bbox[3]]
             df.at[idx, "bbox"] = adjusted_bbox
+            df.at[idx, 'annotations_census'] = True
         else:
             print(f"No bbox generated for {dataset.get_path(idx)}")
     
