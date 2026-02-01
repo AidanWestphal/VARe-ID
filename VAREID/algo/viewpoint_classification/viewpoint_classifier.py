@@ -162,8 +162,8 @@ def predict_labels_new(dataset, model, device, cp_int, cp_path, batch_size, num_
                     if dl.sum() == 0:
                         dl[ps.argmax()] = 1
 
-                    # up-only case → force left or right
-                    if torch.equal(dl, torch.tensor([0, 0, 0, 0, 1], device=dl.device)):
+                    # up-only case or upfront case → force left or right
+                    if torch.equal(dl, torch.tensor([0, 0, 0, 0, 1], device=dl.device)) or torch.equal(dl, torch.tensor([0, 1, 0, 0, 1], device=dl.device)):
                         if ps[2] > ps[3]:
                             dl[2] = 1
                         elif ps[3] > ps[2]:
