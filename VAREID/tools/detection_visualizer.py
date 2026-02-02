@@ -9,30 +9,53 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 import gradio as gr
 from collections import defaultdict
 import random
+import sys
 
-with open('VAREID/tools/config_visualize.yaml', 'r') as f:
-    config = yaml.load(f, Loader=yaml.SafeLoader)
+SEED = None
+NUM_IMAGES = 250
+
+for i, arg in enumerate(sys.argv[1]):
+    if arg == '--seed':
+        if i+1 >= len(sys.argv[1]):
+            raise("flag seed expects integer")
+        try:
+            SEED = int(sys.argv[1][i+1])
+        except:
+            raise("flag seed expects integer")
     
-IMG_DIR = config["img_dir"]
-ANNOTS_DIR = config["annots_dir"]
-IDR_DIR = os.path.join(ANNOTS_DIR, "id_region/id_regions.json")
-IAC_DIR = os.path.join(ANNOTS_DIR, "ia_classifier/ia_annots.json")
-FIELDS = config['desired_fields']
-FULL_IMAGE = config['full_image']
-SORT_BY = config['sort_by']
+    if arg == '--num_images':
+        if i+1 >= len(sys.argv[1]):
+            raise("flag num_images expects integer")
+        try:
+            NUM_IMAGES = int(sys.argv[1][i+1])
+        except:
+            raise("flag num_images expects integer")
+                
+if SEED is not None:
+    random.seed(SEED)
+
+with open('config.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.SafeLoader)
+
+DIR = config['data_dir_out']
+IDR_DIR = os.path.join(DIR, "id_region/id_regions.json")
+IAC_DIR = os.path.join(DIR, config['ia_dirname'], config['ia_out_file'])
+FIELDS = ['viewpoint', 'annotations_census', 'CA_score']
 VIDEO_MODE = config['data_video']
-ANNOT_METHOD = config['annot_method']
-IMAGE_PATHS = config['image_paths']
-NUM_IMAGES = config['num_images']
 
 # Random selection of images
-with open(os.path.join(ANNOTS_DIR, 'detector/img_annots.json'), 'r') as file:
-        # Use json.load() to convert the file content to a Python dictionary
-        data = json.load(file)
+if VIDEO_MODE:
+    with open(os.path.join(DIR, config['dt_dirname'], config['dt_image_out_file']), 'r') as file:
+            # Use json.load() to convert the file content to a Python dictionary
+            data = json.load(file)
+else:
+    with open(os.path.join(DIR, config['dt_dirname'], config['dt_video_out_file']), 'r') as file:
+            # Use json.load() to convert the file content to a Python dictionary
+            data = json.load(file)
         
-subset = random.sample(data['images'], 250)
+subset = random.sample(data['images'], NUM_IMAGES)
 subset_uuids = [thing['uuid'] for thing in subset]
-with open(os.path.join(ANNOTS_DIR, 'image_data.json'), 'r') as file:
+with open(os.path.join(DIR, config["image_out_file"]), 'r') as file:
     data = json.load(file)
 
 new_subset = []
@@ -41,12 +64,6 @@ for thing in data['images']:
         new_subset.append(thing)
 data['images'] = new_subset
 metadata = data
-
-# new_subset = []
-# for thing in data['images']:
-#     if thing['uuid'] in subset_uuids:
-#         new_subset.append(thing)
-# metadata = new_subset
 
 # Step 1: Get the list of all valid image uris from metadata file
 if VIDEO_MODE:
@@ -62,28 +79,8 @@ for image in image_metadata:
     uri_list.append(image["uri_original"])
     uri_uuid_mapping[image["uri_original"]] = image["uuid"]
 
-# Step 2: Get the list of appropriate URIs to display
-
-if ANNOT_METHOD == "all":
-    images = uri_list
-
-elif IMAGE_PATHS is not None:
-    #df = df[df["uri"].isin(IMAGE_PATHS)]
-    images_input = [path for path in IMAGE_PATHS if isinstance(path,str)]
-    images = list(set(images_input) & set(uri_list))
-
-elif NUM_IMAGES is not None:
-    #num = min(NUM_IMAGES, len(df))
-    #df = df.sample(n=num)
-    rands = np.random.choice(len(uri_list), NUM_IMAGES, replace=False)
-    images = list(np.array(uri_list)[rands])
-
-else:
-    raise Exception("Invalid inputs. Must specify either num_images, image_paths, or all.")
-
-
 # GET THE ANNOTATIONS CORRESPONDING TO EACH URI
-images_df = pd.DataFrame(images, columns=["uri"])
+images_df = pd.DataFrame(uri_list, columns=["uri"])
 
 images_df["image_uuid"] = images_df["uri"].map(uri_uuid_mapping)
 
@@ -106,14 +103,8 @@ all_annots_df = pd.concat([idr_annot_df, iac_annot_df], ignore_index=True)
 # Inner join because we can process this via a select w/ no returns
 df = pd.merge(images_df, all_annots_df, on="image_uuid", how="left")
 
-if SORT_BY is not None:
-    df = df.sort_values(by=SORT_BY)
-
-
 # Keep a fixed ordered list of URIs
 URI_LIST = list(df["uri"].unique())
-NUM_IMAGES = len(URI_LIST)
-
 
 grouped = {
     uri: df[df["uri"] == uri].reset_index(drop=True)
