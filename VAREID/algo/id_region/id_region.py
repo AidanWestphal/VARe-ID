@@ -180,11 +180,17 @@ def main(args):
     for idx in tqdm(range(len(dataset))):
         new_bbox = get_new_bbox(model, dataset[idx], conf=config['confidence_threshold'], x_scale=config['x_scale'], y_scale=config['y_scale'])
         new_bbox = xyxy_to_xywh(list(new_bbox))
+        
+        width = new_bbox[2] - new_bbox[0]
+        height = new_bbox[3] - new_bbox[1]
+        aspect_ratio = width/height
+        
         if new_bbox[0] != -1:
             original_x1, original_y1 = df.iloc[idx]["bbox"][0], df.iloc[idx]["bbox"][1]
             adjusted_bbox = [new_bbox[0]+original_x1, new_bbox[1]+original_y1, new_bbox[2], new_bbox[3]]
             df.at[idx, "bbox"] = adjusted_bbox
-            df.at[idx, 'annotations_census'] = True
+            if aspect_ratio > config['AR threshold']:
+                df.at[idx, 'annotations_census'] = True
     
     # Step 3: Apply NMS
     df = df.groupby("image_path").apply(lambda x: apply_nms(x, config["NMS_threshold"]))
