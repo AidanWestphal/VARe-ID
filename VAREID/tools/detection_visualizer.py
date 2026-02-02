@@ -14,20 +14,20 @@ import sys
 SEED = None
 NUM_IMAGES = 250
 
-for i, arg in enumerate(sys.argv[1]):
+for i, arg in enumerate(sys.argv):
     if arg == '--seed':
-        if i+1 >= len(sys.argv[1]):
+        if i+1 >= len(sys.argv):
             raise("flag seed expects integer")
         try:
-            SEED = int(sys.argv[1][i+1])
+            SEED = int(sys.argv[i+1])
         except:
             raise("flag seed expects integer")
     
     if arg == '--num_images':
-        if i+1 >= len(sys.argv[1]):
+        if i+1 >= len(sys.argv):
             raise("flag num_images expects integer")
         try:
-            NUM_IMAGES = int(sys.argv[1][i+1])
+            NUM_IMAGES = int(sys.argv[i+1])
         except:
             raise("flag num_images expects integer")
                 
@@ -45,11 +45,11 @@ VIDEO_MODE = config['data_video']
 
 # Random selection of images
 if VIDEO_MODE:
-    with open(os.path.join(DIR, config['dt_dirname'], config['dt_image_out_file']), 'r') as file:
+    with open(os.path.join(DIR, config['dt_dirname'], config['dt_video_out_file']), 'r') as file:
             # Use json.load() to convert the file content to a Python dictionary
             data = json.load(file)
 else:
-    with open(os.path.join(DIR, config['dt_dirname'], config['dt_video_out_file']), 'r') as file:
+    with open(os.path.join(DIR, config['dt_dirname'], config['dt_image_out_file']), 'r') as file:
             # Use json.load() to convert the file content to a Python dictionary
             data = json.load(file)
         
