@@ -4,6 +4,7 @@ import sys
 import ultralytics
 import uuid
 import warnings
+import cv2  # Added cv2
 
 import pandas as pd
 
@@ -29,6 +30,9 @@ def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
     # STATE GETTER FOR ANNOTATIONS INFO
     state_getter = lambda : {"data": annotations}
 
+    # Initialize QR Detector
+    qr_detector = cv2.QRCodeDetector()
+
     with CheckpointManager(images, state_getter, cp_int, cp_path, len(images)) as cpdata:
 
         # Load current annotations if needed
@@ -36,6 +40,22 @@ def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
             annotations = cpdata.external_state["data"]
 
         for image in tqdm(cpdata, initial=cpdata.iteration, desc=f"Detecting images..."):
+            
+            # --- QR CODE DETECTION START ---
+            # Read the image using OpenCV
+            img_path = image["uri_original"]
+            cv_img = cv2.imread(img_path)
+
+            if cv_img is not None:
+                # Detect QR codes
+                retval, decoded_info, points, _ = qr_detector.detectAndDecodeMulti(cv_img)
+                
+                # If retval is True, a QR code was detected
+                if retval:
+                    # Skip processing this image
+                    continue
+            # --- QR CODE DETECTION END ---
+
             # Detect from the image
             results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
 

@@ -45,7 +45,12 @@ def apply_nms(df, iou_threshold):
     df = df.sort_values("CA_score", ascending=False)
     
     boxes = np.array([xywh_to_xyxy(bbox) for bbox in df["bbox"]])
-    scores = df["CA_score"].values
+    # scores = df["CA_score"].values
+    
+    #filter by aspect ratio
+    heights  = boxes[:, 2] - boxes[:, 0]
+    widths = boxes[:, 3] - boxes[:, 1]
+    scores = widths/heights
     
     boxes = torch.as_tensor(boxes).float()
     scores = torch.as_tensor(scores).float()
