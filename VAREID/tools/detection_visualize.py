@@ -25,29 +25,35 @@ ANNOT_METHOD = config['annot_method']
 IMAGE_PATHS = config['image_paths']
 NUM_IMAGES = config['num_images']
 
+# Random selection of images
 with open(os.path.join(ANNOTS_DIR, 'detector/img_annots.json'), 'r') as file:
         # Use json.load() to convert the file content to a Python dictionary
         data = json.load(file)
         
 subset = random.sample(data['images'], 250)
 subset_uuids = [thing['uuid'] for thing in subset]
-
 with open(os.path.join(ANNOTS_DIR, 'image_data.json'), 'r') as file:
-        # Use json.load() to convert the file content to a Python dictionary
-        data = json.load(file)
+    data = json.load(file)
 
 new_subset = []
 for thing in data['images']:
     if thing['uuid'] in subset_uuids:
         new_subset.append(thing)
-metadata = new_subset
+data['images'] = new_subset
+metadata = data
 
-# # Step 1: Get the list of all valid image uris from metadata file
-# if VIDEO_MODE:
-#     image_metadata = []
-#     [image_metadata.extend(video["frame data"]) for video in metadata["videos"]]
-# else:
-#     image_metadata = metadata["images"]
+# new_subset = []
+# for thing in data['images']:
+#     if thing['uuid'] in subset_uuids:
+#         new_subset.append(thing)
+# metadata = new_subset
+
+# Step 1: Get the list of all valid image uris from metadata file
+if VIDEO_MODE:
+    image_metadata = []
+    [image_metadata.extend(video["frame data"]) for video in metadata["videos"]]
+else:
+    image_metadata = metadata["images"]
 
 
 uri_list = []
