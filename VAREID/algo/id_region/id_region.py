@@ -41,6 +41,27 @@ def xyxy_to_xywh(bbox: list):
     h = y2-y1
     return [x, y, w, h]
 
+def apply_nms(df, iou_threshold):
+    df = df.sort_values("CA_score", ascending=False)
+    
+    boxes = np.array([xywh_to_xyxy(bbox) for bbox in df["bbox"]])
+    scores = df["CA_score"].values
+    
+    boxes = torch.as_tensor(boxes).float()
+    scores = torch.as_tensor(scores).float()
+    
+    keep_positions = nms(boxes, scores, iou_threshold)
+    
+    keep_positions = keep_positions.cpu().numpy()
+    kept_index_labels = df.index[keep_positions]
+    
+    removed_index_labels = df.index.difference(kept_index_labels)
+    
+    if len(removed_index_labels) > 0:
+        df.loc[removed_index_labels, 'annotations_census'] = False
+        
+    return df
+
 class CustomImageDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.img_data = dataframe
@@ -160,6 +181,9 @@ def main(args):
         else:
             print(f"No bbox generated for {dataset.get_path(idx)}")
     
+    # Step 3: Apply NMS
+    df = df.groupby("image_path").apply(lambda x: apply_nms(x, config["NMS_threshold"]))
+
     annotations = split_dataframe(df)
     save_json(annotations,args.out_json_path)
     
