@@ -38,7 +38,7 @@ with open('config.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.SafeLoader)
 
 DIR = config['data_dir_out']
-IDR_DIR = os.path.join(DIR, "id_region/id_regions.json")
+IDR_DIR = os.path.join(DIR, config['id_region_dirname'], config['id_region_out'])
 IAC_DIR = os.path.join(DIR, config['ia_dirname'], config['ia_out_file'])
 FIELDS = ['viewpoint', 'annotations_census', 'CA_score']
 VIDEO_MODE = config['data_video']
