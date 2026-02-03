@@ -2,11 +2,11 @@
 data_video: False
 
 # Image directory
-img_dir: "/fs/ess/PAS2136/ggr_data/results/GGR2024 Summary Statistics/output.json"
+img_dir: ~
 #img_dir: "/fs/ess/PAS2136/ggr_data/results/GZCD_Jan_4/image_data.json"
 
 # Which output annotations to use
-annots_dir: "/fs/ess/PAS2136/ggr_data/results/GGR2024_subset"
+annots_dir: ~
 #annots_dir: "/fs/ess/PAS2136/ggr_data/results/GZCD_Jan_4/ia_classifier/ia_annots.json"
 
 # Which annotation fields to show
