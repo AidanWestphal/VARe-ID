@@ -25,6 +25,8 @@ from VAREID.libraries.io.checkpoint import DataLoaderCheckpointManager
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 from VAREID.libraries.utils import path_from_file
 
+from tqdm import tqdm
+
 def xywh_to_xyxy(bbox: list):
     x, y, w, h = bbox
     x1 = x
@@ -40,6 +42,32 @@ def xyxy_to_xywh(bbox: list):
     w = x2-x1
     h = y2-y1
     return [x, y, w, h]
+
+def apply_nms(df, iou_threshold):
+    df = df.sort_values("CA_score", ascending=False)
+    
+    boxes = np.array([xywh_to_xyxy(bbox) for bbox in df["bbox"]])
+    # scores = df["CA_score"].values
+    
+    #filter by aspect ratio
+    heights  = boxes[:, 3] - boxes[:, 1]
+    widths = boxes[:, 2] - boxes[:, 0]
+    scores = widths/heights
+    
+    boxes = torch.as_tensor(boxes).float()
+    scores = torch.as_tensor(scores).float()
+    
+    keep_positions = nms(boxes, scores, iou_threshold)
+    
+    keep_positions = keep_positions.cpu().numpy()
+    kept_index_labels = df.index[keep_positions]
+    
+    removed_index_labels = df.index.difference(kept_index_labels)
+    
+    if len(removed_index_labels) > 0:
+        df.loc[removed_index_labels, 'annotations_census'] = False
+        
+    return df
 
 class CustomImageDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -95,7 +123,7 @@ def expand_bbox_columns(df):
     return df
 
 def get_new_bbox(model, image, conf=0.0, x_scale=1, y_scale=1):
-    results = model.predict(image, classes=[0], conf=conf)
+    results = model.predict(image, classes=[0], conf=conf, verbose=False)
     first_image_results = results[0]
 
     # Access the bounding boxes data
@@ -139,6 +167,7 @@ def main(args):
     
     data = load_json(args.in_json_path)
     df = join_dataframe(data)
+    df['annotations_census'] = False
     
     # Expand bbox column into separate x, y, w, h columns
     dataset = CustomImageDataset(df)
@@ -148,16 +177,25 @@ def main(args):
         warnings.filterwarnings("ignore", category=UserWarning)
         model = load_model(args.model_checkpoint_path, device)
         
-    for idx in range(len(dataset)):
+    for idx in tqdm(range(len(dataset))):
         new_bbox = get_new_bbox(model, dataset[idx], conf=config['confidence_threshold'], x_scale=config['x_scale'], y_scale=config['y_scale'])
         new_bbox = xyxy_to_xywh(list(new_bbox))
+        
+        if new_bbox[3] > 0:
+            aspect_ratio = new_bbox[2]/new_bbox[3]
+        else:
+            aspect_ratio = 0
+        
         if new_bbox[0] != -1:
             original_x1, original_y1 = df.iloc[idx]["bbox"][0], df.iloc[idx]["bbox"][1]
             adjusted_bbox = [new_bbox[0]+original_x1, new_bbox[1]+original_y1, new_bbox[2], new_bbox[3]]
             df.at[idx, "bbox"] = adjusted_bbox
-        else:
-            print(f"No bbox generated for {dataset.get_path(idx)}")
+            if aspect_ratio > config['AR_threshold']:
+                df.at[idx, 'annotations_census'] = True
     
+    # Step 3: Apply NMS
+    df = df.groupby("image_path").apply(lambda x: apply_nms(x, config["NMS_threshold"]))
+
     annotations = split_dataframe(df)
     save_json(annotations,args.out_json_path)
     

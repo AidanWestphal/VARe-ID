@@ -8,29 +8,62 @@ import yaml
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import gradio as gr
 from collections import defaultdict
+import random
+import sys
 
+SEED = None
+NUM_IMAGES = 250
 
-with open('config_visualize.yaml', 'r') as f:
-    config = yaml.load(f, Loader=yaml.SafeLoader)
+for i, arg in enumerate(sys.argv):
+    if arg == '--seed':
+        if i+1 >= len(sys.argv):
+            raise("flag seed expects integer")
+        try:
+            SEED = int(sys.argv[i+1])
+        except:
+            raise("flag seed expects integer")
     
-IMG_DIR = config["img_dir"]
-ANNOTS_DIR = config["annots_dir"]
-SAVE_DIR = config["save_dir"]
-FIELDS = config['desired_fields']
-FULL_IMAGE = config['full_image']
-SORT_BY = config['sort_by']
+    if arg == '--num_images':
+        if i+1 >= len(sys.argv):
+            raise("flag num_images expects integer")
+        try:
+            NUM_IMAGES = int(sys.argv[i+1])
+        except:
+            raise("flag num_images expects integer")
+                
+if SEED is not None:
+    random.seed(SEED)
+
+with open('config.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.SafeLoader)
+
+DIR = config['data_dir_out']
+IDR_DIR = os.path.join(DIR, config['id_region_dirname'], config['id_region_out'])
+IAC_DIR = os.path.join(DIR, config['ia_dirname'], config['ia_out_file'])
+FIELDS = ['viewpoint', 'annotations_census', 'CA_score']
 VIDEO_MODE = config['data_video']
-ANNOT_METHOD = config['annot_method']
-IMAGE_PATHS = config['image_paths']
-NUM_IMAGES = config['num_images']
 
+# Random selection of images
+if VIDEO_MODE:
+    with open(os.path.join(DIR, config['dt_dirname'], config['dt_video_out_file']), 'r') as file:
+            # Use json.load() to convert the file content to a Python dictionary
+            data = json.load(file)
+else:
+    with open(os.path.join(DIR, config['dt_dirname'], config['dt_image_out_file']), 'r') as file:
+            # Use json.load() to convert the file content to a Python dictionary
+            data = json.load(file)
+        
+subset = random.sample(data['images'], NUM_IMAGES)
+subset_uuids = [thing['uuid'] for thing in subset]
+with open(os.path.join(DIR, config["image_out_file"]), 'r') as file:
+    data = json.load(file)
 
-
-with open(ANNOTS_DIR, 'r') as file:
-    annots = json.load(file)
-
-with open(IMG_DIR, 'r') as file:
-    metadata = json.load(file)
+new_subset = []
+for thing in data['images']:
+    if thing['uuid'] in subset_uuids:
+        new_subset.append(thing)
+data['images'] = new_subset
+metadata = data
 
 # Step 1: Get the list of all valid image uris from metadata file
 if VIDEO_MODE:
@@ -46,46 +79,32 @@ for image in image_metadata:
     uri_list.append(image["uri_original"])
     uri_uuid_mapping[image["uri_original"]] = image["uuid"]
 
-# Step 2: Get the list of appropriate URIs to display
-
-if ANNOT_METHOD == "all":
-    images = uri_list
-
-elif IMAGE_PATHS is not None:
-    #df = df[df["uri"].isin(IMAGE_PATHS)]
-    images_input = [path for path in IMAGE_PATHS if isinstance(path,str)]
-    images = list(set(images_input) & set(uri_list))
-
-elif NUM_IMAGES is not None:
-    #num = min(NUM_IMAGES, len(df))
-    #df = df.sample(n=num)
-    rands = np.random.choice(len(uri_list), NUM_IMAGES, replace=False)
-    images = list(np.array(uri_list)[rands])
-
-else:
-    raise Exception("Invalid inputs. Must specify either num_images, image_paths, or all.")
-
-
 # GET THE ANNOTATIONS CORRESPONDING TO EACH URI
-images_df = pd.DataFrame(images, columns=["uri"])
+images_df = pd.DataFrame(uri_list, columns=["uri"])
 
 images_df["image_uuid"] = images_df["uri"].map(uri_uuid_mapping)
 
-with open(ANNOTS_DIR, "r") as f:
+with open(IDR_DIR, "r") as f:
     data = json.load(f)
-    annot_df = pd.DataFrame(data["annotations"])
+    idr_annot_df = pd.DataFrame(data["annotations"])
+    idr_annot_df["is_secondary"] = False  # Mark as Primary
+
+with open(IAC_DIR, "r") as f:
+    data = json.load(f)
+    iac_annot_df = pd.DataFrame(data["annotations"])
+    iac_annot_df["is_secondary"] = True   # Mark as Secondary
+
+primary_uuids = set(idr_annot_df["uuid"])
+
+iac_annot_df = iac_annot_df[~iac_annot_df["uuid"].isin(primary_uuids)]
+
+all_annots_df = pd.concat([idr_annot_df, iac_annot_df], ignore_index=True)
 
 # Inner join because we can process this via a select w/ no returns
-df = pd.merge(images_df, annot_df, on="image_uuid", how="inner")
-
-if SORT_BY is not None:
-    df = df.sort_values(by=SORT_BY)
-
+df = pd.merge(images_df, all_annots_df, on="image_uuid", how="left")
 
 # Keep a fixed ordered list of URIs
 URI_LIST = list(df["uri"].unique())
-NUM_IMAGES = len(URI_LIST)
-
 
 grouped = {
     uri: df[df["uri"] == uri].reset_index(drop=True)
@@ -93,6 +112,13 @@ grouped = {
 }
 
 uris = list(grouped.keys())
+
+'''
+state = {
+    "idx": 0,
+    "box_states": defaultdict(dict),  # uri -> box_idx -> "green"/"blue"
+    "missed": defaultdict(list),       # uri -> list of (x,y)
+}'''
 
 state = {
     "idx": 0,
@@ -110,8 +136,6 @@ def render_image():
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     total = len(uris)
-
-
     h, w, _ = img.shape
 
     # ============================
@@ -120,16 +144,10 @@ def render_image():
     image_uuid = rows.loc[0, "image_uuid"]
 
     header_height = 60
-    header_color = (30, 30, 30)  # dark gray
+    header_color = (30, 30, 30)
     text_color = (255, 255, 255)
 
-    img = cv2.rectangle(
-        img,
-        (0, 0),
-        (w, header_height),
-        header_color,
-        -1
-    )
+    img = cv2.rectangle(img, (0, 0), (w, header_height), header_color, -1)
 
     cv2.putText(
         img,
@@ -145,39 +163,57 @@ def render_image():
     # ============================
     # Bounding boxes
     # ============================
-
     for i, row in rows.iterrows():
+        # 1. Check validity
+        if not isinstance(row["bbox"], list):
+            continue
+
+        # 2. Get flags
+        is_secondary = row.get("is_secondary", False)
+        census_true = bool(row["annotations_census"])
+
+        # 3. FILTER: If secondary and census is True, DO NOT display.
+        if is_secondary and census_true:
+            continue
+
         bbox = np.array(row["bbox"]).astype(int)
         x1, y1, bw, bh = bbox
         x2, y2 = x1 + bw, y1 + bh
 
-        started_green = bool(row["annotations_census"])
-        base_color = (0,255,0) if started_green else (0,0,255)
+        # 4. Color Logic
+        # Since 'img' was converted to RGB at the top of the function:
+        # Yellow = (255, 255, 0), Green = (0, 255, 0), Red = (255, 0, 0)
+        
+        if is_secondary:
+            # We know census is False here because we skipped True above
+            base_color = (255, 255, 0) # Yellow for Secondary
+        else:
+            # Primary dataset logic remains the same
+            base_color = (0, 255, 0) if census_true else (0, 0, 255)
 
-        # draw normal box
+        # Draw box
         img = cv2.rectangle(img, (x1,y1), (x2,y2), base_color, 4)
 
-        '''
-        # draw RED X if marked wrong
+        # Draw Error X (Manual edits)
         if state["box_errors"][uri].get(i, False):
-            cv2.line(img, (x1,y1), (x2,y2), (255,0,0), 6)
-            cv2.line(img, (x1,y2), (x2,y1), (255,0,0), 6)
-        '''
-
-        if state["box_errors"][uri].get(i, False):
-
-            size = 72   # size of small X
+            size = 72
             thickness = 8
+            cx, cy = x2 + 8, y1 + 8
+            # Blue X
+            cv2.line(img, (cx-size, cy-size), (cx+size, cy+size), (0,0,255), thickness)
+            cv2.line(img, (cx-size, cy+size), (cx+size, cy-size), (0,0,255), thickness)
 
-            cx, cy = x2 + 8, y1 + 8   # top-right corner offset
-
-            cv2.line(img, (cx-size, cy-size), (cx+size, cy+size), (255,0,0), thickness)
-            cv2.line(img, (cx-size, cy+size), (cx+size, cy-size), (255,0,0), thickness)
-
-    
-        # Annotation text
+        # Draw Text
         y_offset = max(y1 - 10, header_height + 25)
-        text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
+        
+        # Helper to safely get field text
+        field_texts = []
+        for f in FIELDS:
+            val = row.get(f, "N/A")
+            if pd.isna(val): val = "N/A"
+            field_texts.append(f"{f}:{val}")
+            
+        text = ", ".join(field_texts)
 
         img = cv2.putText(
             img,
@@ -189,14 +225,12 @@ def render_image():
             2,
             cv2.LINE_AA
         )
-
     # ============================
     # Missed detections
     # ============================
     for (x, y) in state["missed"][uri]:
         img = cv2.circle(img, (x, y), 8, (255, 0, 0), -1)
 
-    
     TP, FP, FN = compute_image_stats(uri)
 
     header_text = (
@@ -213,7 +247,34 @@ def render_image():
 
     return img, header_text, stats_text
 
+'''
+def handle_click(evt: gr.SelectData, mode):
+    if evt.index is None:
+        return render_image()
 
+    # Guard against None events
+    if evt is None:
+        return render_image()
+
+    uri = uris[state["idx"]]
+    x, y = evt.index
+
+    if mode == "Edit Boxes":
+        rows = grouped[uri]
+        for i, row in rows.iterrows():
+            x1, y1, w, h = row["bbox"]
+            if x1 <= x <= x1 + w and y1 <= y <= y1 + h:
+                cur = state["box_states"][uri][i]
+                state["box_states"][uri][i] = (
+                    "blue" if cur == "green" else "green"
+                )
+                break
+
+    elif mode == "Missed Detection":
+        state["missed"][uri].append((x, y))
+
+    return render_image()
+'''
 def handle_click(evt: gr.SelectData, mode):
     if evt is None:
         return render_image()
@@ -225,6 +286,11 @@ def handle_click(evt: gr.SelectData, mode):
         rows = grouped[uri]
 
         for i, row in rows.iterrows():
+            # --- FIX: Skip rows with no bbox ---
+            if not isinstance(row["bbox"], list):
+                continue
+            # -----------------------------------
+            
             x1,y1,w,h = row["bbox"]
             if x1 <= x <= x1+w and y1 <= y <= y1+h:
                 cur = state["box_errors"][uri].get(i, False)
@@ -257,6 +323,11 @@ def compute_image_stats(uri):
     rows = grouped[uri]
 
     for i, row in rows.iterrows():
+        # --- FIX: Skip rows with no bbox ---
+        if not isinstance(row["bbox"], list):
+            continue
+        # -----------------------------------
+
         started_green = bool(row["annotations_census"])
         is_error = state["box_errors"][uri].get(i, False)
 
@@ -300,8 +371,9 @@ def compute_global_metrics():
         f"- **F1 Score:** {f1:.4f}"
     )
 
-def save_results_json():
-    results = []
+
+def save_results():
+    records = []
 
     for uri in uris:
         rows = grouped[uri]
@@ -309,31 +381,25 @@ def save_results_json():
 
         TP, FP, FN = compute_image_stats(uri)
 
-        results.append({
-            "image_uuid": str(uuid),
-            "TP": int(TP),
-            "FP": int(FP),
-            "FN": int(FN)
+        records.append({
+            "image_uuid": uuid,
+            "TP": TP,
+            "FP": FP,
+            "FN": FN
         })
 
-    save_path = SAVE_DIR
-
-    with open(save_path, "w") as f:
-        json.dump(results, f, indent=2)
+    df_out = pd.DataFrame(records)
+    save_path = "annotation_results.csv"
+    df_out.to_csv(save_path, index=False)
 
     return save_path
 
 
 
-
 with gr.Blocks() as demo:
     header_display = gr.Markdown()
-    '''
-    img = gr.Image(
-        interactive=True,
-        height=650,      # adjust if you want smaller/larger
-        show_label=False
-    )
+    
+    img = gr.Image(interactive=True)
 
     with gr.Row():
         mode = gr.Radio(
@@ -358,31 +424,8 @@ with gr.Blocks() as demo:
     stats_btn = gr.Button("Compute Stats")
     stats_out = gr.Markdown()
 
-    save_btn = gr.Button("Save Per-Image Results")
+    save_btn = gr.Button("Save Per-Image Results CSV")
     file_output = gr.File()
-
-    '''
-    with gr.Row():
-
-        with gr.Column(scale=4):
-            img = gr.Image(
-                interactive=True,
-                height=650,
-                show_label=False
-            )
-
-        with gr.Column(scale=1):
-            header_display = gr.Markdown()
-            stats_display = gr.Markdown()
-            mode = gr.Radio(["Edit Boxes", "Missed Detection"])
-            next_btn = gr.Button("Next")
-            prev_btn = gr.Button("Previous")
-            undo_btn = gr.Button("↩ Undo")
-
-            stats_btn = gr.Button("Compute Metrics")
-            save_btn = gr.Button("Save JSON")
-    file_output = gr.File()
-
 
     demo.load(render_image, outputs=[img, header_display, stats_display])
 
@@ -390,8 +433,8 @@ with gr.Blocks() as demo:
 
     prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
     next_btn.click(next_img, outputs=[img, header_display, stats_display])
-    stats_btn.click(compute_global_metrics, outputs=stats_btn)
-    save_btn.click(save_results_json, outputs=file_output)
+    stats_btn.click(compute_global_metrics, outputs=stats_out)
+    save_btn.click(save_results, outputs=file_output)
 
     img.select(
         fn=handle_click,
@@ -400,9 +443,4 @@ with gr.Blocks() as demo:
     )
 
 
-#demo.launch(share=True)
-demo.launch(share=True,
-    allowed_paths=[
-        SAVE_DIR
-    ]
-)
+demo.launch(share=True)

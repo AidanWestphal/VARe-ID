@@ -39,7 +39,7 @@ def detect_videos(video_data, model_path, threshold, sz):
             for result in results:
                 # Check if any detection in the image is a person (class 0)
                 if any(box.cls.item() == 0 for box in result.boxes):
-                    # Skip this entire image
+                    # Skip this entire image if a person is found
                     continue
                 
                 # Iterate over detections in frame and only accept those above threshold
@@ -59,7 +59,7 @@ def detect_videos(video_data, model_path, threshold, sz):
                         "confidence": box.conf.item() if box.conf is not None else -1,
                         "detection_class": int(box.cls.item()) if box.cls is not None else -1,
                         "tracking_id": int(box.id.item()) if box.id is not None else -1,
-                        "timestamp": frame_data["time_posix"],
+                        "timestamp": frame_data["timestamp"] if "timestamp" in frame_data else frame_data.get("time_posix", 0),
                     })
         
         print(f"Finished detecting frames from {vid_name}.")

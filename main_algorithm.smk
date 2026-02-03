@@ -82,7 +82,7 @@ rule id_region:
     output:
         config["idr_out_path"]
     shell:
-        "python -m VAREID.drivers.id_region_driver --config {config_str}"
+        "python -m VAREID.drivers.idr_driver --config {config_str}"
 
 
 rule frame_sampling:
