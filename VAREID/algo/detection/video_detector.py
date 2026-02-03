@@ -22,9 +22,6 @@ def detect_videos(video_data, model_path, threshold, sz):
     videos = video_data["videos"]
     annotations = []
 
-    # Initialize QR Detector
-    qr_detector = cv2.QRCodeDetector()
-
     for vid in videos:
         vid_name = vid["video fname"]
         frames = vid["frame data"]
@@ -36,17 +33,6 @@ def detect_videos(video_data, model_path, threshold, sz):
         for i, frame_data in enumerate(tqdm(frames, desc=f"Detecting frames from {vid_name}...")):
             img = cv2.imread(frame_data["uri"])
             
-            # --- QR CODE DETECTION START ---
-            if img is not None:
-                # Detect QR codes
-                retval, decoded_info, points, _ = qr_detector.detectAndDecodeMulti(img)
-                
-                # If retval is True, a QR code was detected
-                if retval:
-                    # Skip processing this frame
-                    continue
-            # --- QR CODE DETECTION END ---
-
             results = model.track(img, verbose=False, persist=True, imgsz=sz)
 
             # Extract detections and tracking information
