@@ -6,4 +6,4 @@ confidence_threshold: 0.6
 
 NMS_threshold: 0.2
 
-AR threshold: 1
+AR_threshold: 0.9
