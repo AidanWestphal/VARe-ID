@@ -27,6 +27,7 @@ ANNOTATION_COLNAMES = [
     # "occurence_id",  # Removed - should only be in IMAGE_COLNAMES to avoid duplicates
     "intra_cluster_id",
     "representative",
+    "clarity_score"
 ]
 
 # COLUMNS TO BE KEPT IN CATEGORIES (as found in annotations)

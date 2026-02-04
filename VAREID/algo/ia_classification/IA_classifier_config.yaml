@@ -4,5 +4,6 @@ max_log_AR: 1000 # 1.4348566194081924
 batch_size: 32
 species: 'zebra_grevys' # FOR GT DATA FILTERING ONLY
 NMS_threshold: 1 # 1 is off, 0 filters any and all overlap
-viewpoints: ["right", "left", "upright", "upleft", "frontright", "frontleft", "backright", "backleft", "upfrontright", "upfrontleft", "upbackright", "upbackleft"]
+viewpoints: ["right", "upright", "frontright", "backright", "upfrontright", "upbackright"]
+# ["right", "left", "upright", "upleft", "frontright", "frontleft", "backright", "backleft", "upfrontright", "upfrontleft", "upbackright", "upbackleft"]
 # ['right', 'left', 'upleft', 'upright']
