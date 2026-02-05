@@ -2,11 +2,12 @@ import cv2
 import geopandas  # type: ignore
 import json
 import os
+import re
 from qreader import QReader
 from shapely import MultiPolygon, Polygon, Point
 
 
-def extrapolate_ggr_gps(imgtable, doctest_mode=False):
+def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
     """
     Extrapolates GPS data for images taken by cameras without GPS data using
     cameras with GPS within the same cars. Synchronizes image unixtimes within each car
@@ -92,7 +93,7 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
         # Identify car, camera, & day from image hierarchy
         tokens = uri_list[i].split("/")
         cam_str, day_str = "", ""
-        valid_cams = [" A", " B", " C", " D"]
+        valid_cams = [" A", "_A", " B", "_B", " C", "_C", " D", "_D", " E", "_E"]
         for token in tokens:
             if "QR" in token and token[-2:] in valid_cams:
                 cam_str = token
@@ -105,7 +106,8 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
             )
             continue
 
-        car = cam_str[: cam_str.find("_")]
+        # car = cam_str[: cam_str.find("_")]
+        car = "QR" + re.findall(r"\d+", cam_str)[0]
         cam_idx = ord(cam_str[-1]) - 65
 
         # Handle doubly nested images in case of flaw in image hierarchy
@@ -324,8 +326,8 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
 
     # Locate all images for which GPS data could not be extrapolated
     # Get counties/land holdings for each image with GPS
-    poly_dict_c = get_ggr_polygons(c_or_lt=0, invert=True)
-    poly_dict_lt = get_ggr_polygons(c_or_lt=1, invert=True)
+    poly_dict_c = get_ggr_polygons(filepath=geometry[0], c_or_lt=0, invert=True)
+    poly_dict_lt = get_ggr_polygons(filepath=geometry[1], c_or_lt=1, invert=True)
     gps_list = imgtable.get_image_gps(gid_list)
     uri_list = imgtable.get_image_uris_original(gid_list)
     uuid_list = imgtable.get_image_uuids(gid_list)
@@ -333,10 +335,6 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
     c_lt_by_uuid = {}
     c_prev = None
     lt_prev = None
-    print(poly_dict_c.values())
-    print(len(poly_dict_c.values()))
-    print(poly_dict_lt.values())
-    print(len(poly_dict_lt.values()))
     for i in range(len(gid_list)):
         c_cur = None
         coord = Point(gps_list[i])

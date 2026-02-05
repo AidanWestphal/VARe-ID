@@ -11,7 +11,7 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    command = f'python -u -m VAREID.algo.import.import_images {config["data_dir_in"]} {config["image_out_path"]}'
+    command = f'python -u -m VAREID.algo.import.import_images {config["data_dir_in"]} {config["image_out_path"]} {config["counties_path"]} {config["land_holdings_path"]}'
 
     logger = setup_logging(config["import_logs"])
     log_subprocess(command, logger)
