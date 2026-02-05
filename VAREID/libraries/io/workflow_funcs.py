@@ -94,6 +94,8 @@ def build_config(config):
     image_out_path = os.path.join(out_dir, config["image_out_file"])
     video_out_path = os.path.join(out_dir, config["video_out_file"])
     import_logs = os.path.join(log_dir, config["import_logfile"])
+    counties_path = config["counties_file"]
+    land_holdings_path = config["land_holdings_file"]
 
     # DETECTION STEP
     dt_dir = os.path.join(out_dir, config["dt_dirname"])
@@ -164,6 +166,8 @@ def build_config(config):
     config["image_out_path"] = image_out_path
     config["video_out_path"] = video_out_path
     config["import_logs"] = import_logs
+    config["counties_path"] = counties_path
+    config["land_holdings_path"] = land_holdings_path
     config["dt_dir"] = dt_dir
     config["dt_model_path"] = dt_model_path
     config["dt_video_out_path"] = dt_video_out_path
