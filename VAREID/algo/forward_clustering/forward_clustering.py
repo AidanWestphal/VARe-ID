@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def assign_inter_cluster_ids(annotations, cluster_field='encounter_id',
-                            inter_field='inter_cluster_id', rep_field='representative'):
+                            inter_field='cluster_id', rep_field='representative'):
     """
     Forward cluster inter_cluster_id from representative to non-representative annotations.
 
@@ -86,7 +86,7 @@ def assign_inter_cluster_ids(annotations, cluster_field='encounter_id',
         representative_inter_id = representative.get(inter_field)
 
         if representative_inter_id is None:
-            logger.warning(f"Representative in intra_cluster {cluster_id} has no inter_cluster_id")
+            logger.warning(f"Representative in intra_cluster {cluster_id} has no cluster_id")
             skipped_no_inter += len(cluster_annotations)
             continue
 
@@ -111,7 +111,7 @@ def assign_inter_cluster_ids(annotations, cluster_field='encounter_id',
 
     logger.info(f"Forward clustering results:")
     logger.info(f"  - Total annotations processed: {len(annotations)}")
-    logger.info(f"  - Representatives (already had inter_cluster_id): {rep_count}")
+    logger.info(f"  - Representatives (already had cluster_id): {rep_count}")
     logger.info(f"  - Forward clustered (assigned from representative): {forward_count}")
     logger.info(f"  - No encounter_id (skipped): {null_count}")
     logger.info(f"  - Skipped (no representative): {skipped_no_rep}")
@@ -166,7 +166,7 @@ def validate_data(annotations, cluster_field, rep_field):
 
 
 def process_annotations_file(input_path, output_path, cluster_field='encounter_id',
-                            inter_field='inter_cluster_id', rep_field='representative'):
+                            inter_field='cluster_id', rep_field='representative'):
     """
     Process an annotations file to assign inter cluster IDs.
 
@@ -275,13 +275,13 @@ def process_annotations_file(input_path, output_path, cluster_field='encounter_i
     logger.info(f"Representative annotations:        {rep_annotations}")
     logger.info(f"Forward clustered:                 {forward_annotations}")
     logger.info(f"No encounter_id (null):       {null_intra}")
-    logger.info(f"No inter_cluster_id (null):       {null_inter}")
+    logger.info(f"No cluster_id (null):       {null_inter}")
     logger.info(f"Average intra cluster size:        {avg_intra_cluster_size:.1f}")
     logger.info("=" * 60)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Forward inter_cluster_id from representative to non-representative annotations")
+    parser = argparse.ArgumentParser(description="Forward cluster_id from representative to non-representative annotations")
     parser.add_argument("input_file", type=str, help="Path to input annotation JSON file")
     parser.add_argument("output_file", type=str, help="Path to output annotation JSON file")
     parser.add_argument("--config", type=str, help="Path to configuration file",
@@ -301,7 +301,7 @@ if __name__ == "__main__":
             # Default parameters
             config = {
                 'cluster_field': 'encounter_id',
-                'inter_field': 'inter_cluster_id',
+                'inter_field': 'cluster_id',
                 'rep_field': 'representative'
             }
             print("Using default configuration parameters")
@@ -320,7 +320,7 @@ if __name__ == "__main__":
             args.input_file,
             args.output_file,
             cluster_field=config.get('cluster_field', 'encounter_id'),
-            inter_field=config.get('inter_field', 'inter_cluster_id'),
+            inter_field=config.get('inter_field', 'cluster_id'),
             rep_field=config.get('rep_field', 'representative')
         )
     except Exception as e:

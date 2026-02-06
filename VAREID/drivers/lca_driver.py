@@ -83,7 +83,7 @@ def main(args):
         log_path = config["inter_lca_logs"]
         lca_subunit_logs = config["inter_lca_subunit_logs"]
     
-    command = f'python -u -m VAREID.algo.lca.lca {input} {config["mid_out_path"]} {lca_dir} {config["lca_out_prefix"]} {config["lca_out_suffix"]} {lca_subunit_logs} {log_path} {video_flag} {separation_flag} {intra_flag}'
+    command = f'python -u -m VAREID.algo.lca.lca {input} {config["mid_out_path"]} {lca_dir} {lca_subunit_logs} {log_path} {video_flag} {separation_flag} {intra_flag}'
     
     logger = setup_logging(log_path)
     log_subprocess(command, logger)

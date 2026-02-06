@@ -1,10 +1,11 @@
-exp_name: lca_image
+# LCA inter-encounter clustering config using stability algorithm
+exp_name: lca_inter_stability
 species: Grevys zebra
-algorithm_type: gc
+algorithm_type: stability
+
 data:
   name_keys:
-  - occurence_id
-  # - individual_id
+  - individual_id
   id_key: "uuid"
   n_filter_min: 1
   n_filter_max: 1000
@@ -13,34 +14,90 @@ data:
   # output_path: ./output <-- provided by lca.py
   # separate_viewpoints: true <-- provided by lca.py
   separate_by_fields:
-  - viewpoint
+  # - viewpoint
   viewpoint_list:
-  - left
   - right
+  - backright
+  - downright
+  - frontright
   category_id_list:
   - 0
   representative_list:
   - true
-  output_key: inter_cluster_id
-  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2020_subset_encounter_grouping/GGR_encounter_score.db
+  output_key: cluster_id
+  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GZCD_encounters/GZCD_encounter_score.db
+
 algorithm:
-  target_edges: 0
   initial_topk: 10
+  initial_botk: 0
+  target_edges: 0
+  target_proportion: 0
+  distance_power: 1
+  max_outer_iterations: 10000
+
+# Stability algorithm specific configuration
+stability:
+  # GC-like threshold for Phase 0 (reaching 0-stability)
+  theta: 0.1
+
+  # Target stability level (in [0, 1] scale)
+  # Higher values require more human reviews but produce more reliable clusters
+  target_alpha: 0.5
+
+  # Maximum number of human reviews before stopping
+  max_human_reviews: 500
+
+  # Confidence added/subtracted per human review (in [0, 1] scale)
+  review_confidence: 0.97
+
+  # Phase 0 iterations per step
+  warmup_iterations: 10
+
+  # Number of edges to send for human review per batch between PCCs
+  edges_per_review_batch: 50
+
+  # Validation against ground truth every N human reviews
+  validation_step: 100
+
+  # Maximum edges to add when densifying a component
+  max_densify_edges: 0
+
+  # Phase 0 stability threshold (slightly negative = less aggressive fragmentation)
+  phase0_alpha: 0.0
+
+  # Maximum cross-PCC edges to discover per iteration
+  cross_pcc_max_edges: 1000000
+
+  # Verifier for edge classification
+  verifier_name: miewid
+
+  densify_prioritize_negatives: true
+
+  # Maximum human review attempts per edge
+  tries_before_edge_done: 4
+
+  # Merge priority: fraction of review batch dedicated to merge candidates (0.0-1.0)
+  merge_priority: 0.7
+
+# HDBSCAN fallback config
+hdbscan:
+  min_cluster_size: 2
+  min_samples: null
+  metric: euclidean
+  cluster_selection_method: eom
+  verifier_name: miewid
+
 edge_weights:
   prob_human_correct: 1.0
   classifier_thresholds:
-    miewid: auto(0.2)
-  # verifier_names: miewid no_human
+    # miewid: auto(0.2)
+    miewid: 0.81
   verifier_names: miewid ui_human
+
 logging:
   log_level: INFO
   # log_file: tmp/logs/whaleshark_kde.log <-- provided by lca.py
   update_log_file: false
   histogram_path: ""
-  auto_threshold_plot_path: "/fs/ess/PAS2136/ggr_data/results/GGR2020_subset_encounter_grouping/logs/hist_inter.png"
-  file_mode: w # or a for append
-gc:
-  verifier_name: miewid
-  theta: 0.03
-  validation_step: 20
-  max_densify_edges: 200
+  auto_threshold_plot_path: ""
+  file_mode: w

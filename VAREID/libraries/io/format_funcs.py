@@ -22,10 +22,10 @@ ANNOTATION_COLNAMES = [
     "LCA_clustering_id",
     "cluster_id",
     "encounter_id",
-    "inter_cluster_id",
+    "cluster_id",
     "gt_iou",
     # "occurence_id",  # Removed - should only be in IMAGE_COLNAMES to avoid duplicates
-    "intra_cluster_id",
+    # "intra_cluster_id",
     "representative",
 ]
 

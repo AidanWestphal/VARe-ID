@@ -188,8 +188,6 @@ if __name__ == "__main__":
     parser.add_argument("embeddings", type=str, help="The path to the embeddings file.")
     #parser.add_argument("verifiers_probs", type=str, help="The path to the verifier probabilities.")
     parser.add_argument("lca_dir", type=str, help="The directory to save files into.")
-    parser.add_argument("output_prefix", type=str, help="The prefix for the output annotation file format.")
-    parser.add_argument("output_suffix", type=str, help="The suffix for the output annotation file format.")
     parser.add_argument("log_subunit_file", type=str, help="The path to the log file for the LCA algorithm itself.")
     parser.add_argument("log_file", type=str, help="The path to the log file.")
     parser.add_argument("--video", action="store_true", help="True if LCA should run on the video (drone) config file.")
