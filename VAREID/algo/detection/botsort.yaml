@@ -1,0 +1,29 @@
+# botsort_wildlife.yaml - Optimized for aerial zebra/giraffe tracking
+tracker_type: botsort
+
+# ReID model for appearance-based matching
+reid_weights: osnet_x0_25_msmt17.pt  # Lightweight ReID model
+device: cuda
+fp16: True
+
+# Detection confidence thresholds
+# Since YOLOv9 already filters at 0.75, we can be more lenient here
+track_high_thresh: 0.5     # CHANGED: 0.75 -> 0.5 (trust YOLO's filtering)
+track_low_thresh: 0.3      # Keep for recovering low-confidence tracks
+new_track_thresh: 0.6      # CHANGED: 0.8 -> 0.6 (easier to initialize tracks)
+track_buffer: 60           # Keep lost tracks for ~4 seconds (at 15fps)
+
+# Association thresholds
+match_thresh: 0.7          # CHANGED: 0.85 -> 0.7 (more lenient IoU matching)
+proximity_thresh: 0.8      # CHANGED: 0.6 -> 0.8 (allow larger distances)
+appearance_thresh: 0.25    # CHANGED: 0.3 -> 0.25 (slightly stricter appearance)
+
+# Camera motion compensation (CRITICAL for drone footage!)
+cmc_method: sparseOptFlow  # Handles drone jitter and camera movement
+
+# Track management
+min_box_area: 200          # Filter out tiny/noise detections
+max_disappeared: 90        # Remove track after ~6 seconds (at 15fps)
+
+# Kalman filter
+kalman_format: xywh        # Bounding box format (x_center, y_center, width, height)

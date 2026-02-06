@@ -1,27 +1,71 @@
-# frame_sampling.yaml
-# Configuration for the frame sampling algorithm
+# # frame_sampling.yaml
+# # Configuration for the frame sampling algorithm
+
+# thresholds:
+#   t_seconds: 15 # Minimum time gap (in seconds) between selected annotations after all time suppression steps.
+#   frame_interval: 8 # Number of frames per second in the source video (used to convert t_seconds to t_frames).
+
+#   threshold_percentage_stage1: 0.7 # Step 1 Subsequence Processing (only for 'many' mode):
+#                                    # - If use_ca_score=true: Local max CA must be >= this percentage * subsequence_max_ca to be selected as a candidate.
+#                                    # - If use_ca_score=false: Randomly sample this percentage of frames from the subsequence as candidates (at least 1).
+
+#   threshold_percentage_stage2: 0.9 # Step 2 Final Filtering (only for 'many' mode, applied AFTER time suppression):
+#                                    # - If use_ca_score=true: Final CA must be >= this percentage * track_max_ca.
+#                                    # - If use_ca_score=false: Randomly sample this percentage of annotations remaining for the track (at least 1).
+#                                    # - Set to 0 or less to disable this final filtering step entirely.
+
+# settings:
+#   selection_mode: 'many' # Options: 'one' or 'many'.
+#                          # - 'one': Selects only the single highest CA score annotation per track ID per viewpoint. All other settings are ignored.
+#                          # - 'many': Runs the full multi-stage sampling algorithm using the thresholds defined above.
+
+#   use_ca_score: true # Master switch for logic type:
+#                      # - true: Use CA score for candidate selection.
+#                      # - false: Use random sampling for candidate selection.
+
+#   use_viewpoint: true # Process tracks separately for each distinct viewpoint found in annotations.
+#                       # If false, all annotations are treated as a single viewpoint ("unknown").
+
+
+# ============================================================================
+# KABR UNIFIED FRAME SAMPLING CONFIGURATION
+# ============================================================================
 
 thresholds:
-  t_seconds: 15 # Minimum time gap (in seconds) between selected annotations after all time suppression steps.
-  frame_interval: 8 # Number of frames per second in the source video (used to convert t_seconds to t_frames).
+  # Temporal suppression distance: Any two selected frames for a specific animal 
+  # identity must be at least this many seconds apart. 
+  t_seconds: 15 
 
-  threshold_percentage_stage1: 0.7 # Step 1 Subsequence Processing (only for 'many' mode):
-                                   # - If use_ca_score=true: Local max CA must be >= this percentage * subsequence_max_ca to be selected as a candidate.
-                                   # - If use_ca_score=false: Randomly sample this percentage of frames from the subsequence as candidates (at least 1).
+  # The FPS used during your YOLOv9/BoT-SORT detection phase. 
+  # Used to convert t_seconds into a frame-based distance.
+  frame_interval: 15 
 
-  threshold_percentage_stage2: 0.9 # Step 2 Final Filtering (only for 'many' mode, applied AFTER time suppression):
-                                   # - If use_ca_score=true: Final CA must be >= this percentage * track_max_ca.
-                                   # - If use_ca_score=false: Randomly sample this percentage of annotations remaining for the track (at least 1).
-                                   # - Set to 0 or less to disable this final filtering step entirely.
+  # Global Quality Gate: A frame is only considered a candidate if its 
+  # CA_score is >= (this percentage) of the best CA_score found in that 
+  # entire animal's track. (0.8 = 80%).
+  quality_threshold_pct: 0.8 
 
 settings:
-  selection_mode: 'many' # Options: 'one' or 'many'.
-                         # - 'one': Selects only the single highest CA score annotation per track ID per viewpoint. All other settings are ignored.
-                         # - 'many': Runs the full multi-stage sampling algorithm using the thresholds defined above.
+  # 'one': Selects exactly one absolute best CA_score frame per track per viewpoint.
+  # 'many': Uses the full NMS-in-time and Stratified RA sampling logic.
+  selection_mode: 'one' 
 
-  use_ca_score: true # Master switch for logic type:
-                     # - true: Use CA score for candidate selection.
-                     # - false: Use random sampling for candidate selection.
+  # Final Sampling Cap: If more than this many frames survive the quality and 
+  # time filters, the script divides the encounter into equal time segments 
+  # and picks the best one from each.
+  num_RA_annots: 5 
 
-  use_viewpoint: true # Process tracks separately for each distinct viewpoint found in annotations.
-                      # If false, all annotations are treated as a single viewpoint ("unknown").
+  # Master Switch: 
+  # true: Use Class Accuracy (CA) scores to find peaks and best quality.
+  # false: Use random sampling (CA score ignored).
+  use_ca_score: true 
+
+  # Identity Separation: 
+  # true: Treat different viewpoints (e.g., Left vs Right flank) of the same 
+  #       tracking ID as separate entities.
+  # false: Treat all annotations for a tracking ID as a single encounter.
+  use_viewpoint: true 
+
+  # Deterministic Seed: Ensures that any random operations (like tie-breaking 
+  # in random mode) produce identical results every time the script is run.
+  seed: 123456789

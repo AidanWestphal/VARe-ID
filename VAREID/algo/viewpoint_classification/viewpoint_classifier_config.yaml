@@ -13,4 +13,6 @@ accum_iter: 2
 verbose_step: 1
 label_cols: ["back", "front", "left", "right", "up"]
 threshold: 0.5
-filtered_classes: ["grevy's zebra", "plains zebra"]
+#filtered_classes: ["grevy's zebra", "plains zebra"]
+filtered_classes: ["grevy's zebra"]
+

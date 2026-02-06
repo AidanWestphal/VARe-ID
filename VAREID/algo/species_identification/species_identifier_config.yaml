@@ -10,4 +10,5 @@ custom_labels:
   - "masai giraffe"
   - "neither"
 
+
 confidence_threshold: 0.75
