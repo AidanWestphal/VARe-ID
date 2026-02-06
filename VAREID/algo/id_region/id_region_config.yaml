@@ -3,3 +3,9 @@ x_scale: 1
 y_scale: 1
 
 confidence_threshold: 0.6
+
+NMS_threshold: 0.2
+
+AR_threshold: 0.9
+
+clarity_threshold: 7.5

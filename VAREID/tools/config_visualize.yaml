@@ -1,0 +1,26 @@
+# True/False describing whether the data is in video format (True) or image format (False)
+data_video: False
+
+# Image directory
+img_dir: ~
+#img_dir: "/fs/ess/PAS2136/ggr_data/results/GZCD_Jan_4/image_data.json"
+
+# Which output annotations to use
+annots_dir: ~
+#annots_dir: "/fs/ess/PAS2136/ggr_data/results/GZCD_Jan_4/ia_classifier/ia_annots.json"
+
+# Which annotation fields to show
+#desired_fields: ['tracking_id', 'individual_id', 'category_id', 'LCA_clustering_id',
+#                     'confidence', 'detection_class', 'viewpoint', 'CA_score']
+desired_fields: ['viewpoint', 'annotations_census', 'CA_score']
+
+# Show full image or only bounding box
+full_image: True
+
+# Sort by: detection confidence, CA_score, etc
+sort_by: 
+
+# Set to "all" to show all images
+annot_method: "all"
+image_paths: 
+num_images: 

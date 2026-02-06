@@ -110,7 +110,10 @@ class ImageTable:
 
             # Automatically assign gids to new images
             self.table["gid"] = list(range(1, len(params_list) + 1))
-
+        print(len(colnames))
+        print(len(params_list))
+        print(len(params_list[0]))
+        print(len(params_list[1]))
         # Add data to table for each column provided
         for col_idx in range(len(colnames)):
             colname = colnames[col_idx]
@@ -129,6 +132,13 @@ class ImageTable:
             # Update table
             self.table[colname] = []
             for row_idx in range(len(params_list)):
+                if col_idx >= len(params_list[row_idx]):
+                    print(col_idx)
+                    print(row_idx)
+                    print(len(params_list[row_idx]))
+                    print(params_list[row_idx])
+                    print(params_list[0])
+                    print(params_list[1])
                 self.table[colname].append(params_list[row_idx][col_idx])
 
         return self.table["gid"]

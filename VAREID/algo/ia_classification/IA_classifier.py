@@ -121,7 +121,8 @@ def test_new(dataset, model, device, cp_int, cp_path, batch_size, num_workers):
         checkpoint_interval=cp_int,
         save_path=cp_path,
         batch_size=batch_size,
-        num_workers=num_workers
+        num_workers=num_workers,
+        shuffle=False
     )
 
     with manager as runner:

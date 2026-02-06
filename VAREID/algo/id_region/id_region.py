@@ -25,6 +25,9 @@ from VAREID.libraries.io.checkpoint import DataLoaderCheckpointManager
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 from VAREID.libraries.utils import path_from_file
 
+from tqdm import tqdm
+import cv2
+
 def xywh_to_xyxy(bbox: list):
     x, y, w, h = bbox
     x1 = x
@@ -40,6 +43,32 @@ def xyxy_to_xywh(bbox: list):
     w = x2-x1
     h = y2-y1
     return [x, y, w, h]
+
+def apply_nms(df, iou_threshold):
+    df = df.sort_values("CA_score", ascending=False)
+    
+    boxes = np.array([xywh_to_xyxy(bbox) for bbox in df["bbox"]])
+    # scores = df["CA_score"].values
+    
+    #filter by aspect ratio
+    heights  = boxes[:, 3] - boxes[:, 1]
+    widths = boxes[:, 2] - boxes[:, 0]
+    scores = widths/heights
+    
+    boxes = torch.as_tensor(boxes).float()
+    scores = torch.as_tensor(scores).float()
+    
+    keep_positions = nms(boxes, scores, iou_threshold)
+    
+    keep_positions = keep_positions.cpu().numpy()
+    kept_index_labels = df.index[keep_positions]
+    
+    removed_index_labels = df.index.difference(kept_index_labels)
+    
+    if len(removed_index_labels) > 0:
+        df.loc[removed_index_labels, 'annotations_census'] = False
+        
+    return df
 
 class CustomImageDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -95,7 +124,7 @@ def expand_bbox_columns(df):
     return df
 
 def get_new_bbox(model, image, conf=0.0, x_scale=1, y_scale=1):
-    results = model.predict(image, classes=[0], conf=conf)
+    results = model.predict(image, classes=[0], conf=conf, verbose=False)
     first_image_results = results[0]
 
     # Access the bounding boxes data
@@ -129,6 +158,43 @@ def get_new_bbox(model, image, conf=0.0, x_scale=1, y_scale=1):
         
     return (x1, y1, x2, y2)
 
+def calculate_zebra_clarity(pil_crop, target_width=300):
+    """
+    Calculates a normalized clarity score specifically for zebra patterns.
+    """
+    # Convert PIL to OpenCV (BGR)
+    open_cv_crop = cv2.cvtColor(np.array(pil_crop), cv2.COLOR_RGB2BGR)
+    gray = cv2.cvtColor(open_cv_crop, cv2.COLOR_BGR2GRAY)
+    
+    # Resize to standard width to normalize stripe frequency
+    h, w = gray.shape
+    aspect_ratio = h / w
+    gray = cv2.resize(gray, (target_width, int(target_width * aspect_ratio)))
+    
+    # Calculate Laplacian variance
+    lap = cv2.Laplacian(gray, cv2.CV_64F)
+    variance = lap.var()
+
+    edges = cv2.Canny(gray, 100, 200)
+    
+    # Normalization: Sharpness perception scales with brightness
+    # Dividing by mean intensity helps separate dark/shadow blur from bright sharp shots
+    mean_intensity = np.mean(gray) + 1e-6
+    normalized_score = variance / mean_intensity
+    
+    edge_count = np.count_nonzero(edges)
+    total_pixels = edges.shape[0] * edges.shape[1]
+    edge_density = (edge_count / total_pixels) * 100
+        
+    return (normalized_score + edge_density)/2
+    
+    # im_dx = cv2.Sobel(gray, cv2.CV_32F, 1, 0)
+    # im_dy = cv2.Sobel(gray, cv2.CV_32F, 0, 1)
+    # return np.mean(np.square(im_dx) + np.square(im_dy))
+
+def point_contained(point, bbox):
+    x, y = point
+    return bbox[0] < x < bbox[0]+bbox[2] and bbox[1] < y < bbox[1]+bbox[3]
 
 def main(args):
     print("Loading configuration...")
@@ -139,6 +205,7 @@ def main(args):
     
     data = load_json(args.in_json_path)
     df = join_dataframe(data)
+    df['annotations_census'] = False
     
     # Expand bbox column into separate x, y, w, h columns
     dataset = CustomImageDataset(df)
@@ -148,16 +215,34 @@ def main(args):
         warnings.filterwarnings("ignore", category=UserWarning)
         model = load_model(args.model_checkpoint_path, device)
         
-    for idx in range(len(dataset)):
-        new_bbox = get_new_bbox(model, dataset[idx], conf=config['confidence_threshold'], x_scale=config['x_scale'], y_scale=config['y_scale'])
+    for idx in tqdm(range(len(dataset))):
+        img = dataset[idx]
+        new_bbox = get_new_bbox(model, img, conf=config['confidence_threshold'], x_scale=config['x_scale'], y_scale=config['y_scale'])
         new_bbox = xyxy_to_xywh(list(new_bbox))
+        center_x, center_y = img.size
+        center_x /= 2
+        center_y /= 2
+        center = (center_x, center_y)
+        
+        if new_bbox[3] > 0:
+            aspect_ratio = new_bbox[2]/new_bbox[3]
+        else:
+            aspect_ratio = 0
+        
         if new_bbox[0] != -1:
+            id_region_crop = dataset[idx].crop(xywh_to_xyxy(new_bbox))
+            clarity_score = calculate_zebra_clarity(id_region_crop)
+            df.at[idx, "clarity_score"] = clarity_score
+            
             original_x1, original_y1 = df.iloc[idx]["bbox"][0], df.iloc[idx]["bbox"][1]
             adjusted_bbox = [new_bbox[0]+original_x1, new_bbox[1]+original_y1, new_bbox[2], new_bbox[3]]
             df.at[idx, "bbox"] = adjusted_bbox
-        else:
-            print(f"No bbox generated for {dataset.get_path(idx)}")
+            if aspect_ratio > config['AR_threshold'] and clarity_score >= config.get('clarity_threshold', 0):
+                df.at[idx, 'annotations_census'] = True
     
+    # Step 3: Apply NMS
+    df = df.groupby("image_path").apply(lambda x: apply_nms(x, config["NMS_threshold"]))
+
     annotations = split_dataframe(df)
     save_json(annotations,args.out_json_path)
     

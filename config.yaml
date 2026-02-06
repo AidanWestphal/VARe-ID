@@ -27,6 +27,8 @@ cp_freq: 50
 image_out_file: "image_data.json"
 video_out_file: "video_data.json"
 import_logfile: "import.txt"
+counties_file: "VAREID/ggr_counties.json"
+land_holdings_file: "VAREID/ggr_landtenures.json"
 
 # Detection step fields
 dt_dirname: "detector"

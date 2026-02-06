@@ -5,11 +5,9 @@ import os
 from torch.utils.data import DataLoader
 from typing import Any, Iterable, Optional, Callable, Dict
 
-from VAREID.libraries.io.resumable_random_sampler import ResumableRandomSampler
+from VAREID.libraries.io.resumable_sampler import ResumableSampler
 
-# SIGNATE FOR CALLBACK GETTER FUNCTION
 StateGetter = Callable[[], Dict[str, Any]]
-
 
 class DataLoaderCheckpointManager:
     """
@@ -23,13 +21,15 @@ class DataLoaderCheckpointManager:
                  save_path: str,
                  batch_size: int,
                  num_workers: int,
-                 collate_fn=None):
+                 collate_fn=None,
+                 shuffle=True):
         
         # Store ingredients to build the loader later
         self.dataset = dataset
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.collate_fn = collate_fn
+        self.shuffle = shuffle
         
         self._state_getter = state_getter
         self._interval = checkpoint_interval
@@ -39,7 +39,7 @@ class DataLoaderCheckpointManager:
         Path(os.path.dirname(self.save_path)).mkdir(parents=True, exist_ok=True)
         
         # State tracking
-        self.iteration = 0  # This tracks BATCHES, not images
+        self.iteration = 0 
         self.external_state = {}
         self.loader = None
         self.iterator = None
@@ -67,15 +67,19 @@ class DataLoaderCheckpointManager:
             print(f"No valid checkpoint found ({e}), starting from scratch.")
 
         # --- B. BUILD DATALOADER ---
+        
         # Create the sampler with the calculated offset
-        sampler = ResumableRandomSampler(self.dataset, seed=42, start_index=start_index_samples)
+        if self.shuffle:
+            sampler = ResumableSampler(self.dataset, seed=42, start_index=start_index_samples)
+        else:
+            sampler = ResumableSampler(self.dataset, start_index=start_index_samples)
         
         self.loader = DataLoader(
             self.dataset,
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
-            sampler=sampler,  # <--- Magic happens here
+            sampler=sampler,
             pin_memory=True
         )
         
