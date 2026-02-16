@@ -36,6 +36,7 @@ if __name__ == "__main__":
     imgtable = ImageTable(config["data_dir_out"])
     
     json_path = os.path.join(config["data_dir_out"], config["image_out_file"])
+    geometry = (config["counties_path"], config["land_holdings_path"])
     
     if not os.path.exists(json_path):
         print(f"{json_path} does not exist.")
@@ -44,9 +45,15 @@ if __name__ == "__main__":
         print(f"Extrapolate ggr gps needs a .json file")
         print(f"{json_path} is not a JSON file")
         exit(-1)
+    if not os.path.exists(geometry[0]):
+        print(f"{geometry[0]} does not exist.")
+        exit(-1)
+    if not os.path.exists(geometry[1]):
+        print(f"{geometry[1]} does not exist.")
+        exit(-1)
     
     imgtable.import_from_json(json_path)
 
     # Add images to database
-    skipped_gid_list = extrapolate_ggr_gps(imgtable, doctest_mode=False)
+    skipped_gid_list = extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False)
     imgtable.export_to_json(json_path)
