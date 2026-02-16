@@ -91,7 +91,8 @@ edge_weights:
   classifier_thresholds:
     # miewid: auto(0.2)
     miewid: 0.81
-  verifier_names: miewid ui_human
+    metadata(miewid): miewid
+  verifier_names: metadata(miewid) ui_human
 
 logging:
   log_level: INFO

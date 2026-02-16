@@ -1,6 +1,6 @@
 exp_name: lca_image
 species: Grevys zebra
-algorithm_type: gc
+algorithm_type: stability
 data:
   viewpoint_list:
   - left
@@ -21,7 +21,7 @@ algorithm:
 edge_weights:
   prob_human_correct: 1.0
   classifier_thresholds:
-    miewid: auto(0.5)
+    miewid: 0.8
     tracking(miewid): miewid
   verifier_names:  tracking(miewid) no_human
 logging:
@@ -35,3 +35,47 @@ gc:
   theta: 0.1
   validation_step: 20
   max_densify_edges: 200
+
+# Stability algorithm specific configuration
+stability:
+  # GC-like threshold for Phase 0 (reaching 0-stability)
+  theta: 0.1
+
+  # Target stability level (in [0, 1] scale)
+  # Higher values require more human reviews but produce more reliable clusters
+  target_alpha: 0.5
+
+  # Maximum number of human reviews before stopping
+  max_human_reviews: 500
+
+  # Confidence added/subtracted per human review (in [0, 1] scale)
+  review_confidence: 0.97
+
+  # Phase 0 iterations per step
+  warmup_iterations: 10
+
+  # Number of edges to send for human review per batch between PCCs
+  edges_per_review_batch: 50
+
+  # Validation against ground truth every N human reviews
+  validation_step: 100
+
+  # Maximum edges to add when densifying a component
+  max_densify_edges: 0
+
+  # Phase 0 stability threshold (slightly negative = less aggressive fragmentation)
+  phase0_alpha: 0.0
+
+  # Maximum cross-PCC edges to discover per iteration
+  cross_pcc_max_edges: 1000000
+
+  # Verifier for edge classification
+  verifier_name: miewid
+
+  densify_prioritize_negatives: true
+
+  # Maximum human review attempts per edge
+  tries_before_edge_done: 4
+
+  # Merge priority: fraction of review batch dedicated to merge candidates (0.0-1.0)
+  merge_priority: 0.7
