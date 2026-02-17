@@ -127,7 +127,9 @@ state = {
 state = {
     "idx": 0,
     "box_errors": defaultdict(dict),  # uri -> box_idx -> True/False
-    "missed": defaultdict(list)
+    "missed": defaultdict(list),
+    "added_boxes": defaultdict(list), # uri -> list of [x, y, w, h]
+    "temp_pt": None                   # Used for 2-click box drawing
 }
 
 def save_session():
@@ -136,6 +138,7 @@ def save_session():
         "idx": state["idx"],
         "box_errors": state["box_errors"],
         "missed": state["missed"],
+        "added_boxes": state["added_boxes"],
         "seed": SEED 
     }
     
@@ -165,6 +168,9 @@ def load_session():
         
         # Restore 'missed': Convert back to defaultdict(list)
         state["missed"] = defaultdict(list, loaded.get("missed", {}))
+        
+        # Restore 'added_boxes': Convert back to defaultdict(list)
+        state["added_boxes"] = defaultdict(list, loaded.get("added_boxes", {}))
         
         # Restore 'box_errors': JSON converts integer keys to strings.
         raw_errors = loaded.get("box_errors", {})
@@ -286,10 +292,31 @@ def render_image():
             cv2.LINE_AA
         )
     # ============================
+    # Newly Added Boxes (Manual)
+    # ============================
+    for (x, y, bw, bh) in state["added_boxes"][uri]:
+        # Draw Cyan Box for manually added boxes
+        img = cv2.rectangle(img, (x, y), (x+bw, y+bh), (0, 255, 255), 4)
+        
+        # Add label
+        img = cv2.putText(
+            img, "Added", (x, y-10), 
+            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2, cv2.LINE_AA
+        )
+
+    # ============================
     # Missed detections
     # ============================
     for (x, y) in state["missed"][uri]:
         img = cv2.circle(img, (x, y), 8, (255, 0, 0), -1)
+
+    # ============================
+    # Temporary Point (Drawing in progress)
+    # ============================
+    if state["temp_pt"] is not None:
+        tx, ty = state["temp_pt"]
+        img = cv2.circle(img, (tx, ty), 6, (0, 255, 255), -1) # Small cyan dot
+        cv2.putText(img, "Click 2nd Point", (tx+10, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,255), 2)
 
     TP, FP, FN = compute_image_stats(uri)
 
@@ -343,6 +370,9 @@ def handle_click(evt: gr.SelectData, mode):
     x, y = evt.index
 
     if mode == "Edit Boxes":
+        # Clear temp point if switching modes mid-draw
+        state["temp_pt"] = None 
+
         rows = grouped[uri]
 
         for i, row in rows.iterrows():
@@ -358,23 +388,62 @@ def handle_click(evt: gr.SelectData, mode):
                 break
 
     elif mode == "Missed Detection":
+        state["temp_pt"] = None
         state["missed"][uri].append((x,y))
+
+    elif mode == "Add Box":
+        # 2-Click Logic
+        if state["temp_pt"] is None:
+            # First Click
+            state["temp_pt"] = (x, y)
+        else:
+            # Second Click - Finalize Box
+            x1, y1 = state["temp_pt"]
+            
+            # Calculate coordinates
+            x_min, x_max = min(x1, x), max(x1, x)
+            y_min, y_max = min(y1, y), max(y1, y)
+            w, h = x_max - x_min, y_max - y_min
+            
+            # Only add if box has size
+            if w > 5 and h > 5:
+                state["added_boxes"][uri].append([x_min, y_min, w, h])
+            
+            # Reset temp point
+            state["temp_pt"] = None
 
     return render_image()
 
-def undo_missed():
+def undo_action(mode):
+    """Context-aware undo function."""
     uri = uris[state["idx"]]
-    if state["missed"][uri]:
-        state["missed"][uri].pop()
+
+    # If in the middle of drawing a box, cancel the drawing
+    if state["temp_pt"] is not None:
+        state["temp_pt"] = None
+        return render_image()
+
+    if mode == "Missed Detection":
+        if state["missed"][uri]:
+            state["missed"][uri].pop()
+            
+    elif mode == "Add Box":
+        if state["added_boxes"][uri]:
+            state["added_boxes"][uri].pop()
+            
+    # For Edit Boxes, typically undo is just clicking the box again.
+    
     return render_image()
 
 
 def next_img():
     state["idx"] = min(state["idx"] + 1, len(uris)-1)
+    state["temp_pt"] = None # Reset partial drawings
     return render_image()
 
 def prev_img():
     state["idx"] = max(state["idx"] - 1, 0)
+    state["temp_pt"] = None # Reset partial drawings
     return render_image()
 
 
@@ -398,7 +467,9 @@ def compute_image_stats(uri):
         elif (not started_green) and is_error:
             FN += 1
 
+    # Count points and full boxes as False Negatives
     FN += len(state["missed"][uri])
+    FN += len(state["added_boxes"][uri])
 
     return TP, FP, FN
 
@@ -440,12 +511,16 @@ def save_results():
         uuid = rows.loc[0, "image_uuid"]
 
         TP, FP, FN = compute_image_stats(uri)
+        
+        # We can include added boxes count in CSV if desired
+        added_count = len(state["added_boxes"][uri])
 
         records.append({
             "image_uuid": uuid,
             "TP": TP,
             "FP": FP,
-            "FN": FN
+            "FN": FN,
+            "Added_Boxes": added_count
         })
 
     df_out = pd.DataFrame(records)
@@ -464,13 +539,14 @@ with gr.Blocks() as demo:
 
     with gr.Row():
         mode = gr.Radio(
-        ["Edit Boxes", "Missed Detection"],
-        value="Edit Boxes",
-        scale=4
+            ["Edit Boxes", "Missed Detection", "Add Box"],
+            value="Edit Boxes",
+            label="Tool Mode",
+            scale=4
         )
 
         undo_btn = gr.Button(
-            "↩ Undo",
+            "↩ Undo Last Action",
             scale=1,        # makes it small
             min_width=90   # keeps compact size
         )
@@ -496,7 +572,8 @@ with gr.Blocks() as demo:
 
     demo.load(render_image, outputs=[img, header_display, stats_display])
 
-    undo_btn.click(undo_missed, outputs=[img, header_display, stats_display])
+    # Pass 'mode' to undo so it knows what to undo
+    undo_btn.click(undo_action, inputs=[mode], outputs=[img, header_display, stats_display])
 
     prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
     next_btn.click(next_img, outputs=[img, header_display, stats_display])
