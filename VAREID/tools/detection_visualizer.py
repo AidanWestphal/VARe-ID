@@ -11,51 +11,55 @@ from collections import defaultdict
 import random
 import sys
 
-SEED = None
-NUM_IMAGES = 250
+from VAREID.libraries.io.format_funcs import load_config
+from VAREID.libraries.io.workflow_funcs import build_config
 
-for i, arg in enumerate(sys.argv):
-    if arg == '--seed':
-        if i+1 >= len(sys.argv):
-            raise("flag seed expects integer")
-        try:
-            SEED = int(sys.argv[i+1])
-        except:
-            raise("flag seed expects integer")
-    
-    if arg == '--num_images':
-        if i+1 >= len(sys.argv):
-            raise("flag num_images expects integer")
-        try:
-            NUM_IMAGES = int(sys.argv[i+1])
-        except:
-            raise("flag num_images expects integer")
-                
+vis_config = load_config("VAREID/tools/detection_visualize.yaml")
+
+SEED = vis_config['seed']
+NUM_IMAGES = vis_config['number_of_images']
+
 if SEED is not None:
+    try:
+        SEED = int(SEED)
+        print(f"Seed is {SEED}")
+    except TypeError:
+        raise("flag seed expects integer")
     random.seed(SEED)
+    
+try:
+    NUM_IMAGES = int(NUM_IMAGES)
+except TypeError:
+    raise("flag num_images expects integer")
+                
+    
 
-with open('config.yaml', 'r') as f:
-    config = yaml.load(f, Loader=yaml.SafeLoader)
+config = build_config(load_config('config.yaml'))
 
 DIR = config['data_dir_out']
-IDR_DIR = os.path.join(DIR, config['id_region_dirname'], config['id_region_out'])
-IAC_DIR = os.path.join(DIR, config['ia_dirname'], config['ia_out_file'])
+IDR_DIR = config['idr_out_path']
+IAC_DIR = config['ia_out_path']
 FIELDS = ['category_id', 'viewpoint', 'annotations_census', 'CA_score', 'clarity_score']
 VIDEO_MODE = config['data_video']
+VIS_FOlDER = os.path.join(DIR, vis_config['save_folder'])
+VIS_SAVE_PATH = os.path.join(VIS_FOlDER, vis_config['save_name'])
+
+if not os.path.isdir(VIS_FOlDER):
+    os.mkdir(VIS_FOlDER)
 
 # Random selection of images
 if VIDEO_MODE:
-    with open(os.path.join(DIR, config['dt_dirname'], config['dt_video_out_file']), 'r') as file:
+    with open(config['dt_video_out_path'], 'r') as file:
             # Use json.load() to convert the file content to a Python dictionary
             data = json.load(file)
 else:
-    with open(os.path.join(DIR, config['dt_dirname'], config['dt_image_out_file']), 'r') as file:
+    with open(config['dt_image_out_path'], 'r') as file:
             # Use json.load() to convert the file content to a Python dictionary
             data = json.load(file)
         
 subset = random.sample(data['images'], NUM_IMAGES)
 subset_uuids = [thing['uuid'] for thing in subset]
-with open(os.path.join(DIR, config["image_out_file"]), 'r') as file:
+with open(config["image_out_path"], 'r') as file:
     data = json.load(file)
 
 new_subset = []
@@ -126,6 +130,59 @@ state = {
     "missed": defaultdict(list)
 }
 
+def save_session():
+    """Saves the current state (edits, index, missed detections, and SEED) to JSON."""
+    serializable_state = {
+        "idx": state["idx"],
+        "box_errors": state["box_errors"],
+        "missed": state["missed"],
+        "seed": SEED 
+    }
+    
+    with open(VIS_SAVE_PATH, 'w') as f:
+        json.dump(serializable_state, f, indent=4)
+    
+    return f"✅ Session saved to {VIS_SAVE_PATH}"
+
+def load_session():
+    """Loads state from JSON if it exists."""
+    if not os.path.exists(VIS_SAVE_PATH):
+        print("No previous session found. Starting fresh.")
+        return
+
+    try:
+        with open(VIS_SAVE_PATH, 'r') as f:
+            loaded = json.load(f)
+
+        # Check if the seed has changed
+        saved_seed = loaded.get("seed", None)
+        
+        if saved_seed != SEED or saved_seed is None:
+            print(f"⚠️ Seed changed from {saved_seed} to {SEED}. Resetting index to 0.")
+            state["idx"] = 0
+        else:
+            state["idx"] = loaded.get("idx", 0)
+        
+        # Restore 'missed': Convert back to defaultdict(list)
+        state["missed"] = defaultdict(list, loaded.get("missed", {}))
+        
+        # Restore 'box_errors': JSON converts integer keys to strings.
+        raw_errors = loaded.get("box_errors", {})
+        restored_errors = defaultdict(dict)
+        
+        # LOAD ALL DATA (preserves edits for images not in current subset)
+        for uri, error_map in raw_errors.items():
+            int_key_map = {int(k): v for k, v in error_map.items()}
+            restored_errors[uri] = int_key_map
+            
+        state["box_errors"] = restored_errors
+        print(f"Successfully loaded session from {VIS_SAVE_PATH}")
+        
+    except Exception as e:
+        print(f"Error loading session: {e}")
+
+# Automatically load session on startup
+load_session()
 
 def render_image():
     idx = state["idx"]
@@ -400,6 +457,7 @@ def save_results():
 
 
 with gr.Blocks() as demo:
+    
     header_display = gr.Markdown()
     
     img = gr.Image(interactive=True)
@@ -426,8 +484,14 @@ with gr.Blocks() as demo:
 
     stats_btn = gr.Button("Compute Stats")
     stats_out = gr.Markdown()
+    
+    with gr.Row():
+        save_session_btn = gr.Button("💾 Save Progress (Session)", variant="primary")
+        save_csv_btn = gr.Button("Save Per-Image Results CSV")
+        
+    session_out = gr.Markdown() # To show the "Saved" message
+    file_output = gr.File()
 
-    save_btn = gr.Button("Save Per-Image Results CSV")
     file_output = gr.File()
 
     demo.load(render_image, outputs=[img, header_display, stats_display])
@@ -437,7 +501,9 @@ with gr.Blocks() as demo:
     prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
     next_btn.click(next_img, outputs=[img, header_display, stats_display])
     stats_btn.click(compute_global_metrics, outputs=stats_out)
-    save_btn.click(save_results, outputs=file_output)
+    
+    save_session_btn.click(save_session, outputs=session_out)
+    save_csv_btn.click(save_results, outputs=file_output)
 
     img.select(
         fn=handle_click,
