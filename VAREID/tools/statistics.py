@@ -17,6 +17,13 @@ with open(config['image_out_path']) as f:
     
 print(f"        {len(image_data)} images imported")
 
+with open(config['import_logs']) as f:
+    content = f.read()
+    
+err_msg = "can't open file for writing: permission denied"
+print(f"        {content.count(err_msg)} images failed to open due to permissions")
+print(f"        {content.count('found QR code')} QR codes found")
+
 
 print("\n     Detection:")
 with open(config['dt_image_out_path']) as f:
