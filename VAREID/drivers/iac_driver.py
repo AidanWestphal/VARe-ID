@@ -11,7 +11,7 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
 
-    command = f'python -u -m VAREID.algo.ia_classification.IA_classifier {config["vc_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]}'
+    command = f'python -u -m VAREID.algo.ia_classification.IA_classifier {config["vc_out_path"]} {config["ia_model_path"]} {config["ia_out_path"]} {config["cp_freq"]} {config["ia_cp_path"]}'
 
     logger = setup_logging(config["ia_logs"])
     log_subprocess(command, logger)

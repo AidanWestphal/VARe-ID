@@ -4,8 +4,9 @@ import hashlib
 import time
 import re
 import uuid
-from os.path import basename, splitext
+from os.path import basename, splitext, getsize
 from PIL import Image
+from PIL.TiffImagePlugin import IFDRational
 
 import VAREID.libraries.constants as const
 from VAREID.libraries.utils import parse_exif
@@ -39,13 +40,34 @@ def get_unixtime(exif_dict, default=-1):
 
     if const.EXIF_TIME in exif_dict.keys():
         dt = re.split(":| ", exif_dict[const.EXIF_TIME])
-        dt = datetime.datetime(
-            int(dt[0]), int(dt[1]), int(dt[2]), int(dt[3]), int(dt[4]), int(dt[5])
-        )
-        unixtime = int(time.mktime(dt.timetuple()))
-        return unixtime
+
+        if int(dt[0]) != 0:
+            dt = datetime.datetime(
+                int(dt[0]), int(dt[1]), int(dt[2]), int(dt[3]), int(dt[4]), int(dt[5])
+            )
+            unixtime = int(time.mktime(dt.timetuple()))
+            return unixtime
 
     return default
+
+
+def gps_to_decimal(value, ref=None):
+    # Case 1: already decimal (IFDRational or float)
+    if isinstance(value, (int, float, IFDRational)):
+        decimal = float(value)
+
+    # Case 2: DMS tuple
+    elif isinstance(value, (tuple, list)) and len(value) == 3:
+        deg, min_, sec = map(float, value)
+        decimal = deg + min_ / 60 + sec / 3600
+
+    else:
+        raise TypeError(f"Unsupported GPS format: {type(value)}")
+
+    if ref in ("S", "W"):
+        decimal = -decimal
+
+    return decimal
 
 
 def get_lat_lon(exif_dict, default=(-1, -1)):
@@ -79,22 +101,31 @@ def get_lat_lon(exif_dict, default=(-1, -1)):
 
     if const.EXIF_LAT in exif_dict.keys() and const.EXIF_LON in exif_dict.keys():
         lat_tup = exif_dict[const.EXIF_LAT]
-        lat = lat_tup[0] + lat_tup[1] / 60 + lat_tup[2] / 3600
-        if (
-            const.EXIF_LAT_REF in exif_dict.keys()
-            and exif_dict[const.EXIF_LAT_REF] == "S"
-        ):
-            lat = -lat
+        lat_ref = exif_dict[const.EXIF_LAT_REF] if const.EXIF_LAT_REF in exif_dict.keys() else None
+        lat = gps_to_decimal(lat_tup, lat_ref)
 
         lon_tup = exif_dict[const.EXIF_LON]
-        lon = lon_tup[0] + lon_tup[1] / 60 + lon_tup[2] / 3600
-        if (
-            const.EXIF_LON_REF in exif_dict.keys()
-            and exif_dict[const.EXIF_LON_REF] == "W"
-        ):
-            lon = -lon
+        lon_ref = exif_dict[const.EXIF_LON_REF] if const.EXIF_LON_REF in exif_dict.keys() else None
+        lon = gps_to_decimal(lon_tup, lon_ref)
 
-        return (float(lat), float(lon))
+        return (lat, lon)
+        # lat_tup = exif_dict[const.EXIF_LAT]
+        # lat = float(lat_tup[0]) + float(lat_tup[1]) / 60 + float(lat_tup[2]) / 3600
+        # if (
+        #     const.EXIF_LAT_REF in exif_dict.keys()
+        #     and exif_dict[const.EXIF_LAT_REF] == "S"
+        # ):
+        #     lat = -lat
+
+        # lon_tup = exif_dict[const.EXIF_LON]
+        # lon = float(lon_tup[0]) + float(lon_tup[1]) / 60 + float(lon_tup[2]) / 3600
+        # if (
+        #     const.EXIF_LON_REF in exif_dict.keys()
+        #     and exif_dict[const.EXIF_LON_REF] == "W"
+        # ):
+        #     lon = -lon
+
+        # return (float(lat), float(lon))
 
     return default
 
@@ -375,6 +406,10 @@ def parse_imageinfo(gpath):
     gpath = gpath.strip()
 
     try:
+        # Check for corrupt files
+        if getsize(gpath) == 0:
+            return None, None
+        
         # Open image with EXIF support to get time, GPS, and the original orientation
         pil_img = Image.open(gpath, "r")
 

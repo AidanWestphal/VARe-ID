@@ -4,19 +4,23 @@ import os
 import shutil
 import warnings
 import json
+import pickle
+from typing import Any, Callable, Dict
 
 import numpy as np
 import pandas as pd
 import torch
 import yaml
+from tqdm import tqdm
 from PIL import Image
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Sampler
 from torchvision import transforms
 from torchvision.transforms import functional as F
 from torchvision.models import resnet50
 from torchvision.ops import nms
 
+from VAREID.libraries.io.checkpoint import DataLoaderCheckpointManager
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 from VAREID.libraries.utils import path_from_file
 
@@ -104,18 +108,40 @@ def filter_dataframe(df, config):
     return filtered_test, filtered_out
 
 
-def test_new(dataloader, model, device):
+def test_new(dataset, model, device, cp_int, cp_path, batch_size, num_workers):
+    model.eval()
     all_softmax_outputs = []
 
-    with torch.no_grad():
-        for X in dataloader:
-            X = X.to(device)
-            pred = model(X)
-            pred_softmax = torch.softmax(pred, dim=1)
-            all_softmax_outputs.append(pred_softmax.detach().cpu())
+    def get_current_state():
+        return {"softmax": all_softmax_outputs}
 
-    all_softmax_outputs = torch.cat(all_softmax_outputs, dim=0).numpy()
-    return all_softmax_outputs
+    manager = DataLoaderCheckpointManager(
+        dataset=dataset,
+        state_getter=get_current_state,
+        checkpoint_interval=cp_int,
+        save_path=cp_path,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False
+    )
+
+    with manager as runner:
+        # Resume data if available
+        if runner.iteration > 0:
+            all_softmax_outputs = runner.external_state.get("softmax", [])
+
+        for X in tqdm(runner, desc="Calculating IA Scores"):
+            X = X.to(device)
+            with torch.no_grad():
+                pred = model(X)
+                pred_softmax = torch.softmax(pred, dim=1)
+                
+                # Store as list of floats/lists to save memory/pickle safely
+                batch_out = pred_softmax.detach().cpu().numpy().tolist()
+                all_softmax_outputs.extend(batch_out)
+
+    # Convert list of lists back to numpy array
+    return np.array(all_softmax_outputs)
 
 
 def apply_nms(df, iou_threshold):
@@ -165,7 +191,7 @@ def main(args):
         ]
     )
     dataset = CustomImageDataset(filtered_test, transform)
-    dataloader = DataLoader(dataset, batch_size=config["batch_size"], shuffle=False)
+    # Note: DataLoader is now created inside test_new via the manager
 
     print("Loading model...")
     with warnings.catch_warnings():  # Add this line
@@ -173,7 +199,19 @@ def main(args):
         model = load_model(args.model_checkpoint_path, device)
 
     print("Starting testing...")
-    all_softmax_outputs = test_new(dataloader, model, device)
+
+    # Check if config has num_workers, default to 0 if not
+    num_workers = config.get("num_workers", 0)
+    
+    all_softmax_outputs = test_new(
+        dataset=dataset,
+        model=model,
+        device=device,
+        cp_int=args.cp_freq,
+        cp_path=args.cp_path,
+        batch_size=config["batch_size"],
+        num_workers=num_workers
+    )
 
     print(
         "Testing completed. Appending softmax outputs to JSON and starting post-processing..."
@@ -260,14 +298,18 @@ def main(args):
 
     # Save the updated DataFrame to a new json file
     cac_dir = os.path.dirname(args.out_json_path)
-    if os.path.exists(cac_dir):
-        print("Removing Previous Instance of Experiment...")
-        shutil.rmtree(cac_dir)
+    
+    # Updated Logic: Don't delete directory if resuming
+    if not os.path.exists(cac_dir):
+        os.makedirs(cac_dir, exist_ok=True)
 
     print("Saving the results...")
-    os.makedirs(cac_dir, exist_ok=True)
     annotations = split_dataframe(final_df)
     save_json(annotations,args.out_json_path)
+    
+    # Clean up checkpoint
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
 
     print(
         f"JSON with softmax outputs and census annotations saved to: {args.out_json_path}"
@@ -290,6 +332,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "out_json_path", type=str, help="The full path to the output json file"
+    )
+    parser.add_argument(
+        "cp_freq", type=int, help="The checkpoint frequency for safe exiting"
+    )
+    parser.add_argument(
+        "cp_path", type=str, help="The checkpoint path for safe exiting"
     )
     args = parser.parse_args()
 

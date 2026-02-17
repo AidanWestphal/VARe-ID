@@ -7,12 +7,13 @@ import os.path
 
 from VAREID.libraries.io.image_funcs import add_images
 from VAREID.libraries.io.video_funcs import add_videos, link_srts, update_timestamps
+from VAREID.libraries.ggr_funcs import extrapolate_ggr_gps
 from VAREID.libraries.db.directory import Directory
 from VAREID.libraries.db.table import ImageTable
 
 
 # Import images recursively from path into database
-def import_image_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=False):
+def import_image_folder(dir_in, dir_out, file_out, geometry, recursive=True, doctest_mode=False):
     """Import images recursively from path into image table.
 
     Parameters:
@@ -109,6 +110,7 @@ def import_image_folder(dir_in, dir_out, file_out, recursive=True, doctest_mode=
 
     # Add images to database
     gid_list = add_images(imgtable, files, doctest_mode=doctest_mode)
+    skipped_gid_list = extrapolate_ggr_gps(imgtable, geometry)
     if gid_list:
         imgtable.export_to_json(path_out)
     return gid_list

@@ -6,21 +6,54 @@ from VAREID.libraries.db.table import ImageTable
 
 from VAREID.libraries.ggr_funcs import extrapolate_ggr_gps
 
+from VAREID.libraries.io.format_funcs import load_config
+from VAREID.libraries.io.workflow_funcs import build_config, decode_config
+
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Import database of GGR images and extrapolate GPS coordinates for images without GPS')
-    parser.add_argument('in_csv_path', type=str, help='The image data json file to import from')
-    parser.add_argument('out_csv_path', type=str, help='The full path to the .json file to store image data in')
-    args = parser.parse_args()
+    group = parser.add_mutually_exclusive_group(required=True)
 
-    # Load image data from json when applicable
-    if os.path.isfile(args.in_csv_path) and os.path.getsize(args.in_csv_path) != 0:
-        imgtable = ImageTable(os.path.dirname(args.in_csv_path))
-        imgtable.import_from_json(args.in_csv_path)
+    group.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="The built config file as a base64 encoded string. Config file MUST be structured like config.yaml!",
+    )
+    group.add_argument(
+        "--config_path",
+        type=str,
+        default=None,
+        help="A path to the config file to load. Config file MUST be structured like config.yaml!",
+    )
+    args = parser.parse_args()
+    
+    if args.config:
+        config = decode_config(args.config)
     else:
-        print("Unable to import image data... (exiting)")
+        config = build_config(load_config(args.config_path))
+
+    imgtable = ImageTable(config["data_dir_out"])
+    
+    json_path = os.path.join(config["data_dir_out"], config["image_out_file"])
+    geometry = (config["counties_path"], config["land_holdings_path"])
+    
+    if not os.path.exists(json_path):
+        print(f"{json_path} does not exist.")
+        exit(-1)
+    if not json_path[-5:] == ".json":
+        print(f"Extrapolate ggr gps needs a .json file")
+        print(f"{json_path} is not a JSON file")
+        exit(-1)
+    if not os.path.exists(geometry[0]):
+        print(f"{geometry[0]} does not exist.")
+        exit(-1)
+    if not os.path.exists(geometry[1]):
+        print(f"{geometry[1]} does not exist.")
         exit(-1)
     
+    imgtable.import_from_json(json_path)
+
     # Add images to database
-    skipped_gid_list = extrapolate_ggr_gps(imgtable, doctest_mode=False)
-    imgtable.export_to_json(args.out_csv_path)
+    skipped_gid_list = extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False)
+    imgtable.export_to_json(json_path)

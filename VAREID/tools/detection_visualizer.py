@@ -38,9 +38,9 @@ with open('config.yaml', 'r') as f:
     config = yaml.load(f, Loader=yaml.SafeLoader)
 
 DIR = config['data_dir_out']
-IDR_DIR = os.path.join(DIR, "id_region/id_regions.json")
+IDR_DIR = os.path.join(DIR, config['id_region_dirname'], config['id_region_out'])
 IAC_DIR = os.path.join(DIR, config['ia_dirname'], config['ia_out_file'])
-FIELDS = ['viewpoint', 'annotations_census', 'CA_score']
+FIELDS = ['category_id', 'viewpoint', 'annotations_census', 'CA_score', 'clarity_score']
 VIDEO_MODE = config['data_video']
 
 # Random selection of images
@@ -211,6 +211,9 @@ def render_image():
         for f in FIELDS:
             val = row.get(f, "N/A")
             if pd.isna(val): val = "N/A"
+            if type(val) == float:
+                val = f"{val:.2f}"
+                
             field_texts.append(f"{f}:{val}")
             
         text = ", ".join(field_texts)
@@ -221,7 +224,7 @@ def render_image():
             (x1, y_offset),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
-            base_color,
+            (base_color),
             2,
             cv2.LINE_AA
         )

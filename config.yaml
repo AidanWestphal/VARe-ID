@@ -7,28 +7,34 @@
 
 # The file path (dir) to save your output to
 data_dir_out: ~
-# The file path (dir) to read data from
+# The file path (dir) to read data from`
 data_dir_in: ~
 # True/False describing whether the data is in video format (True) or image format (False)
 data_video: True
 
 # -------- END FILL OUT SECTION --------
 
-
 # Important directories to reference
 log_dirname: "logs"
 image_dirname: "images"
 model_dirname: "VAREID/models"
 
+# General checkpoint information for whole pipeline
+cp_dir: "checkpoints"
+cp_freq: 50
+
 # Import step fields
 image_out_file: "image_data.json"
 video_out_file: "video_data.json"
 import_logfile: "import.txt"
+counties_file: "VAREID/ggr_counties.json"
+land_holdings_file: "VAREID/ggr_landtenures.json"
 
 # Detection step fields
 dt_dirname: "detector"
 dt_model: "yolov9c.pt" # SEE Ultralytics for recognizable models
 dt_logfile: "detector.txt"
+dt_cpname: "dt_cp.pkl"
 
 # Detection (gt present) fields -- FILL IN IF PROVIDING GT FILE
 dt_gt_file: ~
@@ -42,12 +48,14 @@ dt_image_out_file: "img_annots.json"
 si_dirname: "species_identifier"
 si_out_file: "si_annots.json"
 si_logfile: "species_identifier.txt"
+si_cpname: "si_cp.pkl"
 
 # Viewpoint classification step fields
 vc_dirname: "viewpoint_classifier"
 vc_model: "plains_grevys_VC_june_25_tf_efficientnet_b4_ns_9.pth"
 vc_out_file: "vc_annots.json"
 vc_logfile: "viewpoint_classifier.txt"
+vc_cpname: "vc_cp.pkl"
 
 # Identifiable annotation classification step fields
 ia_dirname: "ia_classifier"
@@ -55,6 +63,13 @@ ia_model: "best_june_24_2025_IA_classifier_016.pth"
 ia_out_file: "ia_annots.json"
 ia_filtered_out_file: "ia_filtered_annots.json"
 ia_logfile: "ia_classify_and_filter.txt"
+ia_cpname: "ia_cp.pkl"
+
+# Identifiable region step fields
+id_region_dirname: "id_region"
+id_region_model: "finetuned_yolo.pt"
+id_region_out: "id_regions.json"
+id_logfile: "idr_logs.txt"
 
 # Frame sampling step fields
 fs_dirname: "frame_sampling"
@@ -69,6 +84,7 @@ mid_dirname: "miew_id"
 mid_model: "conservationxlabs/miewid-msv3"
 mid_out_file: "miewid_embeddings.pickle"
 mid_logfile: "miew_id.txt"
+mid_cpname: "mid_cp.pkl"
 
 # LCA step fields
 lca_dirname: "lca"
