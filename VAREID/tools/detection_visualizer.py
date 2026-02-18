@@ -9,7 +9,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 import gradio as gr
 from collections import defaultdict
 import random
-import sys
+import argparse
 
 from VAREID.libraries.io.format_funcs import load_config
 from VAREID.libraries.io.workflow_funcs import build_config
@@ -32,9 +32,14 @@ try:
 except TypeError:
     raise("flag num_images expects integer")
                 
-    
+parser = argparse.ArgumentParser(description="Detection Visualizer")
+parser.add_argument("--config_path", default="config.yaml", help="Path to config file")
 
-config = build_config(load_config('config.yaml'))
+args = parser.parse_args()
+
+config_path = args.config_path
+
+config = build_config(load_config(config_path))
 
 DIR = config['data_dir_out']
 IDR_DIR = config['idr_out_path']
