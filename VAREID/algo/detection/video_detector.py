@@ -12,7 +12,6 @@ from tqdm import tqdm
 from ultralytics import YOLO
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe
 from VAREID.libraries.utils import path_from_file
-from VAREID.tools.generate_ggr_subset import is_qr_code_image
 
 ultralytics.checks()
 warnings.filterwarnings("ignore")
@@ -32,9 +31,6 @@ def detect_videos(video_data, model_path, threshold, sz):
 
         # DETECT AND TRACK OVER VIDEO
         for i, frame_data in enumerate(tqdm(frames, desc=f"Detecting frames from {vid_name}...")):
-            
-            if is_qr_code_image(frame_data["uri_original"]):
-                continue
             
             img = cv2.imread(frame_data["uri"])
             

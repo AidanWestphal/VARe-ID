@@ -13,7 +13,6 @@ from ultralytics import YOLO
 from VAREID.libraries.io.checkpoint import CheckpointManager
 from VAREID.libraries.io.format_funcs import load_config, load_json, load_dataframe, save_json, split_dataframe
 from VAREID.libraries.utils import path_from_file
-from VAREID.tools.generate_ggr_subset import is_qr_code_image
 
 ultralytics.checks()
 warnings.filterwarnings("ignore")
@@ -37,10 +36,7 @@ def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
             annotations = cpdata.external_state["data"]
 
         for image in tqdm(cpdata, initial=cpdata.iteration, desc=f"Detecting images..."):
-            
-            if is_qr_code_image(image["uri_original"]):
-                continue
-            
+
             # Detect from the image
             results = model(image["uri_original"], conf=threshold, imgsz=sz, verbose=False)
 
