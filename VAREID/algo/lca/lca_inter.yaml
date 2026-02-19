@@ -93,7 +93,7 @@ edge_weights:
     # miewid: auto(0.2)
     miewid: 0.81
     metadata(miewid): miewid
-  verifier_names: metadata(miewid) simulated_human
+  verifier_names: metadata(miewid) ui_human
 
 logging:
   log_level: INFO
