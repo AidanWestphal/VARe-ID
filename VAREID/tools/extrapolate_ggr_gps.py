@@ -55,5 +55,6 @@ if __name__ == "__main__":
     imgtable.import_from_json(json_path)
 
     # Add images to database
-    skipped_gid_list = extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False)
+    skipped_gid_list, qr_gid_list = extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False)
+    imgtable.delete_rowids(qr_gid_list)
     imgtable.export_to_json(json_path)

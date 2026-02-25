@@ -360,7 +360,7 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
         )
         print(f"\t{skipped_gid_list}")
 
-    return skipped_gid_list + qr_gids
+    return skipped_gid_list, qr_gids
 
 
 def match_point_to_poly(point, poly_prev, polys):
