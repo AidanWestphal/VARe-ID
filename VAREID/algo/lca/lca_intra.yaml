@@ -8,7 +8,7 @@ data:
   - individual_id
   id_key: "uuid"
   n_filter_min: 1
-  n_filter_max: 1000
+  n_filter_max: 100000
   # annotation_file: ./zebra_annotations.json <-- provided by lca.py
   # embedding_file: ./zebra_embeddings.pickle <-- provided by lca.py
   # output_path: ./output <-- provided by lca.py
@@ -21,8 +21,8 @@ data:
   - backright
   - downright
   - frontright
-  category_id_list:
-  - 0
+  # category_id_list:
+  # - 0
   output_key: encounter_id
   ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2020_subset_encounter_grouping/GGR_encounter_score.db
 

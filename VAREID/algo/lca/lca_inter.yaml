@@ -5,10 +5,10 @@ algorithm_type: stability
 
 data:
   name_keys:
-  - individual_id
+  - occurence_id
   id_key: "uuid"
   n_filter_min: 1
-  n_filter_max: 1000
+  n_filter_max: 5000
   # annotation_file: ./zebra_annotations.json <-- provided by lca.py
   # embedding_file: ./zebra_embeddings.pickle <-- provided by lca.py
   # output_path: ./output <-- provided by lca.py
@@ -20,12 +20,12 @@ data:
   - backright
   - downright
   - frontright
-  category_id_list:
-  - 0
+  # category_id_list:
+  # - 0
   representative_list:
   - true
   output_key: cluster_id
-  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GZCD_encounters/GZCD_test_100annots.db
+  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2024_encounter_grouping/annots.db
 
 algorithm:
   initial_topk: 10
