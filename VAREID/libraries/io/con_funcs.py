@@ -110,7 +110,8 @@ def import_image_folder(dir_in, dir_out, file_out, geometry, recursive=True, doc
 
     # Add images to database
     gid_list = add_images(imgtable, files, doctest_mode=doctest_mode)
-    skipped_gid_list = extrapolate_ggr_gps(imgtable, geometry)
+    skipped_gid_list, qr_gid_list = extrapolate_ggr_gps(imgtable, geometry)
+    # remove qr_gid from imgtable
     if gid_list:
         imgtable.export_to_json(path_out)
     return gid_list
