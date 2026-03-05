@@ -209,12 +209,15 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
                     )
                     print("\t...skipping unixtime synchronization")
 
+    qr_gids_all = []
+
     # Synchronize unixtimes & calculate missing GPS data
     for day_idx in range(len(ggr_hierarchy)):
         for car in ggr_hierarchy[day_idx].keys():
             car_data = ggr_hierarchy[day_idx][car]
             imgsets = car_data[0]
             qr_gids = car_data[1]
+            qr_gids_all += qr_gids
             qr_times = imgtable.get_image_unixtimes(qr_gids)
             # Calculate timedeltas for each camera relative to first camera based on QR code images (taken simultaneously)
             base_times = [qr_times[0]] * len(qr_times)
@@ -360,7 +363,7 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
         )
         print(f"\t{skipped_gid_list}")
 
-    return skipped_gid_list, qr_gids
+    return skipped_gid_list, qr_gids_all
 
 
 def match_point_to_poly(point, poly_prev, polys):
