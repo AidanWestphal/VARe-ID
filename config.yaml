@@ -69,6 +69,7 @@ ia_cpname: "ia_cp.pkl"
 id_region_dirname: "id_region"
 id_region_model: "finetuned_yolo.pt"
 id_region_out: "id_regions.json"
+id_filtered_out_file: "id_regions_filtered.json"
 id_logfile: "idr_logs.txt"
 
 # Frame sampling step fields
