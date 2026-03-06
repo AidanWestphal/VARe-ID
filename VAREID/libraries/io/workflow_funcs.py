@@ -61,6 +61,7 @@ def generate_targets(config):
     #     targets.append([config["post_left_in_path"], config["post_right_in_path"]])
     # else:
     targets.append(config["idr_out_path"])
+    targets.append(config["idr_filtered_out_path"])
     targets.append([config["lca_out_path"]])
 
     return targets
@@ -178,6 +179,7 @@ def build_config(config):
     idr_dir = os.path.join(out_dir, config["id_region_dirname"])
     idr_model_path = os.path.join(model_dir, config['id_region_model'])
     idr_out_path = os.path.join(idr_dir, config['id_region_out'])
+    idr_filtered_out_path = os.path.join(idr_dir, config['id_filtered_out_file'])
     idr_logs = os.path.join(log_dir, config["id_logfile"])
 
     # MIEWID EMBEDDING STEP
@@ -262,6 +264,7 @@ def build_config(config):
     config['idr_dir'] = idr_dir
     config['idr_model_path'] = idr_model_path
     config['idr_out_path'] = idr_out_path
+    config['idr_filtered_out_path'] = idr_filtered_out_path
     config['idr_logs'] = idr_logs
     config["mid_dir"] = mid_dir
     config["mid_out_path"] = mid_out_path
