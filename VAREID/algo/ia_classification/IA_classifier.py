@@ -89,8 +89,8 @@ def filter_dataframe(df, config):
     # Filter based on accepted viewpoint
     viewpoint_condition = df["viewpoint"].isin(config["viewpoints"])
     # Special condition - only applies to gt annotated data where the species was correctly identified
-    if "annot species" in df.keys():
-        species_condition = df["annot_species"] == config["species"]
+    if "species" in df.keys():
+        species_condition = df["species"] == config["species"]
     else:
         species_condition = True
 
