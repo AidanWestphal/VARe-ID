@@ -1,0 +1,11 @@
+# Input annotation JSON file
+image_data: "lca_annots.json"
+
+# Path to the SQLite database used to store state and allow pausing/restarting
+db_path: "cluster_labels.db"
+
+# Path for the output annotations JSON file
+out_json: "lca_annots_labeled.json"
+
+# Gradio server port
+port: 7860
