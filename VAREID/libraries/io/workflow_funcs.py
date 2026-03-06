@@ -61,6 +61,7 @@ def generate_targets(config):
     #     targets.append([config["post_left_in_path"], config["post_right_in_path"]])
     # else:
     targets.append(config["idr_out_path"])
+    targets.append(config["idr_filtered_out_path"])
     targets.append([config["lca_out_path"]])
 
     return targets

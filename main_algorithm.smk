@@ -87,7 +87,7 @@ rule id_region:
         "python -m VAREID.drivers.idr_driver --config {config_str}"
 
 
-rule idr_filtering:
+rule id_region_filtering:
     input:
         config["idr_out_path"]
     output:
