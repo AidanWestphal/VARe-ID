@@ -1,8 +1,8 @@
-x_scale: 1
+x_scale: 1 # Scale the length of the bbox in the given direction
 
 y_scale: 1
 
-confidence_threshold: 0.6
+confidence_threshold: 0.6 # Confidence for YOLO
 
 NMS_threshold: 0.2
 
