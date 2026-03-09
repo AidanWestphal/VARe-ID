@@ -470,7 +470,7 @@ def get_ggr_polygons(filepath="ggr_counties.json", c_or_lt=0, poly_obj=True, inv
     return poly_dict
 
 
-def match_ggr_polygons(imgtable, proj_path):
+def match_ggr_polygons(imgtable, c_path, lt_path):
     """
     Get counties/land holdings for each image with GPS.
 
@@ -481,10 +481,8 @@ def match_ggr_polygons(imgtable, proj_path):
         c_lt_by_uuid (dict): dictionary mapping image uuids to county, land holding tuples
     """
         
-    poly_dict_c = get_ggr_polygons(filepath=os.path.join(proj_path, "VAREID/ggr_counties.json"), 
-                                   c_or_lt=0, invert=True)
-    poly_dict_lt = get_ggr_polygons(filepath=os.path.join(proj_path, "VAREID/ggr_landtenures.json"), 
-                                    c_or_lt=1, invert=True)
+    poly_dict_c = get_ggr_polygons(filepath=c_path, c_or_lt=0, invert=True)
+    poly_dict_lt = get_ggr_polygons(filepath=lt_path, c_or_lt=1, invert=True)
     gid_list = imgtable.get_all_gids()
     gps_list = imgtable.get_image_gps(gid_list)
     uuid_list = imgtable.get_image_uuids(gid_list)

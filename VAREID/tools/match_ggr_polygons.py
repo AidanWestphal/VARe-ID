@@ -45,7 +45,9 @@ if __name__ == "__main__":
         exit(-1)
     
     # Write location data to csv
-    c_lt_by_uuids = match_ggr_polygons(imgtable, args.proj_path)
+    c_path = os.path.join(args.proj_path, config_data["counties_file"])
+    lt_path = os.path.join(args.proj_path, config_data["land_holdings_file"])
+    c_lt_by_uuids = match_ggr_polygons(imgtable, c_path, lt_path)
     print("Exporting to json...")
     with open(args.out_json_path, "w") as outfile:
         json.dump(c_lt_by_uuids, outfile, indent=4)
