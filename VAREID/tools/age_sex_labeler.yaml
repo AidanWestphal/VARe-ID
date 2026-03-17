@@ -9,3 +9,8 @@ out_json: "lca_annots_labeled.json"
 
 # Gradio server port
 port: 7860
+
+# Workflow Configuration
+# true: Propagate existing labels; only load clusters missing age/sex into the labeling queue.
+# false: Ignore existing labels; load ALL clusters into the labeling queue from scratch.
+load_unlabeled_only: true
