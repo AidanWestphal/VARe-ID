@@ -148,7 +148,7 @@ def get_cluster_images(df, cluster_id, cache_dir):
 
 
 def export_data():
-    """Generates the new annotation file, applying labels and dropping excluded annotations."""
+    """Generates the new annotation file, applying labels and marking excluded annotations with cluster_id = -1."""
     out_json = CONFIG["out_json"]
     df = CONFIG["df"].copy()
     
@@ -157,9 +157,20 @@ def export_data():
     excluded_df = pd.read_sql_query("SELECT uuid FROM annotation_status WHERE keep = 0", conn)
     conn.close()
     
-    # 1. Propagate cluster-level labels
     label_dict = labels_df.set_index('cluster_id').to_dict('index')
+    excluded_uuids = set(excluded_df['uuid'].astype(str).tolist())
+    
     def apply_labels(row):
+        uuid_str = str(row.get('uuid', ''))
+        
+        # 1. If this annotation was marked for exclusion, reassign to cluster -1 and clear labels
+        if uuid_str in excluded_uuids:
+            row['cluster_id'] = -1
+            row['age'] = ""
+            row['sex'] = ""
+            return row
+            
+        # 2. Otherwise, propagate cluster-level labels normally
         cid = str(row.get('cluster_id', ''))
         if cid in label_dict:
             db_a = label_dict[cid]['age']
@@ -170,16 +181,11 @@ def export_data():
         
     df = df.apply(apply_labels, axis=1)
     
-    # 2. Filter out excluded annotations entirely
-    excluded_uuids = set(excluded_df['uuid'].astype(str).tolist())
-    df['uuid_str'] = df['uuid'].astype(str)
-    df = df[~df['uuid_str'].isin(excluded_uuids)].drop(columns=['uuid_str'])
-    
     # 3. Export
     out_dict = split_dataframe(df)
     save_json(out_dict, out_json)
     
-    return f"Data successfully exported to `{out_json}`. Excluded {len(excluded_uuids)} bad annotations."
+    return f"Data successfully exported to `{out_json}`. Reassigned {len(excluded_uuids)} bad annotations to cluster `-1`."
 
 
 def load_ui_data():
@@ -278,7 +284,7 @@ def build_interface():
             
         exclude_checkboxes = gr.CheckboxGroup(
             label="❌ EXCLUDE Bad Annotations", 
-            info="Select the UUIDs of any images that do NOT belong in this cluster (incorrect detection, bad quality, etc.). They will be completely removed from the final JSON.",
+            info="Select the UUIDs of any images that do NOT belong in this cluster (incorrect detection, bad quality, etc.). They will be reassigned to cluster '-1' for later review.",
             choices=[],
             interactive=True
         )
