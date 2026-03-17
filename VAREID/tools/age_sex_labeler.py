@@ -16,6 +16,9 @@ warnings.filterwarnings("ignore")
 os.environ["GRADIO_TEMP_DIR"] = os.path.expanduser("~/gradio_cache")
 CACHE_DIR = os.path.expanduser("~/gradio_cache/zebra_crops")
 
+# Define maximum safe image threshold per cluster for the UI grid
+MAX_IMAGES = 100
+
 # Load configuration
 try:
     with open('age_sex_labeler.yaml', 'r') as f:
@@ -50,7 +53,6 @@ def setup_data_and_db(json_path, db_path):
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     
-    # If starting fresh, initialize schema and populate based on config rules
     if not db_exists:
         print(f"Initializing new database at {db_path}...")
         c.execute('''
@@ -76,7 +78,6 @@ def setup_data_and_db(json_path, db_path):
             existing_age = ""
             existing_sex = ""
             
-            # Only propagate labels if user requested to load unlabeled data only
             if CONFIG["load_unlabeled_only"]:
                 for _, row in group.iterrows():
                     if str(row.get('age', '')).strip() != "":
@@ -84,17 +85,13 @@ def setup_data_and_db(json_path, db_path):
                     if str(row.get('sex', '')).strip() != "":
                         existing_sex = str(row['sex']).strip()
             
-            # Determine status. If we have both, and we only wanted unlabeled, skip it by marking 'labeled'.
-            # If load_unlabeled_only is False, existing_age/sex are empty, status is 'pending' for all.
             status = "labeled" if (CONFIG["load_unlabeled_only"] and existing_age and existing_sex) else "pending"
             
             c.execute('INSERT INTO cluster_labels (cluster_id, age, sex, status) VALUES (?, ?, ?, ?)', 
                       (str(cluster_id), existing_age, existing_sex, status))
             
-            # Add all individual annotations to the tracking table
             for idx, row in group.iterrows():
                 uuid_val = str(row.get('uuid', f"nouuid_{idx}"))
-                # default keep = 1 (True)
                 c.execute('INSERT INTO annotation_status (uuid, cluster_id, keep) VALUES (?, ?, 1)', 
                           (uuid_val, str(cluster_id)))
                           
@@ -106,15 +103,19 @@ def setup_data_and_db(json_path, db_path):
     return df
 
 
-def get_cluster_images(df, cluster_id, cache_dir):
+def get_cluster_images_and_captions(df, cluster_id, cache_dir):
     """Retrieves cached bounding box crops for a given cluster."""
     rows = df[df['cluster_id'].astype(str) == str(cluster_id)]
-    gallery_items = []
-    uuid_list = []
+    crop_paths = []
+    uuid_mapping = []
     
     os.makedirs(cache_dir, exist_ok=True)
     
     for idx, row in rows.iterrows():
+        if len(crop_paths) >= MAX_IMAGES:
+            print(f"Warning: Cluster {cluster_id} exceeds {MAX_IMAGES} images. Truncating UI view.")
+            break
+
         img_path = row.get('image_path')
         bbox = row.get('bbox')
         uuid_val = str(row.get('uuid', f"nouuid_{idx}"))
@@ -123,42 +124,37 @@ def get_cluster_images(df, cluster_id, cache_dir):
             continue
             
         try:
-            img = Image.open(str(img_path))
-            
-            # Safely parse strings to lists if necessary
-            if isinstance(bbox, str):
-                try:
-                    bbox = json.loads(bbox)
-                except json.JSONDecodeError:
-                    pass
-            
-            # Check if bbox is a valid list/array-like object with 4 coordinates
-            if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
-                # XYWH format: x, y, width, height
-                x, y, w, h = [float(c) for c in bbox]
-                
-                # Convert to PIL's expected x1, y1, x2, y2 (left, upper, right, lower)
-                x1, y1 = max(0, int(x)), max(0, int(y))
-                x2 = min(img.width, int(x + w))
-                y2 = min(img.height, int(y + h))
-                
-                img = img.crop((x1, y1, x2, y2))
-            
             temp_path = os.path.join(cache_dir, f"crop_{uuid_val}.jpg")
-            img.save(temp_path)
             
-            # Store tuple of (image_path, caption) for the gallery
-            gallery_items.append((temp_path, f"UUID: {uuid_val}"))
-            uuid_list.append(uuid_val)
+            if not os.path.exists(temp_path):
+                img = Image.open(str(img_path))
+                
+                if isinstance(bbox, str):
+                    try:
+                        bbox = json.loads(bbox)
+                    except json.JSONDecodeError:
+                        pass
+                
+                if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+                    x, y, w, h = [float(c) for c in bbox]
+                    x1, y1 = max(0, int(x)), max(0, int(y))
+                    x2 = min(img.width, int(x + w))
+                    y2 = min(img.height, int(y + h))
+                    img = img.crop((x1, y1, x2, y2))
+                
+                img.save(temp_path)
+            
+            crop_paths.append(temp_path)
+            uuid_mapping.append(uuid_val)
             
         except Exception as e:
             print(f"Warning: Error processing image {img_path}: {e}")
             
-    return gallery_items, uuid_list
+    return crop_paths, uuid_mapping
 
 
 def export_data():
-    """Generates the new annotation file, applying labels and marking excluded annotations with cluster_id = -1."""
+    """Generates the new annotation file, routing excluded annots to cluster_id = -1."""
     out_json = CONFIG["out_json"]
     df = CONFIG["df"].copy()
     
@@ -173,14 +169,14 @@ def export_data():
     def apply_labels(row):
         uuid_str = str(row.get('uuid', ''))
         
-        # 1. If this annotation was marked for exclusion, reassign to cluster -1 and clear labels
+        # Priority 1: Exclusions become -1 and get scrubbed
         if uuid_str in excluded_uuids:
             row['cluster_id'] = -1
             row['age'] = ""
             row['sex'] = ""
             return row
             
-        # 2. Otherwise, propagate cluster-level labels normally
+        # Priority 2: Valid cluster images inherit consensus
         cid = str(row.get('cluster_id', ''))
         if cid in label_dict:
             db_a = label_dict[cid]['age']
@@ -191,7 +187,6 @@ def export_data():
         
     df = df.apply(apply_labels, axis=1)
     
-    # 3. Export
     out_dict = split_dataframe(df)
     save_json(out_dict, out_json)
     
@@ -199,63 +194,110 @@ def export_data():
 
 
 def load_ui_data():
-    """Fetches the next cluster requiring labeling."""
+    """Builds the dynamic arrays for our fixed-grid layout and fetches the next cluster."""
     conn = sqlite3.connect(CONFIG["db"])
     c = conn.cursor()
     
     c.execute('SELECT COUNT(*) FROM cluster_labels WHERE status = "pending"')
     pending_count = c.fetchone()[0]
     
+    # --- END STATE HANDLING ---
     if pending_count == 0:
-        # Trigger automatic export if nothing is left
         conn.close()
         export_msg = export_data()
         final_text = f"**✅ All clusters labeled!**\n\n{export_msg}"
         
-        # Hide interactive elements via gr.update
-        return (None, final_text, gr.update(visible=False), gr.update(visible=False), 
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False))
-                
+        # Hide all controls and columns
+        col_updates = [gr.update(visible=False)] * MAX_IMAGES
+        img_updates = [gr.update(value=None)] * MAX_IMAGES
+        html_updates = [gr.update(value="")] * MAX_IMAGES
+        chk_updates = [gr.update(value=False)] * MAX_IMAGES
+        
+        return [None, final_text, gr.update(visible=False), gr.update(visible=False)] + \
+               col_updates + img_updates + html_updates + chk_updates + \
+               [{}, gr.update(visible=False)]
+               
+    # --- NEXT CLUSTER HANDLING ---
     c.execute('SELECT cluster_id, age, sex FROM cluster_labels WHERE status = "pending" LIMIT 1')
     row = c.fetchone()
-    conn.close()
-    
     cluster_id, age, sex = row
     
-    gallery_items, uuid_list = get_cluster_images(CONFIG["df"], cluster_id, CACHE_DIR)
+    crop_paths, uuid_mapping = get_cluster_images_and_captions(CONFIG["df"], cluster_id, CACHE_DIR)
+    
+    # Query any previously saved exclusion states (if reloading an old session)
+    all_cluster_uuids = ', '.join([f"'{u}'" for u in uuid_mapping])
+    existing_exclusions = set()
+    if all_cluster_uuids:
+        c.execute(f"SELECT uuid FROM annotation_status WHERE uuid IN ({all_cluster_uuids}) AND keep = 0")
+        existing_exclusions = set(r[0] for r in c.fetchall())
+    conn.close()
+    
+    # Build exact length arrays for our fixed grid UI
+    col_updates, img_updates, html_updates, chk_updates = [], [], [], []
+    for i in range(MAX_IMAGES):
+        if i < len(crop_paths):
+            u_val = uuid_mapping[i]
+            col_updates.append(gr.update(visible=True))
+            img_updates.append(gr.update(value=crop_paths[i]))
+            html_updates.append(gr.update(value=f"<div style='font-size: 0.8em; word-break: break-all; color: gray; margin-bottom: -10px;'>UUID: {u_val}</div>"))
+            chk_updates.append(gr.update(value=(u_val in existing_exclusions)))
+        else:
+            col_updates.append(gr.update(visible=False))
+            img_updates.append(gr.update(value=None))
+            html_updates.append(gr.update(value=""))
+            chk_updates.append(gr.update(value=False))
+
+    cluster_json = {"uuid_mapping": uuid_mapping}
     status_text = f"**Labeling Cluster:** `{cluster_id}` | **Pending:** {pending_count}"
     
-    ui_age = age if age else None
-    ui_sex = sex if sex else None
+    # Translate empty string back to "Unknown" for UI if needed
+    ui_age = "Unknown" if (age == "" and age is not None) else age
+    ui_sex = "Unknown" if (sex == "" and sex is not None) else sex
     
-    # Return UI elements. Make sure controls are visible in case we restarted.
-    return (cluster_id, status_text, 
-            gr.update(value=ui_age, visible=True), 
-            gr.update(value=ui_sex, visible=True), 
-            gr.update(value=gallery_items, visible=True), 
-            gr.update(choices=uuid_list, value=[], visible=True),
-            gr.update(visible=True))
+    return [cluster_id, status_text, gr.update(value=ui_age if ui_age else None, visible=True), gr.update(value=ui_sex if ui_sex else None, visible=True)] + \
+           col_updates + img_updates + html_updates + chk_updates + \
+           [cluster_json, gr.update(visible=True)]
 
 
-def on_submit(cid, age_val, sex_val, excluded_uuids):
-    """Saves the given selections/exclusions to the database and fetches the next cluster."""
+def on_submit(cid, age_val, sex_val, cluster_data_json, *checkbox_values):
+    """Validates inputs, commits changes to SQLite, and cycles queue."""
     if cid is None:
         return load_ui_data()
         
-    a = age_val if age_val else ""
-    s = sex_val if sex_val else ""
+    uuid_mapping = cluster_data_json.get("uuid_mapping", [])
+    total_active_images = len(uuid_mapping)
     
+    # Calculate how many active images were flagged for exclusion
+    excluded_count = 0
+    for i in range(total_active_images):
+        if checkbox_values[i]:
+            excluded_count += 1
+            
+    # VALIDATION: Require Age and Sex unless the ENTIRE cluster was removed
+    if excluded_count < total_active_images:
+        if not age_val or not sex_val:
+            raise gr.Error("⚠️ You must select both an Age and a Sex. If unsure, select 'Unknown'.")
+    else:
+        # If everything is marked for removal, bypass validation and force clear
+        age_val = ""
+        sex_val = ""
+
+    # Map "Unknown" strictly back to empty strings for downstream JSON integrity
+    db_age = "" if age_val == "Unknown" else age_val
+    db_sex = "" if sex_val == "Unknown" else sex_val
+
+    # Commit phase
     conn = sqlite3.connect(CONFIG["db"])
     c = conn.cursor()
     
-    # Update Cluster Labels
-    c.execute('UPDATE cluster_labels SET age=?, sex=?, status="labeled" WHERE cluster_id=?', 
-              (a, s, cid))
+    # Mark cluster as resolved
+    c.execute('UPDATE cluster_labels SET age=?, sex=?, status="labeled" WHERE cluster_id=?', (db_age, db_sex, cid))
               
-    # Process excluded annotations
-    if excluded_uuids:
-        for uuid_val in excluded_uuids:
-            c.execute('UPDATE annotation_status SET keep=0 WHERE uuid=?', (str(uuid_val),))
+    # Write bounding-box level decisions (keep 1 or 0)
+    for i in range(total_active_images):
+        u_val = uuid_mapping[i]
+        is_keep = 0 if checkbox_values[i] else 1
+        c.execute('UPDATE annotation_status SET keep=? WHERE uuid=?', (is_keep, u_val))
             
     conn.commit()
     conn.close()
@@ -268,50 +310,51 @@ def build_interface():
         gr.Markdown("# Zebra Cluster Age & Sex Labeling")
         
         cluster_state = gr.State()
-        status_md = gr.Markdown("**Status:** Initializing...")
+        cluster_data_state = gr.JSON({}, visible=False) # Stores the UUID map for the current active list
         
-        gallery = gr.Gallery(
-            label="Cluster Detections (Cropped) - Note the UUID on each image.", 
-            show_label=True, 
-            elem_id="gallery", 
-            columns=[4], 
-            rows=[1], 
-            object_fit="contain", 
-            height="auto"
-        )
+        status_md = gr.Markdown("**Status:** Initializing...")
         
         with gr.Row():
             age_radio = gr.Radio(
-                choices=["0-2", "3-5", "6-11", "12-23", "24-35", "36+"], 
+                choices=["0-2", "3-5", "6-11", "12-23", "24-35", "36+", "Unknown"], 
                 label="Age (Months)",
                 interactive=True
             )
             sex_radio = gr.Radio(
-                choices=["Male", "Female"], 
+                choices=["Male", "Female", "Unknown"], 
                 label="Sex",
                 interactive=True
             )
             
-        exclude_checkboxes = gr.CheckboxGroup(
-            label="❌ EXCLUDE Bad Annotations", 
-            info="Select the UUIDs of any images that do NOT belong in this cluster (incorrect detection, bad quality, etc.). They will be reassigned to cluster '-1' for later review.",
-            choices=[],
-            interactive=True
-        )
-            
         submit_btn = gr.Button("Submit & Next ➡", variant="primary", size="lg")
         
-        # Load the initial data, hooking up visibility toggles for the auto-save hide mechanic
-        demo.load(
-            load_ui_data, 
-            outputs=[cluster_state, status_md, age_radio, sex_radio, gallery, exclude_checkboxes, submit_btn]
-        )
+        gr.Markdown("---")
+        gr.Markdown("### Cluster Detections\nCheck the box below any image that is a bad detection or doesn't belong. It will be moved to `-1`.")
         
-        submit_btn.click(
-            on_submit, 
-            inputs=[cluster_state, age_radio, sex_radio, exclude_checkboxes], 
-            outputs=[cluster_state, status_md, age_radio, sex_radio, gallery, exclude_checkboxes, submit_btn]
-        )
+        # --- FIXED UI GRID GENERATOR ---
+        box_columns = []
+        image_components = []
+        html_components = []
+        checkbox_components = []
+        
+        with gr.Row():
+            for i in range(MAX_IMAGES):
+                with gr.Column(visible=False, min_width=220) as col:
+                    img = gr.Image(interactive=False, show_label=False, show_download_button=False)
+                    uuid_html = gr.HTML()
+                    chk = gr.Checkbox(label="❌ Remove")
+                    
+                    box_columns.append(col)
+                    image_components.append(img)
+                    html_components.append(uuid_html)
+                    checkbox_components.append(chk)
+
+        # Mapping I/O flows
+        ui_outputs = [cluster_state, status_md, age_radio, sex_radio] + box_columns + image_components + html_components + checkbox_components + [cluster_data_state, submit_btn]
+        submit_inputs = [cluster_state, age_radio, sex_radio, cluster_data_state] + checkbox_components
+        
+        demo.load(load_ui_data, outputs=ui_outputs)
+        submit_btn.click(on_submit, inputs=submit_inputs, outputs=ui_outputs)
         
     return demo
 
