@@ -1,5 +1,5 @@
 # Input annotation JSON file
-image_data: "lca_annots.json"
+image_data: "/fs/ess/PAS2136/ggr_data/results/GGR2020_subset/lca/lca_annots.json"
 
 # Path to the SQLite database used to store state and allow pausing/restarting
 db_path: "cluster_labels.db"

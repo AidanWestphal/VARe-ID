@@ -8,7 +8,7 @@ from PIL import Image
 import gradio as gr
 import pandas as pd
 
-from VAREID.libraries.io.format_funcs import load_dataframe, split_dataframe, save_json
+from VAREID.libraries.io.format_funcs import load_json, join_dataframe, split_dataframe, save_json
 
 warnings.filterwarnings("ignore")
 
@@ -33,7 +33,9 @@ CONFIG = {
 
 def setup_data_and_db(json_path, db_path):
     print(f"Loading annotation data from {json_path}...")
-    df = load_dataframe(json_path)
+
+    df = load_json(json_path)
+    df = join_dataframe(df)
     
     # Requirement 2: Dynamically create 'age' and 'sex' columns if they don't exist at all
     if 'age' not in df.columns:
@@ -107,18 +109,24 @@ def get_cluster_images(df, cluster_id, cache_dir):
         try:
             img = Image.open(str(img_path))
             
-            if pd.notna(bbox):
-                if isinstance(bbox, str):
-                    try:
-                        bbox = json.loads(bbox)
-                    except json.JSONDecodeError:
-                        pass
-                        
-                if isinstance(bbox, list) and len(bbox) == 4:
-                    x1, y1, x2, y2 = [float(c) for c in bbox]
-                    x1, y1 = max(0, int(x1)), max(0, int(y1))
-                    x2, y2 = min(img.width, int(x2)), min(img.height, int(y2))
-                    img = img.crop((x1, y1, x2, y2))
+            # Safely parse strings to lists if necessary
+            if isinstance(bbox, str):
+                try:
+                    bbox = json.loads(bbox)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Check if bbox is a valid list/array-like object with 4 coordinates
+            if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+                # XYWH format: x, y, width, height
+                x, y, w, h = [float(c) for c in bbox]
+                
+                # Convert to PIL's expected x1, y1, x2, y2 (left, upper, right, lower)
+                x1, y1 = max(0, int(x)), max(0, int(y))
+                x2 = min(img.width, int(x + w))
+                y2 = min(img.height, int(y + h))
+                
+                img = img.crop((x1, y1, x2, y2))
             
             temp_path = os.path.join(cache_dir, f"crop_{uuid_val}.jpg")
             img.save(temp_path)
