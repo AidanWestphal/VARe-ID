@@ -7,7 +7,7 @@
 
 # The file path (dir) to save your output to
 data_dir_out: ~
-# The file path (dir) to read data from`
+# The file path (dir) to read data from
 data_dir_in: ~
 # True/False describing whether the data is in video format (True) or image format (False)
 data_video: True
