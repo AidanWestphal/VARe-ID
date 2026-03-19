@@ -15,3 +15,52 @@ Regions that overlap more than the amount specified in the id region config file
 ## Clarity Score
 
 Images that are not clear enough for identification must be filtered out. The default metric used to determine the clarity of an image is the sum of the edge density as determined by Canny edge detection and the normalized Laplacian variance.
+
+## Output
+
+- id regions
+    - categories
+        - id
+        - species
+    - images
+        - uuid # corresponds to image_uuid in annotations 
+        - timestamp
+        - gps_lat
+        - gps_lon
+        - image_path
+    - annotations
+        - uuid
+        - image_uuid
+        - bbox #xywh
+        - confidence
+        - detection_class
+        - tracking_id
+        - category_id
+        - viewpoint
+        - CA_score
+        - individual_id
+        - annotations_census
+        - clarity_score
+
+- id regions filtered # same as id regions output but with annotations_census=false filtered out and column removed
+    - categories
+        - id
+        - species
+    - images
+        - uuid # corresponds to image_uuid in annotations 
+        - timestamp
+        - gps_lat
+        - gps_lon
+        - image_path
+    - annotations
+        - uuid
+        - image_uuid
+        - bbox #xywh
+        - confidence
+        - detection_class
+        - tracking_id
+        - category_id
+        - viewpoint
+        - CA_score
+        - individual_id
+        - clarity_score

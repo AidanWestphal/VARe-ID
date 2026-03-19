@@ -8,3 +8,25 @@ The viewpoint classifier is used to give a description of how the target is pict
 2. Run each crop through finetuned model to gather scores for each base viewpoint
 3. Accpet or reject base viewpoints based on threshold specified in the viewpoint configuration file
 4. Combine base viewpoints into one viewpoint 
+
+## Output
+
+- vc annots
+    - categories
+        - id
+        - species
+    - images
+        - uuid # corresponds to image_uuid in annotations 
+        - timestamp
+        - gps_lat
+        - gps_lon
+        - image_path
+    - annotations
+        - uuid
+        - image_uuid
+        - bbox #xywh
+        - confidence
+        - detection_class
+        - tracking_id
+        - category_id
+        - viewpoint
