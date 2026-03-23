@@ -59,7 +59,7 @@ vc_cpname: "vc_cp.pkl"
 
 # Identifiable annotation classification step fields
 ia_dirname: "ia_classifier"
-ia_model: "best_june_24_2025_IA_classifier_016.pth"
+ia_model: "best_resnet50_ca_model.pth"
 ia_out_file: "ia_annots.json"
 ia_filtered_out_file: "ia_filtered_annots.json"
 ia_logfile: "ia_classify_and_filter.txt"
