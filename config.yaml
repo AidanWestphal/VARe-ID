@@ -52,7 +52,7 @@ si_cpname: "si_cp.pkl"
 
 # Viewpoint classification step fields
 vc_dirname: "viewpoint_classifier"
-vc_model: "plains_grevys_VC_june_25_tf_efficientnet_b4_ns_9.pth"
+vc_model: "plains_grevys_exp_3_GZCD_VC_july_5_tf_efficientnet_b4_ns_0.pth"
 vc_out_file: "vc_annots.json"
 vc_logfile: "viewpoint_classifier.txt"
 vc_cpname: "vc_cp.pkl"
