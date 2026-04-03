@@ -20,12 +20,14 @@ data:
   - backright
   - downright
   - frontright
-  # category_id_list:
-  # - 0
+  category_id_list:
+  - 1
+  annotations_census_list:
+  - true
   representative_list:
   - true
   output_key: cluster_id
-  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2024_encounter_grouping/annots.db
+  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/annots_fixed.db
 
 algorithm:
   initial_topk: 10

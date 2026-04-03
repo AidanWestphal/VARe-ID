@@ -7,7 +7,7 @@ from VAREID.libraries.io.workflow_funcs import build_config, decode_config
 
 
 def get_inputs(config):
-    return [config["fs_out_path"]] if config["data_video"] else [config["ia_filtered_out_path"]]
+    return [config["fs_out_path"]] if config["data_video"] else [config["idr_filtered_out_path"]]
 
 
 def get_outputs(config):
@@ -21,7 +21,7 @@ def main(args):
     else:
         config = build_config(load_config(args.config_path))
     
-    input = config["fs_out_path"] if config["data_video"] else config["ia_filtered_out_path"]
+    input = config["fs_out_path"] if config["data_video"] else config["idr_filtered_out_path"]
 
     command = f'python -u -m VAREID.algo.encounter_grouping.encounter_grouping {input} {config["eg_out_path"]}'
 
