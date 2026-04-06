@@ -17,14 +17,9 @@ from PIL import Image
 # ==========================================
 DATASETS = {
     "GGR2024": {
-        "json": "/fs/ess/PAS2136/ggr_data/results/GGR2024_encounter_grouping/id_region/id_regions_filtered.json",
-        "db": "/fs/ess/PAS2136/ggr_data/results/GGR2024_encounter_grouping/annots.db"
+        "json": "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/id_region/id_regions_filtered.json",
+        "db": "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/annots.db"
     },
-    # Example of a dataset with no database:
-    # "GGR_Unmatched_Archive": {
-    #     "json": "/fs/ess/PAS2136/ggr_data/results/archive/id_regions_filtered.json",
-    #     "db": None
-    # }
     "GGR2018": {
         "json": "/fs/ess/PAS2136/ggr_data/wbia/GGR2018/gt_annots.json",
         "db": None
