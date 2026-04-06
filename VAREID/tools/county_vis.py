@@ -125,13 +125,6 @@ map_df = df.dropna(subset=['gps_lat', 'gps_lon']).copy()
 map_df = map_df[(map_df['gps_lat'] != -1) & (map_df['gps_lon'] != -1)]
 map_df = map_df.sort_values(by=['zebra_id', 'timestamp'])
 
-# Jitter for burst photos
-for zebra_id, group in map_df.groupby('zebra_id'):
-    if zebra_id != "Unmatched" and len(group) > 1:
-        if group['gps_lat'].max() == group['gps_lat'].min() and group['gps_lon'].max() == group['gps_lon'].min():
-            map_df.loc[group.index, 'gps_lat'] += np.random.normal(0, 0.00002, size=len(group))
-            map_df.loc[group.index, 'gps_lon'] += np.random.normal(0, 0.00002, size=len(group))
-
 # Setup Dropdown Choices
 dataset_choices = ["All"] + list(DATASETS.keys())
 initial_matched_zebras = sorted([z for z in map_df['zebra_id'].unique() if z != "Unmatched"])
