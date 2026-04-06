@@ -223,6 +223,9 @@ def main(args):
     filtered_annots = annots[
         annots["species"].isin(config["filtered_classes"])
     ]
+    
+    if (filtered_annots.size == 0):
+        raise Exception("All annotations filtered out. Expected species not found.")
 
     # NOTE: MAY REMOVE LATER
     # Split based on bbox_xywh and species criteria
