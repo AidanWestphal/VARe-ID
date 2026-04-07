@@ -1,16 +1,16 @@
 # Input annotation JSON file
-image_data: "/fs/ess/PAS2136/ggr_data/results/GGR2020_subset/lca/lca_annots.json"
+image_data: "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/lca/lca_annots.json"
 
 # Path to the SQLite database used to store state and allow pausing/restarting
-db_path: "cluster_labels.db"
+db_path: "/fs/ess/PAS2136/ggr_data/results/AGESEX/agesex_2024_labeling.db"
 
 # Path for the output annotations JSON file
-out_json: "lca_annots_labeled.json"
+out_json: "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/agesex_corrected_labels.json"
 
 # Gradio server port
-port: 7860
+port: 7861
 
 # Workflow Configuration
 # true: Propagate existing labels; only load clusters missing age/sex into the labeling queue.
-# false: Ignore existing labels; load ALL clusters into the labeling queue from scratch.
-load_unlabeled_only: true
+# false: Ignore existing labels; load ALL clusters ito the labeling queue from scratch.
+load_unlabeled_only: false

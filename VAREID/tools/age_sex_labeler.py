@@ -80,10 +80,13 @@ def setup_data_and_db(json_path, db_path):
             
             if CONFIG["load_unlabeled_only"]:
                 for _, row in group.iterrows():
-                    if str(row.get('age', '')).strip() != "":
-                        existing_age = str(row['age']).strip()
-                    if str(row.get('sex', '')).strip() != "":
-                        existing_sex = str(row['sex']).strip()
+                    a_val = str(row.get('age', '')).strip()
+                    if a_val and a_val.lower() != "unknown":
+                        existing_age = a_val
+                        
+                    s_val = str(row.get('sex', '')).strip()
+                    if s_val and s_val.lower() != "unknown":
+                        existing_sex = s_val
             
             status = "labeled" if (CONFIG["load_unlabeled_only"] and existing_age and existing_sex) else "pending"
             
@@ -104,9 +107,10 @@ def setup_data_and_db(json_path, db_path):
 
 
 def get_cluster_images_and_captions(df, cluster_id, cache_dir):
-    """Retrieves cached bounding box crops for a given cluster."""
+    """Retrieves cached bounding box crops for a given cluster along with original image paths."""
     rows = df[df['cluster_id'].astype(str) == str(cluster_id)]
     crop_paths = []
+    orig_paths = []
     uuid_mapping = []
     
     os.makedirs(cache_dir, exist_ok=True)
@@ -144,13 +148,14 @@ def get_cluster_images_and_captions(df, cluster_id, cache_dir):
                 
                 img.save(temp_path)
             
+            orig_paths.append(str(img_path))
             crop_paths.append(temp_path)
             uuid_mapping.append(uuid_val)
             
         except Exception as e:
             print(f"Warning: Error processing image {img_path}: {e}")
             
-    return crop_paths, uuid_mapping
+    return crop_paths, orig_paths, uuid_mapping
 
 
 def export_data():
@@ -212,9 +217,10 @@ def load_ui_data():
         img_updates = [gr.update(value=None)] * MAX_IMAGES
         html_updates = [gr.update(value="")] * MAX_IMAGES
         chk_updates = [gr.update(value=False)] * MAX_IMAGES
+        zoom_updates = [gr.update(value=False)] * MAX_IMAGES
         
         return [None, final_text, gr.update(visible=False), gr.update(visible=False)] + \
-               col_updates + img_updates + html_updates + chk_updates + \
+               col_updates + img_updates + html_updates + chk_updates + zoom_updates + \
                [{}, gr.update(visible=False)]
                
     # --- NEXT CLUSTER HANDLING ---
@@ -222,9 +228,9 @@ def load_ui_data():
     row = c.fetchone()
     cluster_id, age, sex = row
     
-    crop_paths, uuid_mapping = get_cluster_images_and_captions(CONFIG["df"], cluster_id, CACHE_DIR)
+    crop_paths, orig_paths, uuid_mapping = get_cluster_images_and_captions(CONFIG["df"], cluster_id, CACHE_DIR)
     
-    # Query any previously saved exclusion states (if reloading an old session)
+    # Query any previously saved exclusion states
     all_cluster_uuids = ', '.join([f"'{u}'" for u in uuid_mapping])
     existing_exclusions = set()
     if all_cluster_uuids:
@@ -233,8 +239,9 @@ def load_ui_data():
     conn.close()
     
     # Build exact length arrays for our fixed grid UI
-    col_updates, img_updates, html_updates, chk_updates = [], [], [], []
+    col_updates, img_updates, html_updates, chk_updates, zoom_updates = [], [], [], [], []
     for i in range(MAX_IMAGES):
+        zoom_updates.append(gr.update(value=False)) # Always reset full image toggle on new cluster
         if i < len(crop_paths):
             u_val = uuid_mapping[i]
             col_updates.append(gr.update(visible=True))
@@ -247,7 +254,12 @@ def load_ui_data():
             html_updates.append(gr.update(value=""))
             chk_updates.append(gr.update(value=False))
 
-    cluster_json = {"uuid_mapping": uuid_mapping}
+    cluster_json = {
+        "uuid_mapping": uuid_mapping,
+        "crop_paths": crop_paths,
+        "orig_paths": orig_paths
+    }
+    
     status_text = f"**Labeling Cluster:** `{cluster_id}` | **Pending:** {pending_count}"
     
     # Translate empty string back to "Unknown" for UI if needed
@@ -255,7 +267,7 @@ def load_ui_data():
     ui_sex = "Unknown" if (sex == "" and sex is not None) else sex
     
     return [cluster_id, status_text, gr.update(value=ui_age if ui_age else None, visible=True), gr.update(value=ui_sex if ui_sex else None, visible=True)] + \
-           col_updates + img_updates + html_updates + chk_updates + \
+           col_updates + img_updates + html_updates + chk_updates + zoom_updates + \
            [cluster_json, gr.update(visible=True)]
 
 
@@ -267,33 +279,27 @@ def on_submit(cid, age_val, sex_val, cluster_data_json, *checkbox_values):
     uuid_mapping = cluster_data_json.get("uuid_mapping", [])
     total_active_images = len(uuid_mapping)
     
-    # Calculate how many active images were flagged for exclusion
     excluded_count = 0
+    # The first total_active_images items in checkbox_values map to our 'Remove' checkboxes
     for i in range(total_active_images):
         if checkbox_values[i]:
             excluded_count += 1
             
-    # VALIDATION: Require Age and Sex unless the ENTIRE cluster was removed
     if excluded_count < total_active_images:
         if not age_val or not sex_val:
             raise gr.Error("⚠️ You must select both an Age and a Sex. If unsure, select 'Unknown'.")
     else:
-        # If everything is marked for removal, bypass validation and force clear
         age_val = ""
         sex_val = ""
 
-    # Map "Unknown" strictly back to empty strings for downstream JSON integrity
     db_age = "" if age_val == "Unknown" else age_val
     db_sex = "" if sex_val == "Unknown" else sex_val
 
-    # Commit phase
     conn = sqlite3.connect(CONFIG["db"])
     c = conn.cursor()
     
-    # Mark cluster as resolved
     c.execute('UPDATE cluster_labels SET age=?, sex=?, status="labeled" WHERE cluster_id=?', (db_age, db_sex, cid))
               
-    # Write bounding-box level decisions (keep 1 or 0)
     for i in range(total_active_images):
         u_val = uuid_mapping[i]
         is_keep = 0 if checkbox_values[i] else 1
@@ -305,12 +311,24 @@ def on_submit(cid, age_val, sex_val, cluster_data_json, *checkbox_values):
     return load_ui_data()
 
 
+def make_toggle_fn(idx):
+    """Closure factory to safely handle Gradio's event binding inside a loop."""
+    def toggle(is_full, c_data):
+        if not c_data: return gr.update()
+        crop_paths = c_data.get("crop_paths", [])
+        orig_paths = c_data.get("orig_paths", [])
+        if idx < len(crop_paths) and idx < len(orig_paths):
+            return orig_paths[idx] if is_full else crop_paths[idx]
+        return gr.update()
+    return toggle
+
+
 def build_interface():
     with gr.Blocks(title="Zebra Annotation GUI") as demo:
         gr.Markdown("# Zebra Cluster Age & Sex Labeling")
         
         cluster_state = gr.State()
-        cluster_data_state = gr.JSON({}, visible=False) # Stores the UUID map for the current active list
+        cluster_data_state = gr.JSON({}, visible=False) 
         
         status_md = gr.Markdown("**Status:** Initializing...")
         
@@ -329,37 +347,61 @@ def build_interface():
         submit_btn = gr.Button("Submit & Next ➡", variant="primary", size="lg")
         
         gr.Markdown("---")
-        gr.Markdown("### Cluster Detections\nCheck the box below any image that is a bad detection or doesn't belong. It will be moved to `-1`.")
+        gr.Markdown("### Cluster Detections\nCheck `❌ Remove` below any image that is a bad detection. Check `🔍 Full Image` to zoom out.")
         
         # --- FIXED UI GRID GENERATOR ---
         box_columns = []
         image_components = []
         html_components = []
         checkbox_components = []
+        zoom_checkbox_components = []
         
         with gr.Row():
             for i in range(MAX_IMAGES):
                 with gr.Column(visible=False, min_width=220) as col:
                     img = gr.Image(interactive=False, show_label=False, show_download_button=False)
                     uuid_html = gr.HTML()
-                    chk = gr.Checkbox(label="❌ Remove")
+                    
+                    with gr.Row():
+                        zoom_chk = gr.Checkbox(label="🔍 Full Image")
+                        chk = gr.Checkbox(label="❌ Remove")
+                    
+                    # Bind local scoped zoom event using our factory function
+                    zoom_chk.change(
+                        fn=make_toggle_fn(i),
+                        inputs=[zoom_chk, cluster_data_state],
+                        outputs=[img]
+                    )
                     
                     box_columns.append(col)
                     image_components.append(img)
                     html_components.append(uuid_html)
                     checkbox_components.append(chk)
+                    zoom_checkbox_components.append(zoom_chk)
 
         # Mapping I/O flows
-        ui_outputs = [cluster_state, status_md, age_radio, sex_radio] + box_columns + image_components + html_components + checkbox_components + [cluster_data_state, submit_btn]
+        ui_outputs = [cluster_state, status_md, age_radio, sex_radio] + box_columns + image_components + html_components + checkbox_components + zoom_checkbox_components + [cluster_data_state, submit_btn]
+        
+        # submit_inputs doesn't need zoom_checkboxes since we don't save zoom state to the DB
         submit_inputs = [cluster_state, age_radio, sex_radio, cluster_data_state] + checkbox_components
         
         demo.load(load_ui_data, outputs=ui_outputs)
         submit_btn.click(on_submit, inputs=submit_inputs, outputs=ui_outputs)
         
-    return demo
+        return demo
 
 
 if __name__ == "__main__":
     CONFIG["df"] = setup_data_and_db(CONFIG["image_data"], CONFIG["db"])
+    
+    # Extract unique parent directories of the original images so Gradio knows they are safe to serve
+    valid_paths = [str(p) for p in CONFIG["df"]['image_path'].dropna() if os.path.exists(str(p))]
+    allowed_dirs = list(set(os.path.dirname(os.path.abspath(p)) for p in valid_paths))
+    
     demo = build_interface()
-    demo.launch(server_name="0.0.0.0", server_port=CONFIG["port"])
+    demo.launch(
+        server_name="0.0.0.0", 
+        server_port=CONFIG["port"], 
+        share=True, 
+        allowed_paths=allowed_dirs
+    )
