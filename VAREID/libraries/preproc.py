@@ -58,7 +58,11 @@ def gps_to_decimal(value, ref=None):
 
     # Case 2: DMS tuple
     elif isinstance(value, (tuple, list)) and len(value) == 3:
-        deg, min_, sec = map(float, value)
+        try:
+            deg, min_, sec = map(float, value)
+        except ZeroDivisionError:
+            print(f"Warning: Corrupt GPS metadata encountered. Skipping value: {value}")
+            return -1
         decimal = deg + min_ / 60 + sec / 3600
 
     else:
@@ -440,7 +444,7 @@ def parse_imageinfo(gpath):
                 orient = EXIF_NORMAL
             except AssertionError:
                 return None, None
-    except FileNotFoundError:
+    except:
         return None, None
 
     # OpenCV imread too slow
