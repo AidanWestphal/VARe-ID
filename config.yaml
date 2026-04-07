@@ -87,17 +87,38 @@ mid_out_file: "miewid_embeddings.pickle"
 mid_logfile: "miew_id.txt"
 mid_cpname: "mid_cp.pkl"
 
+# Encounter grouping step fields
+eg_dirname: "encounter_grouping"
+eg_out_file: "eg_annots.json"
+eg_logfile: "encounter_grouping.txt"
+
 # LCA step fields
 lca_dirname: "lca"
 lca_verifiers_probs: "verifiers_probs.json"
 lca_subunit_logfile: "lca_algorithm.txt"
 lca_logfile: "lca.txt"
+encounter_lca_dirname: "encounter_lca"
+encounter_lca_subunit_logfile: "encounter_lca_algorithm.txt"
+encounter_lca_logfile: "encounter_lca.txt"
+inter_lca_dirname: "inter_lca"
+inter_lca_subunit_logfile: "inter_lca_algorithm.txt"
+inter_lca_logfile: "inter_lca.txt"
 
 lca_separate_viewpoints: True
 
 # LCA is special: its output is formatted as {prefix}_{viewpoint}_{suffix}.json (or {prefix}_{suffix}.json if not separating viewpoint).
 lca_out_prefix: "lca"
 lca_out_suffix: "annots"
+
+# Representative selection step fields
+representative_dirname: "representative"
+representative_out_file: "representative_annots.json"
+representative_logfile: "representative.txt"
+
+# Forward clustering step fields
+forward_clustering_dirname: "forward_clustering"
+forward_clustering_out_file: "forward_clustering_annots.json"
+forward_clustering_logfile: "forward_clustering.txt"
 
 # Postprocessing step fields
 post_dirname: "post"
