@@ -4,7 +4,6 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN
-from geopy.distance import geodesic
 import datetime
 
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, join_dataframe_dict, join_dataframe, split_dataframe
@@ -14,27 +13,24 @@ from VAREID.libraries.utils import path_from_file
 def calculate_distance_matrix(locations):
     """
     Calculate pairwise distance matrix between GPS coordinates in kilometers.
-    
+    Uses vectorized haversine formula for performance.
+
     Args:
         locations: List of (lat, lon) tuples
-    
+
     Returns:
         Distance matrix as numpy array
     """
-    n = len(locations)
-    dist_matrix = np.zeros((n, n))
-    
-    for i in range(n):
-        for j in range(i+1, n):
-            try:
-                dist = geodesic(locations[i], locations[j]).kilometers
-                dist_matrix[i, j] = dist
-                dist_matrix[j, i] = dist
-            except:
-                # Handle invalid coordinates by setting large distance
-                dist_matrix[i, j] = 999999
-                dist_matrix[j, i] = 999999
-    
+    coords = np.array(locations, dtype=np.float64)
+    lat = np.radians(coords[:, 0])
+    lon = np.radians(coords[:, 1])
+
+    dlat = lat[:, np.newaxis] - lat[np.newaxis, :]
+    dlon = lon[:, np.newaxis] - lon[np.newaxis, :]
+
+    a = np.sin(dlat / 2) ** 2 + np.cos(lat[:, np.newaxis]) * np.cos(lat[np.newaxis, :]) * np.sin(dlon / 2) ** 2
+    dist_matrix = 6371.0 * 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
     return dist_matrix
 
 
@@ -103,18 +99,9 @@ def group_encounters(joined_df, config):
         max_time_hours = config['max_time_hours']
 
         # Create binary connectivity matrix: 1 if within both thresholds, 0 otherwise
-        n = len(locations)
-        connectivity = np.zeros((n, n))
-
-        for i in range(n):
-            for j in range(n):
-                if i == j:
-                    connectivity[i, j] = 0  # Distance to self is 0 for DBSCAN
-                elif (spatial_distances[i, j] <= max_distance_km and
-                      temporal_distances[i, j] <= max_time_hours):
-                    connectivity[i, j] = 0.5  # Within both thresholds
-                else:
-                    connectivity[i, j] = 2.0  # Outside at least one threshold
+        within_both = (spatial_distances <= max_distance_km) & (temporal_distances <= max_time_hours)
+        connectivity = np.where(within_both, 0.5, 2.0)
+        np.fill_diagonal(connectivity, 0.0)
 
         # Apply DBSCAN clustering
         clustering = DBSCAN(

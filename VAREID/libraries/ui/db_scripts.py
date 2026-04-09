@@ -43,7 +43,8 @@ def init_db(db_path="./zebra_verification.db"):
         started_at TIMESTAMP,
         completed_at TIMESTAMP,
         instance_id TEXT,
-        heartbeat TIMESTAMP
+        heartbeat TIMESTAMP,
+        read_at TIMESTAMP
     )
     """)
     conn.commit()
@@ -51,6 +52,11 @@ def init_db(db_path="./zebra_verification.db"):
     # Safe migration: add score column if the table existed before without it
     if not _column_exists(conn, "image_verification", "score"):
         cursor.execute("ALTER TABLE image_verification ADD COLUMN score REAL")
+        conn.commit()
+
+    # Safe migration: add read_at column if the table existed before without it
+    if not _column_exists(conn, "image_verification", "read_at"):
+        cursor.execute("ALTER TABLE image_verification ADD COLUMN read_at TIMESTAMP")
         conn.commit()
 
     conn.close()
@@ -156,9 +162,9 @@ def get_decisions(pair_ids, db_path="./zebra_verification.db"):
     
     if results:
         cursor.execute(f"""
-            UPDATE image_verification SET status = 'sent'
+            UPDATE image_verification SET status = 'sent', read_at=?
             WHERE id IN ({placeholders}) AND status = 'checked'
-        """, pair_ids)
+        """, [datetime.now()] + pair_ids)
     
     conn.commit()
     conn.close()
@@ -191,22 +197,31 @@ def get_existing_pair_decision(uuid1, uuid2, db_path="./zebra_verification.db"):
 
 
 def check_pair_exists(uuid1, uuid2, db_path="./zebra_verification.db"):
-    """Check if a pair with these UUIDs exists in any status. Returns (exists, status, decision)."""
+    """Check if a pair with these UUIDs exists in any status. Returns (exists, status, decision).
+    If a decided pair is found, stamps read_at with the current time."""
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
     cursor.execute("""
-        SELECT status, decision FROM image_verification
+        SELECT id, status, decision FROM image_verification
         WHERE ((uuid1 = ? AND uuid2 = ?) OR (uuid1 = ? AND uuid2 = ?))
         LIMIT 1
     """, (uuid1, uuid2, uuid2, uuid1))
-    
+
     result = cursor.fetchone()
-    conn.close()
-    
+
     if result:
-        return (True, result[0], result[1])
+        pair_id, status, decision = result
+        if status in ('checked', 'sent') and decision != 'none':
+            cursor.execute("""
+                UPDATE image_verification SET read_at=?
+                WHERE id=?
+            """, (datetime.now(), pair_id))
+            conn.commit()
+        conn.close()
+        return (True, status, decision)
     else:
+        conn.close()
         return (False, None, None)
 
 

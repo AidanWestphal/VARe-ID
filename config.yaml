@@ -7,7 +7,7 @@
 
 # The file path (dir) to save your output to
 data_dir_out: ~
-# The file path (dir) to read data from`
+# The file path (dir) to read data from
 data_dir_in: ~
 # True/False describing whether the data is in video format (True) or image format (False)
 data_video: True
@@ -52,14 +52,14 @@ si_cpname: "si_cp.pkl"
 
 # Viewpoint classification step fields
 vc_dirname: "viewpoint_classifier"
-vc_model: "plains_grevys_VC_june_25_tf_efficientnet_b4_ns_9.pth"
+vc_model: "plains_grevys_exp_3_GZCD_VC_july_5_tf_efficientnet_b4_ns_0.pth"
 vc_out_file: "vc_annots.json"
 vc_logfile: "viewpoint_classifier.txt"
 vc_cpname: "vc_cp.pkl"
 
 # Identifiable annotation classification step fields
 ia_dirname: "ia_classifier"
-ia_model: "best_june_24_2025_IA_classifier_016.pth"
+ia_model: "best_resnet50_ca_model.pth"
 ia_out_file: "ia_annots.json"
 ia_filtered_out_file: "ia_filtered_annots.json"
 ia_logfile: "ia_classify_and_filter.txt"
@@ -87,17 +87,38 @@ mid_out_file: "miewid_embeddings.pickle"
 mid_logfile: "miew_id.txt"
 mid_cpname: "mid_cp.pkl"
 
+# Encounter grouping step fields
+eg_dirname: "encounter_grouping"
+eg_out_file: "eg_annots.json"
+eg_logfile: "encounter_grouping.txt"
+
 # LCA step fields
 lca_dirname: "lca"
 lca_verifiers_probs: "verifiers_probs.json"
 lca_subunit_logfile: "lca_algorithm.txt"
 lca_logfile: "lca.txt"
+encounter_lca_dirname: "encounter_lca"
+encounter_lca_subunit_logfile: "encounter_lca_algorithm.txt"
+encounter_lca_logfile: "encounter_lca.txt"
+inter_lca_dirname: "inter_lca"
+inter_lca_subunit_logfile: "inter_lca_algorithm.txt"
+inter_lca_logfile: "inter_lca.txt"
 
 lca_separate_viewpoints: True
 
 # LCA is special: its output is formatted as {prefix}_{viewpoint}_{suffix}.json (or {prefix}_{suffix}.json if not separating viewpoint).
 lca_out_prefix: "lca"
 lca_out_suffix: "annots"
+
+# Representative selection step fields
+representative_dirname: "representative"
+representative_out_file: "representative_annots.json"
+representative_logfile: "representative.txt"
+
+# Forward clustering step fields
+forward_clustering_dirname: "forward_clustering"
+forward_clustering_out_file: "forward_clustering_annots.json"
+forward_clustering_logfile: "forward_clustering.txt"
 
 # Postprocessing step fields
 post_dirname: "post"

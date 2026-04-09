@@ -21,8 +21,10 @@ data:
   - backright
   - downright
   - frontright
-  # category_id_list:
-  # - 0
+  category_id_list:
+  - 1
+  annotations_census_list:
+  - true
   output_key: encounter_id
   ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2020_subset_encounter_grouping/GGR_encounter_score.db
 
