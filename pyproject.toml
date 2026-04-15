@@ -8,7 +8,7 @@ name = "vare-id"
 version = "0.1.0"
 description = "This work presents a modular software pipeline and end-to-end workflow for video-based animal re-identification, which assigns consistent individual IDs by clustering multiview spatio-temporal tracks with minimal human intervention."
 readme = "README.md"
-requires-python = "==3.11"
+requires-python = ">=3.11, <3.12"
 dependencies = []
 
 [tool.setuptools]
