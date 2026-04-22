@@ -10,9 +10,9 @@ from VAREID.libraries.io.workflow_funcs import build_config
 
 # --- CONFIGURATION ---
 CLASS_ID = 0 
-OUTPUT_DIR = "yolo_finetune_dataset"
-VIS_YAML_PATH = "VAREID/tools/detection_visualize.yaml"
-CONFIG_YAML_PATH = "config2.yaml"
+OUTPUT_DIR = ""
+VIS_YAML_PATH = ""
+CONFIG_YAML_PATH = ""
 # ---------------------
 
 def convert_to_yolo(bbox, img_w, img_h):
