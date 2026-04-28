@@ -2,6 +2,8 @@ import sqlite3
 import pandas as pd
 import networkx as nx
 import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
 import plotly.colors as pc
 import json
 import gradio as gr
@@ -12,7 +14,6 @@ from PIL import Image
 
 # ==========================================
 # 1. CONFIGURATION
-# Define all your datasets here. 
 # ==========================================
 DATASETS = {
     "GGR2024": {
@@ -20,13 +21,16 @@ DATASETS = {
         "db": "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/annots.db"
     },
     "GGR2018": {
-        "json": "/fs/ess/PAS2136/ggr_data/wbia/GGR2018/counties.json",
+        "json": "/fs/ess/PAS2136/ggr_data/results/GGR2018_ilan/county.json",
         "db": None
     }
 }
 
-AVAILABLE_COLORS = pc.qualitative.Plotly + pc.qualitative.Bold
-DATASET_COLORS = {name: AVAILABLE_COLORS[i % len(AVAILABLE_COLORS)] for i, name in enumerate(DATASETS.keys())}
+# Match colors to your provided map: Blue for 2024, Orange/Red for 2018
+DATASET_COLORS = {
+    "GGR2024": "#636EFA", # Blue
+    "GGR2018": "#EF553B"  # Orange/Red
+}
 
 HEATMAP_SCALES = ['Blues', 'Reds', 'Greens', 'Purples', 'Oranges']
 DATASET_HEATMAP_SCALES = {name: HEATMAP_SCALES[i % len(HEATMAP_SCALES)] for i, name in enumerate(DATASETS.keys())}
@@ -34,318 +38,168 @@ DATASET_HEATMAP_SCALES = {name: HEATMAP_SCALES[i % len(HEATMAP_SCALES)] for i, n
 def get_zebra_mapping(db_path, all_uuids):
     uuid_to_zebra = {}
     zebra_counter = 0
-
     if db_path and os.path.exists(db_path):
         try:
             conn = sqlite3.connect(db_path)
             df_annots = pd.read_sql_query("SELECT uuid1, uuid2 FROM image_verification WHERE decision='correct'", conn)
             conn.close()
-
             G = nx.Graph()
             for _, row in df_annots.iterrows():
                 G.add_edge(row['uuid1'], row['uuid2'])
-
             for comp in nx.connected_components(G):
                 zebra_counter += 1
                 for uuid in comp:
                     uuid_to_zebra[uuid] = f"Zebra_{zebra_counter}"
         except Exception as e:
-            print(f"Warning: Could not process database at {db_path}. Error: {e}")
-
+            print(f"Warning: DB Error: {e}")
     for uuid in all_uuids:
         if uuid not in uuid_to_zebra:
             uuid_to_zebra[uuid] = "Unmatched"
-            
     return uuid_to_zebra
 
 def get_database(dataset_name, id_json, db_path):
-    if not os.path.exists(id_json):
-        raise FileNotFoundError(f"JSON file not found: {id_json}")
-
     with open(id_json, 'r') as file:
         data = json.load(file)
-        
     images = pd.DataFrame(data['images'])
     annotations = pd.DataFrame(data['annotations'])
     
-    # NEW: Ensure 'county' exists just in case a dataset hasn't been processed yet
-    if 'county' not in images.columns:
-        images['county'] = "Unknown"
-    else:
-        images['county'] = images['county'].fillna("Unknown")
+    images['county'] = images.get('county', pd.Series(["Unknown"]*len(images))).fillna("Unknown")
+    images['land tenure'] = images.get('land tenure', pd.Series(["Unknown"]*len(images))).fillna("Unknown")
         
     images = images.rename(columns={"uuid": "image_uuid"})
     zebra_ids = get_zebra_mapping(db_path, annotations['uuid'])
-    
     big_data = pd.merge(images, annotations, on="image_uuid", how='inner')
     big_data["zebra_id"] = big_data['uuid'].map(zebra_ids)
     
     mask = big_data["zebra_id"] != "Unmatched"
     big_data.loc[mask, "zebra_id"] = f"{dataset_name}_" + big_data.loc[mask, "zebra_id"]
     big_data["dataset"] = dataset_name
-    
     return big_data
 
-# --- Data Loading & Cleaning ---
-print("Loading datasets...")
+# --- Data Loading ---
 all_dfs = []
 for name, paths in DATASETS.items():
     try:
-        print(f" -> Processing {name}...")
-        df_part = get_database(name, paths["json"], paths["db"])
-        all_dfs.append(df_part)
-    except Exception as e:
-        print(f" -> Skipped {name}: {e}")
-
-if not all_dfs:
-    raise ValueError("No datasets could be loaded. Please check your DATASETS config paths.")
+        all_dfs.append(get_database(name, paths["json"], paths["db"]))
+    except: pass
 
 df = pd.concat(all_dfs, ignore_index=True)
-
-df['gps_lat'] = pd.to_numeric(df['gps_lat'], errors='coerce')
-df['gps_lon'] = pd.to_numeric(df['gps_lon'], errors='coerce')
 df['timestamp'] = pd.to_numeric(df['timestamp'], errors='coerce')
-
-df = df[(df['gps_lat'] != -1) & (df['gps_lon'] != -1)]
-df = df[(df['gps_lat'] != -1.0) & (df['gps_lon'] != -1.0)]
-
-map_df = df.copy()
+df['date'] = pd.to_datetime(df['timestamp'], unit='s', errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+map_df = df[(df['gps_lat'] != -1) & (df['gps_lat'].notnull())].copy()
 map_df = map_df.sort_values(by=['zebra_id', 'timestamp'])
 
-# Jitter for burst photos
-for zebra_id, group in map_df.groupby('zebra_id'):
-    if zebra_id != "Unmatched" and len(group) > 1:
-        if group['gps_lat'].max() == group['gps_lat'].min() and group['gps_lon'].max() == group['gps_lon'].min():
-            map_df.loc[group.index, 'gps_lat'] += np.random.normal(0, 0.00002, size=len(group))
-            map_df.loc[group.index, 'gps_lon'] += np.random.normal(0, 0.00002, size=len(group))
-
-map_df = df.dropna(subset=['gps_lat', 'gps_lon']).copy()
-map_df = map_df[(map_df['gps_lat'] != -1) & (map_df['gps_lon'] != -1)]
-map_df = map_df.sort_values(by=['zebra_id', 'timestamp'])
-
+# ==========================================
+# MISSING VARIABLES RESTORED HERE
+# ==========================================
 dataset_choices = ["All"] + list(DATASETS.keys())
 initial_matched_zebras = sorted([z for z in map_df['zebra_id'].unique() if z != "Unmatched"])
 initial_zebra_choices = ["All"] + initial_matched_zebras + ["Unmatched"]
+# ==========================================
 
-# --- Map Creation Logic ---
+# --- Map Logic ---
 def create_map(selected_dataset, selected_zebra, show_heatmap):
     plot_df = map_df.copy()
-    
-    if selected_dataset != "All":
-        plot_df = plot_df[plot_df['dataset'] == selected_dataset]
-    if selected_zebra != "All":
-        plot_df = plot_df[plot_df['zebra_id'] == selected_zebra]
-
-    MAX_UNMATCHED = 2000 
-    MAX_TRACKED_PER_ZEBRA = 1000 
-    
-    unmatched_mask = plot_df['zebra_id'] == "Unmatched"
-    if unmatched_mask.sum() > MAX_UNMATCHED:
-        tracked_df = plot_df[~unmatched_mask]
-        sampled_unmatched = plot_df[unmatched_mask].sample(n=MAX_UNMATCHED, random_state=42)
-        plot_df = pd.concat([tracked_df, sampled_unmatched])
+    if selected_dataset != "All": plot_df = plot_df[plot_df['dataset'] == selected_dataset]
+    if selected_zebra != "All": plot_df = plot_df[plot_df['zebra_id'] == selected_zebra]
 
     fig = go.Figure()
-
     if show_heatmap:
-        for dataset_name, group in map_df.groupby('dataset'):
-            c_scale = DATASET_HEATMAP_SCALES.get(dataset_name, 'Inferno')
-            
-            fig.add_trace(go.Densitymapbox(
-                lat=group['gps_lat'],
-                lon=group['gps_lon'],
-                z=np.ones(len(group)),
-                radius=15,
-                colorscale=c_scale,
-                opacity=0.6,          
-                name=dataset_name,    
-                showscale=False       
-            ))
+        for ds, group in plot_df.groupby('dataset'):
+            fig.add_trace(go.Densitymapbox(lat=group['gps_lat'], lon=group['gps_lon'], z=np.ones(len(group)),
+                                          radius=15, colorscale=DATASET_HEATMAP_SCALES.get(ds, 'Inferno'), opacity=0.6, showscale=False))
     else:
-        for zebra_id, group in plot_df.groupby('zebra_id'):
-            dataset_name = group['dataset'].iloc[0]
+        for (ds, zid), group in plot_df.groupby(['dataset', 'zebra_id']):
+            color = DATASET_COLORS.get(ds, 'gray')
+            marker = dict(size=7, opacity=0.7, color=color) if zid == "Unmatched" else dict(size=10, color=color)
             
-            if len(group) > MAX_TRACKED_PER_ZEBRA and zebra_id != "Unmatched":
-                step = len(group) // MAX_TRACKED_PER_ZEBRA
-                group = group.iloc[::step]
-                
-            mode = 'lines+markers' if (len(group) > 1 and zebra_id != "Unmatched") else 'markers'
+            hover_texts = [f"<b>Dataset:</b> {row['dataset']}<br><b>ID:</b> {zid}<br><b>County:</b> {row.get('county', 'Unknown')}<br><b>Land Tenure:</b> {row.get('land tenure', 'Unknown')}<br><b>Date:</b> {row['date']}" for _, row in group.iterrows()]
             
-            if zebra_id == "Unmatched":
-                marker_style = dict(size=5, color='gray', opacity=0.3)
-                line_style = dict(width=0)
-            else:
-                marker_style = dict(size=12 if selected_zebra != "All" else 8)
-                line_style = dict(width=4)
-                
-                if selected_dataset == "All":
-                    ds_color = DATASET_COLORS.get(dataset_name, 'blue')
-                    marker_style['color'] = ds_color
-                    line_style['color'] = ds_color
-            
-            hover_texts = [f"<b>Dataset:</b> {row['dataset']}<br><b>ID:</b> {zebra_id}<br><b>Image:</b> {row['image_uuid']}<br><b>County:</b> {row.get('county', 'Unknown')}<br><b>Time:</b> {row['timestamp']}" for _, row in group.iterrows()]
-            
-            fig.add_trace(go.Scattermapbox(
-                mode=mode, lon=group['gps_lon'], lat=group['gps_lat'], text=hover_texts, hoverinfo='text', 
-                name=zebra_id, marker=marker_style, line=line_style
-            ))
+            fig.add_trace(go.Scattermapbox(mode='markers', lon=group['gps_lon'], lat=group['gps_lat'], 
+                                          text=hover_texts, hoverinfo='text',
+                                          name=f"{zid} ({ds})", marker=marker))
 
-    center_lat = plot_df['gps_lat'].mean() if not plot_df.empty else 0
-    center_lon = plot_df['gps_lon'].mean() if not plot_df.empty else 0
-    zoom_level = 15 if selected_zebra not in ["All", "Unmatched"] else 7 
-
-    fig.update_layout(
-        mapbox=dict(style="open-street-map", zoom=zoom_level, center=dict(lat=center_lat, lon=center_lon)), 
-        margin={"r":0,"t":0,"l":0,"b":0}, showlegend=False, height=600
-    )
+    fig.update_layout(mapbox=dict(style="open-street-map", zoom=7, center=dict(lat=map_df['gps_lat'].mean(), lon=map_df['gps_lon'].mean())),
+                      margin={"r":0,"t":0,"l":0,"b":0}, showlegend=False, height=500)
     return fig
 
-
-# --- Histogram Creation Logic ---
+# --- Histogram Logic (Dataset Separated) ---
 def create_histogram(selected_dataset):
     plot_df = map_df.copy()
+    if selected_dataset != "All": plot_df = plot_df[plot_df['dataset'] == selected_dataset]
     
-    if selected_dataset != "All":
-        plot_df = plot_df[plot_df['dataset'] == selected_dataset]
-        
-    if 'county' not in plot_df.columns or plot_df['county'].replace('Unknown', np.nan).dropna().empty:
-        fig = go.Figure()
-        fig.update_layout(
-            title="⚠️ No County Data Available. Ensure match_ggr_polygons.py has run on the JSON.",
-            template="plotly_white",
-            height=400
-        )
-        return fig
+    # Calculate counts
+    matched = plot_df[plot_df['zebra_id'] != "Unmatched"].groupby(['dataset', 'county'])['zebra_id'].nunique()
+    unmatched = plot_df[plot_df['zebra_id'] == "Unmatched"].groupby(['dataset', 'county']).size()
+    total = (matched.add(unmatched, fill_value=0)).reset_index(name='count')
+    total = total[total['county'] != "Unknown"]
 
-    # Filter out unmatched to count strictly unique IDENTIFIED individuals
-    matched_df = plot_df[plot_df['zebra_id'] != "Unmatched"]
-    
-    # Count unique zebra IDs per county
-    county_counts = matched_df.groupby('county')['zebra_id'].nunique().reset_index()
-    county_counts += plot_df[plot_df['zebra_id'] == "Unmatched"].groupby('county').count().reset_index()
-    county_counts.columns = ['County', 'Unique Individuals']
-    
-    # Sort for a clean Pareto-style chart
-    county_counts = county_counts.sort_values(by='Unique Individuals', ascending=False)
-    
-    # Clean out "Unknown" if it exists so the chart looks cleaner
-    county_counts = county_counts[county_counts['County'] != "Unknown"]
-    
-    # Generate Chart
-    fig = go.Figure(data=[
-        go.Bar(
-            x=county_counts['County'], 
-            y=county_counts['Unique Individuals'], 
-            marker_color='#2ca02c',
-            text=county_counts['Unique Individuals'],
-            textposition='auto'
-        )
-    ])
-    
-    fig.update_layout(
-        title="🦓 Unique Identified Zebras per County",
-        xaxis_title="County / Region",
-        yaxis_title="Count of Unique Individuals",
-        template="plotly_white",
-        margin={"r":0,"t":40,"l":0,"b":0},
-        height=400
-    )
+    fig = go.Figure()
+    for ds in total['dataset'].unique():
+        ds_data = total[total['dataset'] == ds]
+        fig.add_trace(go.Bar(x=ds_data['county'], y=ds_data['count'], name=ds, 
+                            marker_color=DATASET_COLORS.get(ds), text=ds_data['count'], textposition='auto'))
+
+    fig.update_layout(title="Zebras per County", barmode='group', template="plotly_white", height=400)
     return fig
 
-
-# --- Annotation & Image Cropping Function ---
-def get_zebra_details(selected_dataset, selected_zebra):
-    if selected_zebra == "All" or selected_zebra == "Unmatched":
-        msg = "Select a specific Tracked Zebra ID to view its cropped images (Unmatched/All contains too many images to safely load)."
-        return pd.DataFrame([{"Message": msg}]), []
+# --- FACETED Land Tenure Logic ---
+def create_lt_histogram(selected_dataset):
+    plot_df = map_df.copy()
+    if selected_dataset != "All": plot_df = plot_df[plot_df['dataset'] == selected_dataset]
     
-    subset = df.copy()
-    if selected_dataset != "All":
-        subset = subset[subset['dataset'] == selected_dataset]
-        
-    subset = subset[subset['zebra_id'] == selected_zebra]
-    subset = subset.fillna("") 
-    
-    display_cols = ['image_path', 'bbox', 'uuid', 'image_uuid', 'timestamp', 'viewpoint', 'clarity_score', 'county']
-    existing_cols = [c for c in display_cols if c in subset.columns]
-    df_out = subset[existing_cols]
+    # Calculate unique IDs per dataset/county/land-tenure
+    matched = plot_df[plot_df['zebra_id'] != "Unmatched"].groupby(['dataset', 'county', 'land tenure'])['zebra_id'].nunique()
+    unmatched = plot_df[plot_df['zebra_id'] == "Unmatched"].groupby(['dataset', 'county', 'land tenure']).size()
+    total = (matched.add(unmatched, fill_value=0)).reset_index(name='count')
+    total = total[(total['county'] != "Unknown") & (total['land tenure'] != "Unknown")]
 
-    crops = []
-    bbox_col = 'bbox' if 'bbox' in subset.columns else None
-    
-    if bbox_col and 'image_path' in subset.columns:
-        for _, row in subset.iterrows():
-            path = row['image_path']
-            b = row[bbox_col]
-            
-            if not path or not b:
-                continue
-                
-            try:
-                img = Image.open(path)
-                if isinstance(b, str):
-                    b = ast.literal_eval(b)
-                
-                if isinstance(b, (list, tuple)) and len(b) >= 4:
-                    left, top, right, bottom = b[0], b[1], b[2], b[3]
-                    if right <= left or bottom <= top:
-                        right, bottom = left + right, top + bottom
-                        
-                    crop_img = img.crop((left, top, right, bottom))
-                    crop_img.thumbnail((600, 600))
-                    
-                    caption = f"Dataset: {row.get('dataset')} | View: {row.get('viewpoint', 'N/A')} | Score: {row.get('clarity_score', 0):.2f}"
-                    crops.append((crop_img, caption))
-            except Exception as e:
-                print(f"Failed to process crop for {path}: {e}")
+    counties = sorted(total['county'].unique())
+    if not counties: return go.Figure()
 
-    return df_out, crops
+    # Create subplots: one row per county
+    fig = make_subplots(rows=len(counties), cols=1, subplot_titles=counties, vertical_spacing=0.05)
 
-def update_zebra_dropdown(selected_dataset):
-    if selected_dataset == "All":
-        subset = map_df
-    else:
-        subset = map_df[map_df['dataset'] == selected_dataset]
-        
-    matched = sorted([z for z in subset['zebra_id'].unique() if z != "Unmatched"])
-    new_choices = ["All"] + matched + ["Unmatched"]
-    return gr.update(choices=new_choices, value="All")
+    for i, county in enumerate(counties):
+        county_data = total[total['county'] == county]
+        for ds in ["GGR2018", "GGR2024"]:
+            ds_data = county_data[county_data['dataset'] == ds]
+            if not ds_data.empty:
+                fig.add_trace(
+                    go.Bar(x=ds_data['land tenure'], y=ds_data['count'], name=ds,
+                           marker_color=DATASET_COLORS.get(ds), showlegend=(i == 0)),
+                    row=i+1, col=1
+                )
 
+    fig.update_layout(height=400 * len(counties), title_text="Land Tenure breakdown per County", 
+                      barmode='group', template="plotly_white", showlegend=True)
+    fig.update_annotations(font_size=14)
+    return fig
 
 # --- Gradio Interface ---
 with gr.Blocks() as app:
-    gr.Markdown("# 🦓 Grevy's Zebra Analysis Toolkit")
-    
+    gr.Markdown("# 🦓 Grevy's Zebra Spacial Bias Analysis")
     with gr.Row():
-        dataset_dropdown = gr.Dropdown(choices=dataset_choices, value="All", label="1. Filter by Dataset", interactive=True)
-        zebra_dropdown = gr.Dropdown(choices=initial_zebra_choices, value="All", label="2. Filter by Zebra ID", interactive=True)
-        heatmap_toggle = gr.Checkbox(label="3. Show Location Heatmap", value=False, interactive=True)
+        dataset_dropdown = gr.Dropdown(choices=dataset_choices, value="All", label="Dataset Filter")
+        zebra_dropdown = gr.Dropdown(choices=initial_zebra_choices, value="All", label="Zebra ID Filter")
+        heatmap_toggle = gr.Checkbox(label="Show Heatmap", value=False)
     
     map_output = gr.Plot()
-    histogram_output = gr.Plot()
     
-    gr.Markdown("### 📸 Sighting Verification")
-    gallery_output = gr.Gallery(label="Zebra Crops", show_label=True, elem_id="gallery", columns=[3], rows=[2], object_fit="contain", height="auto")
-    annot_output = gr.Dataframe(interactive=False, wrap=True)
+    with gr.Tabs():
+        with gr.TabItem("County Distribution"):
+            histogram_output = gr.Plot()
+        with gr.TabItem("Land Tenure by County"):
+            # Subplots can be tall, so we display this in its own tab
+            lt_histogram_output = gr.Plot()
+
+    dataset_dropdown.change(create_map, [dataset_dropdown, zebra_dropdown, heatmap_toggle], map_output)
+    dataset_dropdown.change(create_histogram, dataset_dropdown, histogram_output)
+    dataset_dropdown.change(create_lt_histogram, dataset_dropdown, lt_histogram_output)
     
-    # Wire the dropdowns
-    dataset_dropdown.change(fn=update_zebra_dropdown, inputs=dataset_dropdown, outputs=zebra_dropdown)
-    
-    # Map Triggers
-    dataset_dropdown.change(fn=create_map, inputs=[dataset_dropdown, zebra_dropdown, heatmap_toggle], outputs=map_output)
-    zebra_dropdown.change(fn=create_map, inputs=[dataset_dropdown, zebra_dropdown, heatmap_toggle], outputs=map_output)
-    heatmap_toggle.change(fn=create_map, inputs=[dataset_dropdown, zebra_dropdown, heatmap_toggle], outputs=map_output)
-    
-    # Histogram Triggers
-    dataset_dropdown.change(fn=create_histogram, inputs=dataset_dropdown, outputs=histogram_output)
-    
-    # Gallery Triggers
-    dataset_dropdown.change(fn=get_zebra_details, inputs=[dataset_dropdown, zebra_dropdown], outputs=[annot_output, gallery_output])
-    zebra_dropdown.change(fn=get_zebra_details, inputs=[dataset_dropdown, zebra_dropdown], outputs=[annot_output, gallery_output])
-    
-    # Load initial view
-    app.load(fn=create_map, inputs=[dataset_dropdown, zebra_dropdown, heatmap_toggle], outputs=map_output)
-    app.load(fn=create_histogram, inputs=dataset_dropdown, outputs=histogram_output)
+    app.load(create_map, [dataset_dropdown, zebra_dropdown, heatmap_toggle], map_output)
+    app.load(create_histogram, dataset_dropdown, histogram_output)
+    app.load(create_lt_histogram, dataset_dropdown, lt_histogram_output)
 
 if __name__ == "__main__":
     app.launch(share=True)
