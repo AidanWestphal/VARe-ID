@@ -6,7 +6,6 @@ import sys
 import geopandas  # type: ignore
 import json
 import os
-from qreader import QReader
 from shapely import MultiPolygon, Polygon, Point
 from VAREID.libraries.ggr_funcs import *
 
@@ -51,4 +50,4 @@ if __name__ == "__main__":
 data['images'] = img_data
 
 with open(args.out_json_path, 'w') as f:
-    json.dump(data, f)
+    json.dump(data, f, indent=4)

@@ -90,34 +90,36 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
     # Gather metadata from image hierarchy, store in ggr_hierarchy
     # Prepare additional lists for car and car/day imagesets
     for i in range(len(gid_list)):
-        # Identify car, camera, & day from image hierarchy
-        tokens = uri_list[i].split("/")
-        cam_str, day_str = "", ""
-        valid_cams = [" A", "_A", " B", "_B", " C", "_C", " D", "_D", " E", "_E"]
-        for token in tokens:
-            if "QR" in token and token[-2:] in valid_cams:
-                cam_str = token
-            elif "Day" in token:
-                day_str = token
+        uri = uri_list[i]
+        
+        # 1. Extract Day (e.g., "Day 1")
+        day_match = re.search(r'Day\s*(\d+)', uri, re.IGNORECASE)
+        day_str = day_match.group(0) if day_match else ""
+        
+        # 2. Extract Car (e.g., "QR 101")
+        car_match = re.search(r'QR\s*(\d+)', uri, re.IGNORECASE)
+        car = "QR" + car_match.group(1) if car_match else ""
+        
+        # 3. Extract Camera Letter (A, B, C, D, E)
+        # Looks for A-E attached to the QR number (129A), preceded by space/underscore ( 160 A), 
+        # or followed by a slash or the word Day.
+        cam_match = re.search(r'(?:QR\s*\d+|[\s_])([A-E])(?:[\s/]|Day|$)', uri, re.IGNORECASE)
+        
+        # Default to camera A (index 0) if the letter is entirely omitted from the folder name
+        cam_idx = ord(cam_match.group(1).upper()) - 65 if cam_match else 0 
 
-        if cam_str == "" or day_str == "":
-            print(
-                f"[extrapolate_ggr_gps] detected improper GGR directory format: {uri_list[i]}. Skipping image..."
-            )
+        if not car or not day_str:
+            print(f"[extrapolate_ggr_gps] detected improper GGR directory format: {uri}. Skipping image...")
             continue
 
-        # car = cam_str[: cam_str.find("_")]
-        car = "QR" + re.findall(r"\d+", cam_str)[0]
-        cam_idx = ord(cam_str[-1]) - 65
-
-        # Handle doubly nested images in case of flaw in image hierarchy
-        while (
-            "Day" not in day_str
-            and "Other" not in day_str
-            and str_day_idx < len(tokens) - 1
-        ):
-            str_day_idx += 1
-            day_str = tokens[str_day_idx]
+        # # Handle doubly nested images in case of flaw in image hierarchy
+        # while (
+        #     "Day" not in day_str
+        #     and "Other" not in day_str
+        #     and str_day_idx < len(tokens) - 1
+        # ):
+        #     str_day_idx += 1
+        #     day_str = tokens[str_day_idx]
 
         # Add gid to ggr_hierarchy, handle data for misordered or missing cars & cameras
         if day_str[-1].isdigit():
@@ -222,6 +224,12 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
                 time - base_time for time, base_time in zip(qr_times, base_times)
             ]
             gps_cam_idx = -1
+            # --- NEW SPECIFIC CAMERA A CATCH ---
+            if len(imgsets) > 0 and imgsets[0]:  # Ensure Camera A actually exists for this car
+                gps_list_A = imgtable.get_image_gps(imgsets[0])
+                if all(gps == (-1, -1) for gps in gps_list_A):
+                    print(f"[extrapolate_ggr_gps] ALERT: Reference Camera A is entirely missing GPS data for {car} on {day_idx}. Cannot extrapolate.")
+            # -----------------------------------
 
             # Locate camera with GPS data in each car
             for cam_idx in range(len(imgsets)):
@@ -313,14 +321,17 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
                 B_idx = 0
                 gps_sorted_B = []
                 while B_idx < len(times_sorted_B):
-                    if (
-                        times_sorted_A <= times_sorted_B
-                        or A_idx >= len(times_sorted_A) - 1
-                    ):
-                        gps_sorted_B.append(gps_sorted_A[A_idx])
-                        B_idx += 1
-                    else:
-                        A_idx += 1
+                    # Advance A_idx if the *next* timestamp in A is closer to B than the *current* timestamp in A
+                    while A_idx < len(times_sorted_A) - 1:
+                        dist_curr = abs(times_sorted_A[A_idx] - times_sorted_B[B_idx])
+                        dist_next = abs(times_sorted_A[A_idx + 1] - times_sorted_B[B_idx])
+                        if dist_next <= dist_curr:
+                            A_idx += 1
+                        else:
+                            break
+                    
+                    gps_sorted_B.append(gps_sorted_A[A_idx])
+                    B_idx += 1
 
                 imgtable.set_image_gps(gids_sorted_B, gps_sorted_B)
 
@@ -360,7 +371,7 @@ def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
         )
         print(f"\t{skipped_gid_list}")
 
-    return skipped_gid_list + qr_gids
+    return skipped_gid_list
 
 
 def match_point_to_poly(point, poly_prev, polys):
