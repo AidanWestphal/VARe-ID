@@ -197,6 +197,7 @@ if __name__ == "__main__":
     parser.add_argument("--separate_by_fields", nargs="+", help="List of fields to separate runs by, e.g., viewpoint encounter")
     parser.add_argument("--ui_db_path", type=str, default=None, help="Override data.ui_db_path in the LCA input config.")
     parser.add_argument("--max_human_reviews", type=int, default=None, help="Override stability.max_human_reviews in the LCA input config.")
+    parser.add_argument("--lca_config", type=str, default=None, help="Path to a custom LCA input config (YAML). Takes precedence over --intra/--inter/--video/--image defaults.")
 
     args = parser.parse_args()
 
@@ -215,7 +216,12 @@ if __name__ == "__main__":
     clone_from_github(lca_github_loc, lca_config["github_lca_url"])
 
     # OPEN LCA INPUT CONFIG
-    if args.video:
+    if args.lca_config:
+        # User-supplied config takes precedence over the mode flags.
+        input_config_name = os.path.basename(args.lca_config)
+        input_config = load_config(args.lca_config)
+        print(f"Using custom LCA config: {args.lca_config}")
+    elif args.video:
         input_config_name = "lca_drone.yaml"
         input_config = load_config(path_from_file(__file__, input_config_name))
     elif args.intra:
@@ -223,7 +229,7 @@ if __name__ == "__main__":
         input_config = load_config(path_from_file(__file__, input_config_name))
     elif args.inter:
         input_config_name = "lca_inter.yaml"
-        input_config = load_config(path_from_file(__file__, input_config_name)) 
+        input_config = load_config(path_from_file(__file__, input_config_name))
     else:
         input_config_name = "lca_image.yaml"
         input_config = load_config(path_from_file(__file__, input_config_name))
@@ -232,22 +238,25 @@ if __name__ == "__main__":
     input_config["data"]["output_path"] = args.lca_dir
     input_config["data"]["annotation_file"] = args.annots
     input_config["data"]["embedding_file"] = args.embeddings
-    
-    # Handle backward compatibility and new field separation
-    if not args.intra and not args.inter:
-        if args.separate_by_fields:
-            input_config["data"]["separate_by_fields"] = args.separate_by_fields
-            # Remove old separate_viewpoints if using new system
-            if "separate_viewpoints" in input_config["data"]:
-                del input_config["data"]["separate_viewpoints"]
-        elif args.separate_viewpoints:
-            # Legacy support
-            input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
-    
+
+    # CLI overrides — only applied when explicitly given. Otherwise the
+    # value already in the input config (YAML) is authoritative.
+    if args.separate_by_fields:
+        input_config["data"]["separate_by_fields"] = args.separate_by_fields
+        if "separate_viewpoints" in input_config["data"]:
+            del input_config["data"]["separate_viewpoints"]
+    elif args.separate_viewpoints:
+        input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
+
     if args.ui_db_path is not None:
         input_config["data"]["ui_db_path"] = args.ui_db_path
     if args.max_human_reviews is not None:
         input_config.setdefault("stability", {})["max_human_reviews"] = args.max_human_reviews
+
+    # Resolve effective separation settings from the merged config so all
+    # downstream logic uses the same source of truth.
+    effective_separate_by_fields = input_config["data"].get("separate_by_fields") or []
+    effective_separate_viewpoints = input_config["data"].get("separate_viewpoints", False)
 
     # input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
     input_config["logging"]["log_file"] = args.log_subunit_file # should append LCA outputs into same log file used by this script
@@ -276,18 +285,18 @@ if __name__ == "__main__":
     # Collect all combinations for unified save
     combinations = []
 
-    if args.separate_by_fields:
+    if effective_separate_by_fields:
         # New multi-field separation logic
         import glob
         import re
 
         # Build regex pattern to match and extract field values
         # Pattern: field1-value1_field2-value2_...
-        regex_pattern = "_".join([f"{field}-([^_]+)" for field in args.separate_by_fields])
+        regex_pattern = "_".join([f"{field}-([^_]+)" for field in effective_separate_by_fields])
         regex = re.compile(regex_pattern)
 
         # Find all directories matching the pattern
-        glob_pattern = "_".join([f"{field}-*" for field in args.separate_by_fields])
+        glob_pattern = "_".join([f"{field}-*" for field in effective_separate_by_fields])
 
         for input_dir in glob.glob(os.path.join(output_path, glob_pattern)):
             if os.path.isdir(input_dir):
@@ -296,10 +305,10 @@ if __name__ == "__main__":
 
                 if match:
                     # Extract field values from regex groups
-                    field_combo = dict(zip(args.separate_by_fields, match.groups()))
+                    field_combo = dict(zip(effective_separate_by_fields, match.groups()))
                     combinations.append((input_dir, field_combo))
 
-    elif args.separate_viewpoints:
+    elif effective_separate_viewpoints:
         # Legacy viewpoint separation
         for viewpoint in input_config["data"]["viewpoint_list"]:
             input_dir = os.path.join(output_path, viewpoint)
