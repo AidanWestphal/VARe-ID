@@ -195,6 +195,8 @@ if __name__ == "__main__":
     parser.add_argument("--inter", action="store_true", help="True if LCA should run on the inter config file.")
     parser.add_argument("--separate_viewpoints", action="store_true", help="True if LCA should be run independently for left and right. (Legacy - use --separate_by_fields instead)")
     parser.add_argument("--separate_by_fields", nargs="+", help="List of fields to separate runs by, e.g., viewpoint encounter")
+    parser.add_argument("--ui_db_path", type=str, default=None, help="Override data.ui_db_path in the LCA input config.")
+    parser.add_argument("--max_human_reviews", type=int, default=None, help="Override stability.max_human_reviews in the LCA input config.")
 
     args = parser.parse_args()
 
@@ -242,6 +244,11 @@ if __name__ == "__main__":
             # Legacy support
             input_config["data"]["separate_viewpoints"] = args.separate_viewpoints
     
+    if args.ui_db_path is not None:
+        input_config["data"]["ui_db_path"] = args.ui_db_path
+    if args.max_human_reviews is not None:
+        input_config.setdefault("stability", {})["max_human_reviews"] = args.max_human_reviews
+
     # input_config["edge_weights"]["verifier_file"] = args.verifiers_probs
     input_config["logging"]["log_file"] = args.log_subunit_file # should append LCA outputs into same log file used by this script
 

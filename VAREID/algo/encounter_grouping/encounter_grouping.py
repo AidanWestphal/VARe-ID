@@ -76,8 +76,25 @@ def group_encounters(joined_df, config):
     # Get unique images (one row per image_uuid)
     images_df = joined_df[image_cols].drop_duplicates(subset=['image_uuid']).copy()
 
-    # Filter out images without GPS or time data
-    valid_images = images_df.dropna(subset=['gps_lat', 'gps_lon', 'timestamp']).copy()
+    # Coerce to numeric so sentinel strings or weird types don't slip through
+    for col in ('gps_lat', 'gps_lon', 'timestamp'):
+        images_df[col] = pd.to_numeric(images_df[col], errors='coerce')
+
+    # An image's GPS / timestamp counts as missing if it is NaN, None, or -1.
+    # Images with any missing field are excluded from clustering and will be
+    # assigned their own unique occurence_id below, so they never share an
+    # encounter just because they all carry the same sentinel values.
+    invalid_mask = (
+        images_df[['gps_lat', 'gps_lon', 'timestamp']].isna().any(axis=1)
+        | (images_df['gps_lat'] == -1)
+        | (images_df['gps_lon'] == -1)
+        | (images_df['timestamp'] == -1)
+    )
+    valid_images = images_df.loc[~invalid_mask].copy()
+    n_invalid = int(invalid_mask.sum())
+    if n_invalid:
+        print(f"Excluding {n_invalid} images with missing/sentinel GPS or timestamp; "
+              f"each will get its own unique occurence_id.")
 
     if len(valid_images) == 0:
         print("No images with valid GPS and time data found")
