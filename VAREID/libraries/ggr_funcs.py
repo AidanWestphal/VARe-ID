@@ -605,3 +605,40 @@ def convert_geofence_to_json(filepath, outpath):
     myshpfile = geopandas.read_file(filepath)
     myshpfile.to_file(outpath, driver="GeoJSON")
     fix_json_lat_lon(outpath)
+
+def append_geospatial_boundaries(imgtable):
+    """
+    Matches each image in the imgtable to a county and land holding 
+    using its GPS coordinates.
+    """
+    print("Mapping coordinates to counties and land tenure...")
+    
+    # Load polygons once
+    poly_dict_c = get_ggr_polygons(filepath="VAREID/ggr_counties.json", 
+                                   c_or_lt=0, invert=True)
+    poly_dict_lt = get_ggr_polygons(filepath="VAREID/ggr_landtenures.json", 
+                                    c_or_lt=1, invert=True)
+    c_prev = None
+    lt_prev = None
+    
+    for info in imgtable:
+        # Skip if GPS data is missing
+        if info.get('gps_lat') is None or info.get('gps_lon') is None:
+            info['county'] = None
+            info['land tenure'] = None
+            continue
+
+        lat = info['gps_lat']
+        lon = info['gps_lon']
+        coord = Point((lat, lon))
+        
+        c_cur = match_point_to_poly(coord, c_prev, poly_dict_c.keys())
+        lt_cur = match_point_to_poly(coord, lt_prev, poly_dict_lt.keys())
+        
+        info['county'] = poly_dict_c[c_cur] if c_cur else None
+        info['land tenure'] = poly_dict_lt[lt_cur] if lt_cur else None
+        
+        c_prev = c_cur
+        lt_prev = lt_cur
+
+    return imgtable
