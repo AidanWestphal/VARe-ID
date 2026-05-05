@@ -1,0 +1,5 @@
+save_folder: visualization
+save_name: save_data.json
+
+seed: ~
+number_of_images: 250

@@ -440,15 +440,21 @@ def check_image_loadable_worker(gpath, orient):
         if orient not in [EXIF_UNDEFINED, EXIF_NORMAL]:
             img = cv2.imread(gpath)
             assert img is not None
-            # Sanitize weird behavior and standardize EXIF orientation to 1
-            cv2.imwrite(gpath, img)
-            orient = EXIF_NORMAL
-            rewritten = True
+            
+            # Attempt to sanitize EXIF, but fail gracefully if read-only
+            try:
+                cv2.imwrite(gpath, img)
+                orient = EXIF_NORMAL
+                rewritten = True
+            except (PermissionError, OSError):
+                print(f" Warning: Read-only file. Could not standardize EXIF for {gpath}")
+                # We do NOT change orient or rewritten here, but we still consider it loadable
 
         img = ut.imread(gpath)
         assert img is not None
     except Exception:
         loadable = False
+        
     return loadable, rewritten, orient
 
 
@@ -586,16 +592,23 @@ def check_image_bit_depth_worker(gpath):
         # Convert 16-bit RGBA images on disk to 8-bit RGB
         if img.mode == "RGBA":
             img.load()
-
             canvas = Image.new("RGB", img.size, (255, 255, 255))
             canvas.paste(img, mask=img.split()[3])  # 3 is the alpha channel
-            canvas.save(gpath)
-            canvas = None
-            flag = True
+            
+            # Attempt to save, but fail gracefully if read-only
+            try:
+                canvas.save(gpath)
+                flag = True
+            except (PermissionError, OSError):
+                print(f" Warning: Read-only file. Could not convert RGBA to RGB for {gpath}")
+                flag = False # Failed to update, but didn't crash
+            finally:
+                canvas = None
 
         img.close()
     except Exception:
         flag = False
+        
     return flag
 
 
