@@ -109,7 +109,7 @@
 
 # def main(args):
 #     config = load_config(path_from_file(__file__, "detector_config.yaml"))
-    
+
 #     dt_dir = Path(args.dt_dir)
 #     video_data = load_json(args.video_data)
 #     os.makedirs(dt_dir, exist_ok=True)
@@ -161,46 +161,36 @@ ultralytics.checks()
 warnings.filterwarnings("ignore")
 
 
-def detect_videos(video_data, model_path, threshold, sz, tracker_config):
-    """Run YOLO detection + tracking (ByteTrack or BoT-SORT) on a single video's frames."""
+def detect_videos(video_data, model_path, threshold, save_threshold, sz, tracker_config):
     videos = video_data["videos"]
     annotations = []
 
     for vid in videos:
         vid_name = vid["video fname"]
         frames = vid["frame data"]
-
-        # MAKE A NEW YOLO MODEL FOR EACH VIDEO
         model = YOLO(model_path)
 
-        # DETECT AND TRACK OVER VIDEO
         for i, frame_data in enumerate(tqdm(frames, desc=f"Detecting frames from {vid_name}...")):
             img = cv2.imread(frame_data["uri"])
-            
-            # Use tracker parameter (ByteTrack or BoT-SORT)
             results = model.track(
-                img, 
-                verbose=False, 
-                persist=True, 
+                img,
+                verbose=False,
+                persist=True,
                 imgsz=sz,
-                tracker=tracker_config,  # NEW: Specify tracker config
-                conf=threshold,          # NEW: Move threshold here for efficiency
+                tracker=tracker_config,
+                conf=threshold,          # low threshold — tracker sees everything ≥ 0.45
             )
 
-            # Extract detections and tracking information
             for result in results:
-                # Check if any detection in the image is a person (class 0)
                 if any(box.cls.item() == 0 for box in result.boxes):
-                    # Skip this entire image
                     continue
-                
-                # Iterate over detections in frame and only accept those above threshold
+
                 for box in result.boxes:
-                    # Threshold already applied in track(), but double-check
-                    if box.conf is None or box.conf.item() < threshold:
+                    # Only SAVE detections above save_threshold
+                    if box.conf is None or box.conf.item() < save_threshold:
                         continue
 
-                    x1, y1, x2, y2 = (box.xyxy[0][0].item(), box.xyxy[0][1].item(), 
+                    x1, y1, x2, y2 = (box.xyxy[0][0].item(), box.xyxy[0][1].item(),
                                       box.xyxy[0][2].item(), box.xyxy[0][3].item())
 
                     annotations.append({
@@ -210,15 +200,15 @@ def detect_videos(video_data, model_path, threshold, sz, tracker_config):
                         "video_path": vid["video path"],
                         "frame_number": i + 1,
                         "bbox": [x1, y1, x2 - x1, y2 - y1],
-                        "confidence": box.conf.item() if box.conf is not None else -1,
+                        "confidence": box.conf.item(),
                         "detection_class": int(box.cls.item()) if box.cls is not None else -1,
                         "tracking_id": int(box.id.item()) if box.id is not None else -1,
                         "timestamp": frame_data["time_posix"],
                     })
-        
+
         print(f"Finished detecting frames from {vid_name}.")
 
-    print(f"Finished all detecting!")
+    print("Finished all detecting!")
     return annotations
 
 
@@ -263,20 +253,22 @@ def postprocess_tracking_ids(annots):
 
 def main(args):
     config = load_config(path_from_file(__file__, "detector_config.yaml"))
-    
+
     dt_dir = Path(args.dt_dir)
     video_data = load_json(args.video_data)
     os.makedirs(dt_dir, exist_ok=True)
 
-    threshold = config["confidence_threshold"]
+    threshold = config["confidence_threshold"]         # 0.45 — tracker sees this
+    save_threshold = config.get("save_threshold", threshold)  # 0.75 — saved to JSON
     sz = config["img_size_vid"]
-    tracker_config = config.get("tracker", "bytetrack.yaml")  # NEW: Get tracker from config
-    
+    tracker_config = config.get("tracker", "bytetrack.yaml")
+
     print(f"Using tracker: {tracker_config}")
-    print(f"Confidence threshold: {threshold}")
+    print(f"Tracking threshold: {threshold}")
+    print(f"Save threshold: {save_threshold}")
     print(f"Image size: {sz}")
-    
-    all_annotations = detect_videos(video_data, args.model_path, threshold, sz, tracker_config)
+
+    all_annotations = detect_videos(video_data, args.model_path, threshold, save_threshold, sz, tracker_config)
 
     print("Post-processing tracking IDs to avoid collisions…")
     postprocess_tracking_ids(all_annotations)

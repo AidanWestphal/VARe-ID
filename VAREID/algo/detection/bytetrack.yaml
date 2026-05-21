@@ -1,0 +1,10 @@
+tracker_type: bytetrack
+
+track_high_thresh: 0.75    # Matches your YOLO model's reliable confidence zone
+track_low_thresh: 0.45     # Matches detector_config — used only for track recovery
+new_track_thresh: 0.75     # Only start new tracks on high-confidence detections
+
+track_buffer: 30           # ~2 seconds lost track memory at 15fps
+match_thresh: 0.8          # Strict IoU — prevents jumping to nearby wrong animal
+
+min_box_area: 200          # Filter noise
