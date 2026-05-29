@@ -87,6 +87,10 @@ class LightweightTransformerPool(nn.Module):
         refined_tokens = self.transformer(x) # -> (B, 196, embed_dim)
         
         # Global Average Pool across sequence dimension
+        # pooled_features = refined_tokens.mean(dim=1) # -> (B, embed_dim)
+
+        # Global Max Pool - maintain features better (generally)
+        # pooled_features, indices = torch.max(refined_tokens, dim=1) # -> (B, embed_dim)
         pooled_features = refined_tokens.mean(dim=1) # -> (B, embed_dim)
         return pooled_features
 
@@ -106,22 +110,32 @@ class DINOProbe(nn.Module):
             num_heads=4, 
             depth=1
         )
+
+        # Projection for CLS token to 256
+        self.project = nn.Linear(self.backbone.embed_dim, 256)
         
-        # 2. Final Classifier (Since we already dropped to 256, we can go straight to output)
+        # 2. Final Classifier (from 256)
         self.fc = nn.Sequential(
-            nn.BatchNorm1d(bottleneck_dim),
-            nn.ReLU(),
-            nn.Dropout(p=0.4), # Aggressive dropout for small datasets
-            nn.Linear(bottleneck_dim, num_classes)
+            nn.BatchNorm1d(512), 
+            nn.Dropout(p=0.4), # aggressive reg
+            nn.Linear(512, num_classes)
         )
 
     def forward(self, x):
         with torch.no_grad():
             features = self.backbone.forward_features(x)
-            patch_tokens = features['x_norm_patchtokens'] 
-            
-        pooled_features = self.pooler(patch_tokens)
-        return self.fc(pooled_features)
+            patch_tokens = features['x_norm_patchtokens'] # 768
+            cls_token = features['x_norm_clstoken'] # 768
+
+        # POOL FOR DENSE            
+        pooled_features = self.pooler(patch_tokens) # 256
+        # PROJECT FOR CLS
+        global_features = self.project(cls_token) # 256
+        # COMBINE
+        total_features = torch.cat((pooled_features, global_features), dim=1) # 512
+        # total_features = pooled_features + global_features
+        # CLASSIFY
+        return self.fc(total_features)
 
 # ==========================================
 # TRAINING & EVALUATION LOOPS
@@ -351,9 +365,10 @@ def main(args):
     age_model = DINOProbe(dinov3, num_classes=6).to(device)
     sex_model = DINOProbe(dinov3, num_classes=2).to(device)
 
+
     # Note: We now optimize the pooler and the fc layer together
-    age_optimizer = torch.optim.AdamW(list(age_model.pooler.parameters()) + list(age_model.fc.parameters()), lr=lr)
-    sex_optimizer = torch.optim.AdamW(list(sex_model.pooler.parameters()) + list(sex_model.fc.parameters()), lr=lr)
+    age_optimizer = torch.optim.AdamW(list(age_model.pooler.parameters()) + list(age_model.project.parameters()) + list(age_model.fc.parameters()), lr=lr, weight_decay=0.05)
+    sex_optimizer = torch.optim.AdamW(list(sex_model.pooler.parameters()) + list(age_model.project.parameters()) + list(sex_model.fc.parameters()), lr=lr, weight_decay=0.05)
     criterion = nn.CrossEntropyLoss()
 
     # CP Resumption

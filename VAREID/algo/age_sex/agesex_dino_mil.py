@@ -12,7 +12,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
-import torchvision.models as models
 
 from albumentations import Compose, Normalize, Resize, HorizontalFlip, ShiftScaleRotate, ColorJitter
 from albumentations.pytorch import ToTensorV2
@@ -29,36 +28,23 @@ IMG_SIZE = 224
 # ==========================================
 # DATA LOADING & DATASET
 # ==========================================
+# (IDENTICAL TO BASELINE - OMITTED FOR SPACE, COPY/PASTE load_coco_to_df AND DINOZebraDataset FROM ABOVE)
 def load_coco_to_df(json_path):
     with open(json_path, 'r') as f:
         data = json.load(f)
-    df = pd.merge(pd.DataFrame(data['annotations']), pd.DataFrame(data['images']), 
-                  left_on='image_uuid', right_on='uuid', suffixes=('', '_img'))
-    return df
+    return pd.merge(pd.DataFrame(data['annotations']), pd.DataFrame(data['images']), left_on='image_uuid', right_on='uuid', suffixes=('', '_img'))
 
 class DINOZebraDataset(Dataset):
     def __init__(self, df, cache_dir, task='age', transforms=None):
-        self.df = df.reset_index(drop=True).copy()
-        self.cache_dir = cache_dir
-        self.task = task
-        self.transforms = transforms
-        self.map = AGE_MAP if task == 'age' else SEX_MAP
-
-    def __len__(self):
-        return len(self.df)
-
+        self.df = df.reset_index(drop=True).copy(); self.cache_dir = cache_dir; self.task = task; self.transforms = transforms; self.map = AGE_MAP if task == 'age' else SEX_MAP
+    def __len__(self): return len(self.df)
     def __getitem__(self, index):
-        row = self.df.loc[index]
-        img_path = os.path.join(self.cache_dir, f"{row['uuid']}.jpg")
-        img = cv2.imread(img_path)
-        img = img[:, :, ::-1] if img is not None else np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.uint8)
-        if self.transforms:
-            img = self.transforms(image=img)["image"]
-        target = torch.tensor(self.map[row[self.task]], dtype=torch.long)
-        return img, target
+        row = self.df.loc[index]; img_path = os.path.join(self.cache_dir, f"{row['uuid']}.jpg"); img = cv2.imread(img_path); img = img[:, :, ::-1] if img is not None else np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.uint8)
+        if self.transforms: img = self.transforms(image=img)["image"]
+        return img, torch.tensor(self.map[row[self.task]], dtype=torch.long)
 
 # ==========================================
-# MODEL ARCHITECTURE (SINGLE-TASK CNN)
+# MODEL ARCHITECTURE (ATTENTION MIL POOL)
 # ==========================================
 
 class FocalLoss(nn.Module):
@@ -79,35 +65,59 @@ class FocalLoss(nn.Module):
         return focal_loss
     
 
-class EfficientNetProbe(nn.Module):
-    def __init__(self, num_classes):
+class AttentionMILPool(nn.Module):
+    def __init__(self, in_dim, embed_dim=128):
         super().__init__()
-        self.backbone = models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT)
-        
-        # Freeze backbone to match DINO evaluation protocol
-        for param in self.backbone.parameters():
-            param.requires_grad = False
-            
-        in_features = self.backbone.classifier[1].in_features
-        
-        # Aligned Classification Head
-        self.backbone.classifier = nn.Sequential(
-            nn.BatchNorm1d(in_features),
-            nn.ReLU(),
-            nn.Dropout(p=0.4), 
-            nn.Linear(in_features, num_classes)
+        self.proj = nn.Linear(in_dim, embed_dim)
+        self.attention = nn.Sequential(
+            nn.Linear(embed_dim, 64),
+            nn.Tanh(),
+            nn.Linear(64, 1)
         )
 
     def forward(self, x):
-        return self.backbone(x)
+        h = self.proj(x)  
+        attn_scores = self.attention(h) 
+        attn_weights = torch.softmax(attn_scores, dim=1)  
+        pooled_features = torch.sum(h * attn_weights, dim=1) 
+        return pooled_features, attn_weights
+
+class DINOProbe(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super().__init__()
+        self.backbone = backbone
+        in_dim = self.backbone.embed_dim
+        bottleneck_dim = 128
+        
+        self.pooler = AttentionMILPool(in_dim=in_dim, embed_dim=bottleneck_dim)
+        
+        self.fc = nn.Sequential(
+            nn.BatchNorm1d(bottleneck_dim),
+            nn.ReLU(),
+            nn.Dropout(p=0.4), 
+            nn.Linear(bottleneck_dim, num_classes)
+        )
+
+    def forward(self, x, return_attention=False):
+        with torch.no_grad():
+            features = self.backbone.forward_features(x)
+            patch_tokens = features['x_norm_patchtokens'] 
+            
+        pooled_features, attn_weights = self.pooler(patch_tokens)
+        logits = self.fc(pooled_features)
+        
+        if return_attention: return logits, attn_weights
+        return logits
 
 # ==========================================
 # TRAINING & EVALUATION LOOPS
 # ==========================================
+# (IDENTICAL TO BASELINE - COPY/PASTE create_sampler, train, evaluate, train_epochs FROM ABOVE)
 def create_sampler(df, target_col):
     class_counts = df[target_col].value_counts()
     weights = df[target_col].map(1.0 / class_counts).values
     return WeightedRandomSampler(weights=weights, num_samples=5000, replacement=True)
+
 
 def train(model, optim, criterion, dataloader, device, verbose=True):
     model.train()
@@ -128,6 +138,7 @@ def train(model, optim, criterion, dataloader, device, verbose=True):
         if verbose:
             pbar.set_postfix({'Loss': f"{loss.item():.4f}"})
     return running_loss / len(dataloader)
+
 
 @torch.no_grad()
 def evaluate(model, dataloader, criterion, task_name, device, verbose=True):
@@ -152,6 +163,7 @@ def evaluate(model, dataloader, criterion, task_name, device, verbose=True):
         print(f"AVERAGE LOSS: {avg_loss:.4f}")
     
     return cr_dict['macro avg']['f1-score'], avg_loss
+
 
 def train_epochs(model, optim, train_dataloader, val_dataloader, criterion, task_name, device, checkpoint_dir, run_name, start_epoch=0, epochs=10, best_metric=0.0, verbose=True):
     best_model_path = os.path.join(checkpoint_dir, f"best_{task_name}_{run_name}.pth")
@@ -183,24 +195,28 @@ def train_epochs(model, optim, train_dataloader, val_dataloader, criterion, task
         
     print(f"Finished training {task_name.upper()}. Best Macro F1: {best_metric:.4f}\n")
 
+
 # ==========================================
 # MAIN EXECUTION
 # ==========================================
 def main(args):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     yaml_path = os.path.join(script_dir, 'agesex_dino.yaml')
-    with open(yaml_path, 'r') as f:
-        config = yaml.safe_load(f)
+    with open(yaml_path, 'r') as f: config = yaml.safe_load(f)
         
-    run_name = "base_" + config.get('run_name', 'effnet_baseline')
-    epochs = config.get('epochs', 50)
-    batch_size = config.get('batch_size', 32)
-    lr = config.get('lr', 1e-4)
-    verbose = config.get('verbose', True)
-    resume = config.get('resume', False) or args.resume
+    run_name = "mil_" + config.get('run_name', 'patch_mil')
+    epochs = config.get('epochs', 50); batch_size = config.get('batch_size', 32); lr = config.get('lr', 1e-4)
+    verbose = config.get('verbose', True); resume = config.get('resume', False) or args.resume
+
+    model_name = config.get('dino_model', 'dinov3_vit7b16')
+    model_dir = config.get('dino_repo', './dino')
+    if not os.path.exists(model_dir): subprocess.run(["git", "clone", config.get('dino_github_url', ''), model_dir], check=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+    print("Loading DINOv3 backbone...")
+    dinov3 = torch.hub.load(model_dir, model_name, source='local', weights=config.get('dino_weights')[model_name]).to(device)
+    for param in dinov3.parameters(): param.requires_grad = False
+    dinov3.eval()
 
     slurm_cores = os.environ.get('SLURM_CPUS_PER_TASK')
     num_workers = int(slurm_cores) if slurm_cores else os.cpu_count()
@@ -239,11 +255,11 @@ def main(args):
     age_val_loader = DataLoader(DINOZebraDataset(val_df, tmpdir, task='age', transforms=eval_transforms), shuffle=False, **loader_kwargs)
     sex_val_loader = DataLoader(DINOZebraDataset(val_df, tmpdir, task='sex', transforms=eval_transforms), shuffle=False, **loader_kwargs)
 
-    age_model = EfficientNetProbe(num_classes=6).to(device)
-    sex_model = EfficientNetProbe(num_classes=2).to(device)
+    age_model = DINOProbe(dinov3, num_classes=6).to(device)
+    sex_model = DINOProbe(dinov3, num_classes=2).to(device)
 
-    age_optimizer = torch.optim.AdamW(age_model.parameters(), lr=lr)
-    sex_optimizer = torch.optim.AdamW(sex_model.parameters(), lr=lr)
+    age_optimizer = torch.optim.AdamW(list(age_model.pooler.parameters()) + list(age_model.fc.parameters()), lr=lr)
+    sex_optimizer = torch.optim.AdamW(list(sex_model.pooler.parameters()) + list(sex_model.fc.parameters()), lr=lr)
     criterion = nn.CrossEntropyLoss()
 
     start_epoch_age, start_epoch_sex, best_f1_age, best_f1_sex = 0, 0, 0.0, 0.0
@@ -273,6 +289,7 @@ def main(args):
 
     print("\n" + "="*40 + "\nTRAINING SEX PROBE\n" + "="*40)
     train_epochs(sex_model, sex_optimizer, sex_train_loader, sex_val_loader, criterion, 'sex', device, args.checkpoint_dir, run_name, start_epoch_sex, epochs, best_f1_sex, verbose)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

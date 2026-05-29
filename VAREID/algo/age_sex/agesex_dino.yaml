@@ -1,5 +1,5 @@
-run_name: "agesex_dino"
-epochs: 50
+run_name: "agesex_ablation"
+epochs: 40
 batch_size: 32
 lr: 0.0001
 verbose: true

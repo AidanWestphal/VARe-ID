@@ -25,7 +25,7 @@ AGE_MAP = {'0-2': 0, '3-5': 1, '6-11': 2, '12-23': 3, '24-35': 4, '36+': 5}
 SEX_MAP = {'Female': 0, 'Male': 1}
 REV_AGE = {v: k for k, v in AGE_MAP.items()}
 REV_SEX = {v: k for k, v in SEX_MAP.items()}
-IMG_SIZE = 224
+IMG_SIZE = 448
 
 # ==========================================
 # DATASET
@@ -94,16 +94,20 @@ class LightweightTransformerPool(nn.Module):
         super().__init__()
         self.proj = nn.Linear(in_dim, embed_dim)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=embed_dim, nhead=num_heads, 
-            dim_feedforward=embed_dim * 2, dropout=0.1, 
-            batch_first=True, norm_first=True
+            d_model=embed_dim, 
+            nhead=num_heads, 
+            dim_feedforward=embed_dim * 2, 
+            dropout=0.3, 
+            batch_first=True, 
+            norm_first=True
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=depth)
 
     def forward(self, x):
-        x = self.proj(x)
-        refined_tokens = self.transformer(x)
-        return refined_tokens.mean(dim=1)
+        x = self.proj(x) 
+        refined_tokens = self.transformer(x) 
+        pooled_features = refined_tokens.mean(dim=1) 
+        return pooled_features
 
 class DINOProbePatch(nn.Module):
     def __init__(self, backbone, num_classes):
@@ -111,20 +115,65 @@ class DINOProbePatch(nn.Module):
         self.backbone = backbone
         in_dim = self.backbone.embed_dim
         bottleneck_dim = 256
+        
         self.pooler = LightweightTransformerPool(in_dim=in_dim, embed_dim=bottleneck_dim, num_heads=4, depth=1)
         self.fc = nn.Sequential(
             nn.BatchNorm1d(bottleneck_dim),
-            nn.ReLU(), # <--- ADD THIS BACK IN FOR OLD CHECKPOINTS
-            nn.Dropout(p=0.4), # <--- Ensure this matches what you trained with (likely 0.4 based on your previous message)
+            nn.ReLU(),
+            nn.Dropout(p=0.4), # Aggressive dropout for small datasets
             nn.Linear(bottleneck_dim, num_classes)
         )
 
     def forward(self, x):
+        features = self.backbone.forward_features(x)
+        patch_tokens = features['x_norm_patchtokens'] 
+            
+        pooled_features = self.pooler(patch_tokens)
+        return self.fc(pooled_features)
+
+class AttentionMILPool(nn.Module):
+    def __init__(self, in_dim, embed_dim=256):
+        super().__init__()
+        self.proj = nn.Linear(in_dim, embed_dim)
+        self.attention = nn.Sequential(
+            nn.Linear(embed_dim, 128),
+            nn.Tanh(),
+            nn.Linear(128, 1)
+        )
+
+    def forward(self, x):
+        h = self.proj(x)  
+        attn_scores = self.attention(h)  
+        attn_weights = torch.softmax(attn_scores, dim=1)  
+        pooled_features = torch.sum(h * attn_weights, dim=1)  
+        return pooled_features, attn_weights
+
+class DINOProbeMIL(nn.Module):
+    def __init__(self, backbone, num_classes):
+        super().__init__()
+        self.backbone = backbone
+        in_dim = self.backbone.embed_dim
+        bottleneck_dim = 256
+        
+        self.pooler = AttentionMILPool(in_dim=in_dim, embed_dim=bottleneck_dim)
+        self.fc = nn.Sequential(
+            nn.BatchNorm1d(bottleneck_dim),
+            nn.ReLU(),
+            nn.Dropout(p=0.2), 
+            nn.Linear(bottleneck_dim, num_classes)
+        )
+
+    def forward(self, x, return_attention=False):
         with torch.no_grad():
             features = self.backbone.forward_features(x)
             patch_tokens = features['x_norm_patchtokens'] 
-        pooled_features = self.pooler(patch_tokens)
-        return self.fc(pooled_features)
+            
+        pooled_features, attn_weights = self.pooler(patch_tokens)
+        logits = self.fc(pooled_features)
+        
+        if return_attention:
+            return logits, attn_weights
+        return logits
 
 # ==========================================
 # EVALUATION ENGINES
@@ -317,9 +366,14 @@ def main(args):
     if args.model_type == 'cls':
         age_model = DINOProbeCLS(dinov3, num_classes=6).to(device)
         sex_model = DINOProbeCLS(dinov3, num_classes=2).to(device)
-    else:
+    elif args.model_type == 'patch':
         age_model = DINOProbePatch(dinov3, num_classes=6).to(device)
         sex_model = DINOProbePatch(dinov3, num_classes=2).to(device)
+    elif args.model_type == 'mil':
+        age_model = DINOProbeMIL(dinov3, num_classes=6).to(device)
+        sex_model = DINOProbeMIL(dinov3, num_classes=2).to(device)
+    else:
+        raise ValueError(f"Unknown model_type: {args.model_type}")
 
     # Load Checkpoints
     age_checkpoint = torch.load(args.age_checkpoint, map_location=device)
@@ -336,8 +390,6 @@ def main(args):
     test_df = load_coco_to_df(args.test_json)
     train_df = load_coco_to_df(args.train_json)
     
-    # We use EVAL transforms for both, because we do NOT want random augmentations 
-    # to artificially lower the training accuracy during evaluation.
     eval_transforms = Compose([
         Resize(IMG_SIZE, IMG_SIZE),
         Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -382,7 +434,7 @@ if __name__ == '__main__':
     parser.add_argument('--test_json', type=str, required=True, help='Path to test JSON split')
     parser.add_argument('--age_checkpoint', type=str, required=True, help='Path to best_age_model.pth')
     parser.add_argument('--sex_checkpoint', type=str, required=True, help='Path to best_sex_model.pth')
-    parser.add_argument('--model_type', type=str, choices=['cls', 'patch'], required=True, help='Which DINO architecture to evaluate')
+    parser.add_argument('--model_type', type=str, choices=['cls', 'patch', 'mil'], required=True, help='Which DINO architecture to evaluate')
     parser.add_argument('--out_dir', type=str, default='./eval_results', help='Directory to save output plots')
     
     args = parser.parse_args()
