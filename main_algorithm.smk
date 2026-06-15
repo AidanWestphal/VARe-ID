@@ -68,6 +68,7 @@ rule ia_classification:
     shell:
         "python -m VAREID.drivers.iac_driver --config {config_str}"
 
+
 rule ia_filtering:
     input:
         config["ia_out_path"]
@@ -77,9 +78,27 @@ rule ia_filtering:
         "python -m VAREID.drivers.iaf_driver --config {config_str}"
 
 
-rule frame_sampling:
+rule id_region:
     input:
         config["ia_filtered_out_path"]
+    output:
+        config["idr_out_path"]
+    shell:
+        "python -m VAREID.drivers.idr_driver --config {config_str}"
+
+
+rule id_region_filtering:
+    input:
+        config["idr_out_path"]
+    output:
+        config["idr_filtered_out_path"]
+    shell:
+        "python -m VAREID.drivers.idrf_driver --config {config_str}"
+
+
+rule frame_sampling:
+    input:
+        config["idr_filtered_out_path"]
     output:
         config["fs_out_path"]
     shell:

@@ -3,6 +3,8 @@ import os
 import shutil
 import warnings
 import json
+import pickle
+from typing import Any, Callable, Dict
 
 import cv2
 import numpy as np
@@ -10,10 +12,12 @@ import pandas as pd
 import timm
 import torch
 import yaml
+from tqdm import tqdm
 from albumentations import Compose, Normalize, Resize
 from albumentations.pytorch import ToTensorV2
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader, Sampler
 
+from VAREID.libraries.io.checkpoint import DataLoaderCheckpointManager
 from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe
 from VAREID.libraries.utils import path_from_file
 
@@ -92,34 +96,87 @@ def reformat_viewpoint(viewpoint):
     return out
 
 
-def predict_labels_new(test_loader, model, device):
+def predict_labels_new(dataset, model, device, cp_int, cp_path, batch_size, num_workers):
     model.eval()
 
     # Store predictions and discrete labels for all samples
     all_preds = []
-    all_discrete_labels = []
+    all_labels = []
 
-    with torch.no_grad():
-        for imgs in test_loader:
+    def get_current_state():
+        return {
+            "preds": all_preds,
+            "labels": all_labels
+        }
+
+    manager = DataLoaderCheckpointManager(
+        dataset=dataset,
+        state_getter=get_current_state,
+        checkpoint_interval=cp_int,
+        save_path=cp_path,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False
+    )
+
+    with manager as runner:
+        if runner.iteration > 0:
+            all_preds = runner.external_state.get("preds", [])
+            all_labels = runner.external_state.get("labels", [])
+
+        for imgs in tqdm(runner, desc="Classifying Viewpoint"):
             imgs = imgs.to(device).float()
 
-            # Make the prediction
-            image_preds = model(imgs)
-            preds_sigmoid = torch.sigmoid(
-                image_preds
-            )  # Apply sigmoid to get probabilities
-            all_preds.append(preds_sigmoid.detach().cpu())
+            with torch.no_grad():
+                # Make the prediction
+                image_preds = model(imgs)
+                preds_sigmoid = torch.sigmoid(
+                    image_preds
+                )  # Apply sigmoid to get probabilities
+                
+                batch_preds = preds_sigmoid.detach().cpu().numpy().tolist()
+                all_preds.extend(batch_preds)
 
-            # Convert probabilities to labels based on a threshold
-            threshold = 0.5
-            discrete_labels = (preds_sigmoid > threshold).int()
-            all_discrete_labels.append(discrete_labels.detach().cpu())
+                # Convert probabilities to labels based on a threshold
+                threshold = 0.5
+                discrete_labels = (preds_sigmoid > threshold).int()
+
+                B = discrete_labels.shape[0]
+
+                #"back", "front", "left", "right", "up"
+                for i in range(B):
+                    dl = discrete_labels[i]
+                    ps = preds_sigmoid[i]
+
+                    # left / right conflict
+                    if dl[2] == 1 and dl[3] == 1:
+                        dl[2] = int(ps[2] > ps[3])
+                        dl[3] = int(ps[3] > ps[2])
+
+                    # front / back conflict
+                    if dl[0] == 1 and dl[1] == 1:
+                        dl[0] = int(ps[0] > ps[1])
+                        dl[1] = int(ps[1] > ps[0])
+
+                    # no viewpoint at all
+                    if dl.sum() == 0:
+                        dl[ps.argmax()] = 1
+
+                    # up-only case or upfront case → force left or right
+                    if torch.equal(dl, torch.tensor([0, 0, 0, 0, 1], device=dl.device)) or torch.equal(dl, torch.tensor([0, 1, 0, 0, 1], device=dl.device)):
+                        if ps[2] > ps[3]:
+                            dl[2] = 1
+                        elif ps[3] > ps[2]:
+                            dl[3] = 1
+                        else:    
+                            pass
+                            
+                batch_labels = discrete_labels.detach().cpu().numpy().tolist()
+                all_labels.extend(batch_labels)
+                
 
     # Concatenate all batch results
-    all_preds = torch.cat(all_preds, dim=0).numpy()
-    all_discrete_labels = torch.cat(all_discrete_labels, dim=0).numpy()
-
-    return all_preds, all_discrete_labels
+    return np.array(all_preds), np.array(all_labels)
 
 
 def rotate_box(x1, y1, x2, y2, theta):
@@ -166,6 +223,9 @@ def main(args):
     filtered_annots = annots[
         annots["species"].isin(config["filtered_classes"])
     ]
+    
+    if (filtered_annots.size == 0):
+        raise Exception("All annotations filtered out. Expected species not found.")
 
     # NOTE: MAY REMOVE LATER
     # Split based on bbox_xywh and species criteria
@@ -184,13 +244,6 @@ def main(args):
 
     print("Preparing data for the model...")
     test_ds = ClassifierDataset(filtered_test, transforms=get_valid_transforms())
-    test_loader = torch.utils.data.DataLoader(
-        test_ds,
-        batch_size=config["valid_bs"],
-        num_workers=config["num_workers"],
-        shuffle=False,
-        pin_memory=False,
-    )
 
     print("Setting up the model...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -204,8 +257,28 @@ def main(args):
         )
 
     print("Running the model...")
-    _, all_discrete_labels = predict_labels_new(test_loader, model, device)
+    
+    sigmoid_outputs, all_discrete_labels = predict_labels_new(
+        dataset=test_ds,
+        model=model,
+        device=device,
+        cp_int=args.cp_freq,
+        cp_path=args.cp_path,
+        batch_size=config["valid_bs"],
+        num_workers=config["num_workers"]
+    )
+    
+    preds_sigmoid_df = pd.DataFrame(
+        sigmoid_outputs,
+        columns=config["label_cols"]
+    )
 
+    filtered_test["viewpoint_sigmoid"] = preds_sigmoid_df.apply(
+        lambda row: row.to_dict(), axis=1
+    )
+
+    other_test["viewpoint_sigmoid"] = [{} for _ in range(len(other_test))]
+    
     print("Processing the model predictions...")
     # Create a DataFrame from the binary labels
     preds_bin = pd.DataFrame(all_discrete_labels, columns=config["label_cols"])
@@ -226,15 +299,17 @@ def main(args):
     # Save the updated DataFrame to a new JSON file
     viewpoint_dir = os.path.dirname(args.out_json_path)
 
-    if os.path.exists(viewpoint_dir):
-        print("Removing Previous Instance of Experiment...")
-        shutil.rmtree(viewpoint_dir)
+    # Logic updated: Do not delete directory if resuming
+    if not os.path.exists(viewpoint_dir):
+        os.makedirs(viewpoint_dir, exist_ok=True)
 
     print("Saving the results...")
-    os.makedirs(viewpoint_dir, exist_ok=True)
-
     final_json = split_dataframe(final_output)
     save_json(final_json, args.out_json_path)
+
+    # Clean up checkpoint
+    if os.path.exists(args.cp_path):
+        os.remove(args.cp_path)
 
     print("Done!")
 
@@ -251,6 +326,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "model_checkpoint_path", type=str, help="The full path to the model checkpoint"
+    )
+    parser.add_argument(
+        "cp_freq", type=int, help="The checkpoint frequency for safe exiting"
+    )
+    parser.add_argument(
+        "cp_path", type=str, help="The checkpoint path for safe exiting"
     )
     parser.add_argument(
         "out_json_path", type=str, help="The full path to the output json file"

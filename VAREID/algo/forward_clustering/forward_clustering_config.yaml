@@ -1,0 +1,8 @@
+# Configuration for Forward Clustering Algorithm
+# This algorithm forwards inter_cluster_id from representative annotations
+# to non-representative annotations within the same occurence_id group
+
+# Field names configuration
+cluster_field: "encounter_id"  # Field containing intra cluster IDs
+inter_field: "cluster_id"    # Field to store/forward inter cluster IDs
+rep_field: "representative"        # Field indicating representative status

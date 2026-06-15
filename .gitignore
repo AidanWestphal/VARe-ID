@@ -15,6 +15,12 @@ VAREID/models/yolo*.pt
 # Mac system
 .DS_Store
 *.pickle
-notebooks/cluster_visualizations*
+notebooks/*
+!notebooks/**/*.ipynb
 config_*
 hist*
+logs/*
+media/*
+.gradio
+
+*.db

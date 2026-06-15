@@ -1,113 +1,44 @@
-'''
-## Annotation Visualization Tool
-
-The following tool helps visualize annotations generated from the pipeline by overlaying them onto images.
-
-Import data under the `annots` parameter. This should be a path to the post CA classifier annotation file. Save data via the `out_dir` param.
-
-Please specify whether the data is in video or image mode through the parameter `--video_mode`, which is boolean.
-
-There are FOUR ways to generate annotations:
-1. Use `--num_images n` to generate the annotations for n images
-2. Use `--all` to generate the annotations for all images
-3. Use `--image_paths {p1} {p2} ...` to generate the annotations for specific images
-4. Use `--annot-uuids {uuid1} {uuid2} ...` to generate for specific annotations
-
-To specify which fields to include on each annotation, see the following list of optional parameters:
-
-- `--detection_class` -- The class returned by the detector
-- `--species` -- The species returned by the species identifier
-- `--tracking_id` -- The tracking id assigned by the detector
-- `--confidence` -- The strength of the bounding box detection from the detector
-- `--viewpoint` -- The viewpoint
-- `--CA_score` -- The CA annotation score
-- `--annotations_census` -- The boolean signifying whether the annotation was kept or rejected
-
-As of now, this step will read in the CSV format outputted by CA Classifier, before the preceeding preprocessing step which converts it to JSON and reformats data. **This will be refactored once formatting for each stage is standardized and file path is stored in annotations!**
-
-TODO RAFACTORS:
-- Revise flag inputs to match a standardized JSON output
-- Allow absolute paths in --image_paths
-- Add more flags
-- Improve output coloring & formatting
-
-Example Executions:
-python3 visualize.py {video/image data json} {CA Output CSV} {Output Directory} --num_images 100 --CA_score --species --confidence --viewpoint
-python3 visualize.py {video/image data json} {CA Output CSV} {Output Directory} --video_mode --image_paths {p1} {p2} {p3} ... --CA_score --species --confidence --viewpoint
-
-python3 visualize.py /fs/ess/PAS2136/ggr_data/results/GGR2020_subset/image_data.json /fs/ess/PAS2136/ggr_data/results/GGR2020_subset/ca_classifier/final_output_with_softmax_and_census.csv annot_dir --all --species --viewpoint --CA_score
-'''
-
-import ast
-import argparse
-import os
-import cv2
-import json
-import numbers
-
-
 import numpy as np
 import pandas as pd
+import json
+import cv2
+import matplotlib.pyplot as plt
+import os
+import yaml
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+import gradio as gr
+from collections import defaultdict
 
-parser = argparse.ArgumentParser(
-    description="Visualize annotaions"
-)
-parser.add_argument(
-    "metadata", type=str, help="The image/video metadata file"
-)
-parser.add_argument(
-    "annots", type=str, help="The post CA classifier CSV file"
-)
-parser.add_argument(
-    "out_dir", type=str, help="The directory to save annotated images to"
-)
-parser.add_argument(
-    "--video_mode", action="store_true", help="Boolean flag identifying the format of the metadata file"
-)
-parser.add_argument(
-    "--num_images", type=int, nargs='?', default=None, help="The number of images to display"
-)
-parser.add_argument(
-    "--all", action="store_true", help="Displays all images"
-)
-parser.add_argument(
-    "--image_paths", type=str, nargs='*', default=None, help="The number of images to display"
-)
-parser.add_argument(
-    "--detection_class", action="store_true", help="Display the class returned by the detector"
-)
-parser.add_argument(
-    "--species", action="store_true", help="Display the species returned by the species identifier"
-)
-parser.add_argument(
-    "--tracking_id", action="store_true", help="Display the tracking id assigned by the detector"
-)
-parser.add_argument(
-    "--confidence", action="store_true", help="Display the strength of the bounding box detection from the detector"
-)
-parser.add_argument(
-    "--viewpoint", action="store_true", help="Display the viewpoint"
-)
-parser.add_argument(
-    "--CA_score", action="store_true", help="Display the CA annotation score"
-)
-parser.add_argument(
-    "--annotations_census", action="store_true", help="Display the boolean signifying whether the annotation was kept or rejected"
-)
 
-args = parser.parse_args()
+with open('config_visualize.yaml', 'r') as f:
+    config = yaml.load(f, Loader=yaml.SafeLoader)
+    
+IMG_DIR = config["img_dir"]
+ANNOTS_DIR = config["annots_dir"]
+SAVE_DIR = config["save_dir"]
+FIELDS = config['desired_fields']
+FULL_IMAGE = config['full_image']
+SORT_BY = config['sort_by']
+VIDEO_MODE = config['data_video']
+ANNOT_METHOD = config['annot_method']
+IMAGE_PATHS = config['image_paths']
+NUM_IMAGES = config['num_images']
 
-# GET THE LIST OF IMAGE PATHS TO USE
 
-with open(args.metadata, 'r') as file:
+
+with open(ANNOTS_DIR, 'r') as file:
+    annots = json.load(file)
+
+with open(IMG_DIR, 'r') as file:
     metadata = json.load(file)
 
 # Step 1: Get the list of all valid image uris from metadata file
-if args.video_mode:
+if VIDEO_MODE:
     image_metadata = []
     [image_metadata.extend(video["frame data"]) for video in metadata["videos"]]
 else:
     image_metadata = metadata["images"]
+
 
 uri_list = []
 uri_uuid_mapping = {}
@@ -117,86 +48,361 @@ for image in image_metadata:
 
 # Step 2: Get the list of appropriate URIs to display
 
-# Case 1: Use all images
-if args.all:
+if ANNOT_METHOD == "all":
     images = uri_list
 
-# Case 2: A list was provided. Only take in valid strs (we will cross check later if they exist in annots)
-elif args.image_paths is not None:
-    images_input = [path for path in args.image_paths if isinstance(path,str)]
+elif IMAGE_PATHS is not None:
+    #df = df[df["uri"].isin(IMAGE_PATHS)]
+    images_input = [path for path in IMAGE_PATHS if isinstance(path,str)]
     images = list(set(images_input) & set(uri_list))
 
-# Case 3: No list was provided. Take in at most num_images random images
-elif args.num_images is not None:
-    rands = np.random.choice(len(uri_list), args.num_images, replace=False)
+elif NUM_IMAGES is not None:
+    #num = min(NUM_IMAGES, len(df))
+    #df = df.sample(n=num)
+    rands = np.random.choice(len(uri_list), NUM_IMAGES, replace=False)
     images = list(np.array(uri_list)[rands])
 
-# Case 4: Invalid input
 else:
     raise Exception("Invalid inputs. Must specify either num_images, image_paths, or all.")
 
-# GET THE ANNOTATIONS CORRESPONDING TO EACH URI
 
+# GET THE ANNOTATIONS CORRESPONDING TO EACH URI
 images_df = pd.DataFrame(images, columns=["uri"])
+
 images_df["image_uuid"] = images_df["uri"].map(uri_uuid_mapping)
 
-with open(args.annots, "r") as f:
+with open(ANNOTS_DIR, "r") as f:
     data = json.load(f)
     annot_df = pd.DataFrame(data["annotations"])
 
 # Inner join because we can process this via a select w/ no returns
 df = pd.merge(images_df, annot_df, on="image_uuid", how="inner")
 
-# FORMATTER
-keys = []
-args_dict = vars(args)
-for key in args_dict:
-    if key not in ["metadata", "annots", "video_mode", "num_images", "image_paths", "out_dir", "all"] and args_dict[key]:
-        keys.append(key)
+if SORT_BY is not None:
+    df = df.sort_values(by=SORT_BY)
 
-def format(annot):
-    format_str = ""
-    # Only include fields with values (and not NaN)
-    for key in keys:
-        if annot[key] and not (isinstance(annot[key], numbers.Number) and np.isnan(annot[key])):
-            format_str += key + f" {annot[key]} "
 
-    return format_str
+# Keep a fixed ordered list of URIs
+URI_LIST = list(df["uri"].unique())
+NUM_IMAGES = len(URI_LIST)
 
-if not os.path.exists(args.out_dir):
-    os.makedirs(args.out_dir, exist_ok=True)
 
-# ANNOTATE ALL IMAGES (uri is unique for uuid)
+grouped = {
+    uri: df[df["uri"] == uri].reset_index(drop=True)
+    for uri in df["uri"].unique()
+}
 
-for uri in images:
-    select = df[df["uri"] == uri]
+uris = list(grouped.keys())
 
-    # Add the annots to the image
-    for _, row in select.iterrows():
-        img = cv2.imread(uri)
-        annot_str = format(row)
+state = {
+    "idx": 0,
+    "box_errors": defaultdict(dict),  # uri -> box_idx -> True/False
+    "missed": defaultdict(list)
+}
+
+
+def render_image():
+    idx = state["idx"]
+    uri = uris[idx]
+    rows = grouped[uri]
+
+    img = cv2.imread(uri)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    total = len(uris)
+
+
+    h, w, _ = img.shape
+
+    # ============================
+    # 🔹 Draw image UUID header
+    # ============================
+    image_uuid = rows.loc[0, "image_uuid"]
+
+    header_height = 60
+    header_color = (30, 30, 30)  # dark gray
+    text_color = (255, 255, 255)
+
+    img = cv2.rectangle(
+        img,
+        (0, 0),
+        (w, header_height),
+        header_color,
+        -1
+    )
+
+    cv2.putText(
+        img,
+        f"Image UUID: {image_uuid}",
+        (15, 42),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1.1,
+        text_color,
+        2,
+        cv2.LINE_AA
+    )
+
+    # ============================
+    # Bounding boxes
+    # ============================
+
+    for i, row in rows.iterrows():
         bbox = np.array(row["bbox"]).astype(int)
-        color = np.random.randint(0, 256, 3).tolist()
-        # Bounding Box
-        x1 = bbox[0]
-        y1 = bbox[1]
-        x2 = bbox[0] + bbox[2]
-        y2 = bbox[1] + bbox[3]
-        img = cv2.rectangle(img, (x1,y1), (x2,y2), color, thickness=3)
+        x1, y1, bw, bh = bbox
+        x2, y2 = x1 + bw, y1 + bh
 
-        # Text (commented lines are text placed ON bbox)
-        (tw, th), _ = cv2.getTextSize(annot_str, cv2.FONT_HERSHEY_SIMPLEX, 3, 3)
-        # img = cv2.rectangle(img, (x1, y1 - th - 2), (x1 + tw + 2, y1), color, -1)
-        img = cv2.rectangle(img, (0, 0), (tw + 2, th + 2), color, -1)
-        # Get the grayscale version of color s.t. we can contrast it
-        gray_color = 0.299*color[0] + 0.587*color[1] + 0.114*color[2]
-        if gray_color < 127.5:
-            text_color = [255,255,255]
-        else:
-            text_color = [0,0,0]
-        # img = cv2.putText(img, annot_str, (x1-1,y1+1), cv2.FONT_HERSHEY_SIMPLEX, 2, text_color, 2)
-        img = cv2.putText(img, annot_str, (1,th+1), cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 3)
+        started_green = bool(row["annotations_census"])
+        base_color = (0,255,0) if started_green else (0,0,255)
 
-        # Save the image on an annotation basis
-        path = os.path.join(args.out_dir,row["uuid"] + ".jpg")
-        cv2.imwrite(path, img)
+        # draw normal box
+        img = cv2.rectangle(img, (x1,y1), (x2,y2), base_color, 4)
+
+        '''
+        # draw RED X if marked wrong
+        if state["box_errors"][uri].get(i, False):
+            cv2.line(img, (x1,y1), (x2,y2), (255,0,0), 6)
+            cv2.line(img, (x1,y2), (x2,y1), (255,0,0), 6)
+        '''
+
+        if state["box_errors"][uri].get(i, False):
+
+            size = 72   # size of small X
+            thickness = 8
+
+            cx, cy = x2 + 8, y1 + 8   # top-right corner offset
+
+            cv2.line(img, (cx-size, cy-size), (cx+size, cy+size), (255,0,0), thickness)
+            cv2.line(img, (cx-size, cy+size), (cx+size, cy-size), (255,0,0), thickness)
+
+    
+        # Annotation text
+        y_offset = max(y1 - 10, header_height + 25)
+        text = ", ".join(f"{f}:{row[f]}" for f in FIELDS)
+
+        img = cv2.putText(
+            img,
+            text,
+            (x1, y_offset),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            base_color,
+            2,
+            cv2.LINE_AA
+        )
+
+    # ============================
+    # Missed detections
+    # ============================
+    for (x, y) in state["missed"][uri]:
+        img = cv2.circle(img, (x, y), 8, (255, 0, 0), -1)
+
+    
+    TP, FP, FN = compute_image_stats(uri)
+
+    header_text = (
+        f"### 🆔 Image UUID: `{image_uuid}`  \n"
+        f"### 🖼️ Image: **{idx + 1} / {total}**"
+    )
+
+    stats_text = (
+        f"### 📊 Per-Image Stats\n"
+        f"- ✅ **TP:** {TP}\n"
+        f"- ❌ **FP:** {FP}\n"
+        f"- ⚠️ **FN:** {FN}"
+    )
+
+    return img, header_text, stats_text
+
+
+def handle_click(evt: gr.SelectData, mode):
+    if evt is None:
+        return render_image()
+
+    uri = uris[state["idx"]]
+    x, y = evt.index
+
+    if mode == "Edit Boxes":
+        rows = grouped[uri]
+
+        for i, row in rows.iterrows():
+            x1,y1,w,h = row["bbox"]
+            if x1 <= x <= x1+w and y1 <= y <= y1+h:
+                cur = state["box_errors"][uri].get(i, False)
+                state["box_errors"][uri][i] = not cur
+                break
+
+    elif mode == "Missed Detection":
+        state["missed"][uri].append((x,y))
+
+    return render_image()
+
+def undo_missed():
+    uri = uris[state["idx"]]
+    if state["missed"][uri]:
+        state["missed"][uri].pop()
+    return render_image()
+
+
+def next_img():
+    state["idx"] = min(state["idx"] + 1, len(uris)-1)
+    return render_image()
+
+def prev_img():
+    state["idx"] = max(state["idx"] - 1, 0)
+    return render_image()
+
+
+def compute_image_stats(uri):
+    TP = FP = FN = 0
+    rows = grouped[uri]
+
+    for i, row in rows.iterrows():
+        started_green = bool(row["annotations_census"])
+        is_error = state["box_errors"][uri].get(i, False)
+
+        if started_green and not is_error:
+            TP += 1
+        elif started_green and is_error:
+            FP += 1
+        elif (not started_green) and is_error:
+            FN += 1
+
+    FN += len(state["missed"][uri])
+
+    return TP, FP, FN
+
+
+def compute_global_metrics():
+    TP = FP = FN = 0
+
+    for uri in uris:
+        t, f, n = compute_image_stats(uri)
+        TP += t
+        FP += f
+        FN += n
+
+    eps = 1e-8  # numerical safety
+
+    precision = TP / (TP + FP + eps)
+    recall = TP / (TP + FN + eps)
+    f1 = 2 * TP / (2 * TP + FP + FN + eps)
+    accuracy = TP / (TP + FP + FN + eps)
+
+    return (
+        f"## 📈 Overall Dataset Metrics\n\n"
+        f"- ✅ **True Positives (TP):** {TP}\n"
+        f"- ❌ **False Positives (FP):** {FP}\n"
+        f"- ⚠️ **False Negatives (FN):** {FN}\n\n"
+        f"### 📊 Performance\n"
+        f"- **Accuracy:** {accuracy:.4f}\n"
+        f"- **Precision:** {precision:.4f}\n"
+        f"- **Recall:** {recall:.4f}\n"
+        f"- **F1 Score:** {f1:.4f}"
+    )
+
+def save_results_json():
+    results = []
+
+    for uri in uris:
+        rows = grouped[uri]
+        uuid = rows.loc[0, "image_uuid"]
+
+        TP, FP, FN = compute_image_stats(uri)
+
+        results.append({
+            "image_uuid": str(uuid),
+            "TP": int(TP),
+            "FP": int(FP),
+            "FN": int(FN)
+        })
+
+    save_path = SAVE_DIR
+
+    with open(save_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+    return save_path
+
+
+
+
+with gr.Blocks() as demo:
+    header_display = gr.Markdown()
+    '''
+    img = gr.Image(
+        interactive=True,
+        height=650,      # adjust if you want smaller/larger
+        show_label=False
+    )
+
+    with gr.Row():
+        mode = gr.Radio(
+        ["Edit Boxes", "Missed Detection"],
+        value="Edit Boxes",
+        scale=4
+        )
+
+        undo_btn = gr.Button(
+            "↩ Undo",
+            scale=1,        # makes it small
+            min_width=90   # keeps compact size
+        )
+    
+
+    stats_display = gr.Markdown()
+
+    with gr.Row():
+        prev_btn = gr.Button("Previous")
+        next_btn = gr.Button("Next")
+
+    stats_btn = gr.Button("Compute Stats")
+    stats_out = gr.Markdown()
+
+    save_btn = gr.Button("Save Per-Image Results")
+    file_output = gr.File()
+
+    '''
+    with gr.Row():
+
+        with gr.Column(scale=4):
+            img = gr.Image(
+                interactive=True,
+                height=650,
+                show_label=False
+            )
+
+        with gr.Column(scale=1):
+            header_display = gr.Markdown()
+            stats_display = gr.Markdown()
+            mode = gr.Radio(["Edit Boxes", "Missed Detection"])
+            next_btn = gr.Button("Next")
+            prev_btn = gr.Button("Previous")
+            undo_btn = gr.Button("↩ Undo")
+
+            stats_btn = gr.Button("Compute Metrics")
+            save_btn = gr.Button("Save JSON")
+    file_output = gr.File()
+
+
+    demo.load(render_image, outputs=[img, header_display, stats_display])
+
+    undo_btn.click(undo_missed, outputs=[img, header_display, stats_display])
+
+    prev_btn.click(prev_img, outputs=[img, header_display, stats_display])
+    next_btn.click(next_img, outputs=[img, header_display, stats_display])
+    stats_btn.click(compute_global_metrics, outputs=stats_btn)
+    save_btn.click(save_results_json, outputs=file_output)
+
+    img.select(
+        fn=handle_click,
+        inputs=mode,
+        outputs=[img, header_display, stats_display]
+    )
+
+
+#demo.launch(share=True)
+demo.launch(share=True,
+    allowed_paths=[
+        SAVE_DIR
+    ]
+)
