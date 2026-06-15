@@ -52,6 +52,8 @@ IMAGE_COLNAMES = [
     "timestamp",
     "frame_number",
     "occurence_id",
+    "county",
+    "land tenure"
 ]
 
 # RENAME PATTERNS FOR IMAGES (to be converted from above)
