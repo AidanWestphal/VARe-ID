@@ -609,7 +609,7 @@ def convert_geofence_to_json(filepath, outpath):
 
 def append_geospatial_boundaries(imgtable):
     """
-    Matches each image in the imgtable to a county and land holding 
+    Matches each image in the ImageTable to a county and land holding 
     using its GPS coordinates.
     """
     print("Mapping coordinates to counties and land tenure...")
@@ -622,24 +622,43 @@ def append_geospatial_boundaries(imgtable):
     c_prev = None
     lt_prev = None
     
-    for info in imgtable:
-        # Skip if GPS data is missing
-        if info.get('gps_lat') is None or info.get('gps_lon') is None:
-            info['county'] = None
-            info['land tenure'] = None
+    # 1. Get all GIDs and their corresponding GPS coordinates from the ImageTable
+    gids = imgtable.get_all_gids()
+    
+    if not gids:
+        print("No images found in table to map.")
+        return imgtable
+        
+    gps_list = imgtable.get_image_gps(gids)
+    
+    # Ensure gps_list is a list of tuples even if there's only 1 image
+    if type(gps_list) == tuple:
+        gps_list = [gps_list]
+        
+    counties = []
+    land_tenures = []
+    
+    # 2. Iterate through the coordinate pairs
+    for lat, lon in gps_list:
+        # Check for missing data (ImageTable uses -1 for missing GPS data)
+        if lat is None or lon is None or lat == -1 or lon == -1:
+            counties.append(None)
+            land_tenures.append(None)
             continue
 
-        lat = info['gps_lat']
-        lon = info['gps_lon']
         coord = Point((lat, lon))
         
         c_cur = match_point_to_poly(coord, c_prev, poly_dict_c.keys())
         lt_cur = match_point_to_poly(coord, lt_prev, poly_dict_lt.keys())
         
-        info['county'] = poly_dict_c[c_cur] if c_cur else None
-        info['land tenure'] = poly_dict_lt[lt_cur] if lt_cur else None
+        counties.append(poly_dict_c[c_cur] if c_cur else None)
+        land_tenures.append(poly_dict_lt[lt_cur] if lt_cur else None)
         
         c_prev = c_cur
         lt_prev = lt_cur
+
+    # 3. Add the new data columns directly to the ImageTable's internal dictionary
+    imgtable.table['county'] = counties
+    imgtable.table['land tenure'] = land_tenures
 
     return imgtable
