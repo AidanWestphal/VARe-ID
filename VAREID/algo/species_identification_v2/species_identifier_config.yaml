@@ -1,0 +1,11 @@
+# species_identifier_config.yaml
+
+bioclip_dirname: BioCLIP/
+
+species_map:
+  zebra_grevys: "Equus grevyi"
+  zebra_plains: "Equus quagga"
+
+prediction:
+  rank: SPECIES
+  top_k: 50

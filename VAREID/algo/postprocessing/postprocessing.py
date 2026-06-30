@@ -97,11 +97,11 @@ def save_json_with_stage(data, original_filename, stage_suffix, final=False):
 # CLUSTER / ANNOTATION INTROSPECTION
 # -----------------------------------------------------------------------------
 
-def print_viewpoint_cluster_mapping(data, viewpoint):
+def print_viewpoint_cluster_mapping(data, viewpoint, output_key='LCA_clustering_id'):
     """Human‑readable summary of Tracking‑IDs per cluster."""
     grouped = defaultdict(set)
     for ann in data.get('annotations', []):
-        cid = ann.get('LCA_clustering_id')
+        cid = ann.get(output_key)
         if cid is not None:
             grouped[cid].add(ann.get('tracking_id'))
     print(f"\n--- {viewpoint.capitalize()} Viewpoint Cluster ➜ Tracking‑ID Mapping ---")
@@ -140,19 +140,19 @@ def intervals_overlap(s1, e1, s2, e2):
 # GROUPING HELPERS
 # -----------------------------------------------------------------------------
 
-def group_annotations_by_lca(data):
+def group_annotations_by_lca(data, output_key='LCA_clustering_id'):
     grouped = defaultdict(list)
     for ann in data.get('annotations', []):
-        cid = ann.get('LCA_clustering_id')
+        cid = ann.get(output_key)
         if cid is not None:
             grouped[cid].append(ann)
     return grouped
 
 
-def group_annotations_by_lca_with_viewpoint(data, viewpoint):
+def group_annotations_by_lca_with_viewpoint(data, viewpoint, output_key='LCA_clustering_id'):
     grouped = defaultdict(list)
     for ann in data.get('annotations', []):
-        cid = ann.get('LCA_clustering_id')
+        cid = ann.get(output_key)
         if cid is not None:
             grouped[f"{cid}_{viewpoint}"].append(ann)
     return grouped
@@ -164,15 +164,15 @@ def group_annotations_by_lca_with_viewpoint(data, viewpoint):
 def get_cluster_best_ann_for_display(anns):
     return max(anns, key=lambda x: x.get('CA_score', 0.0)) if anns else None
 
-def _update_cluster_merge_deterministic(grouped, source_id, target_id):
+def _update_cluster_merge_deterministic(grouped, source_id, target_id, output_key='LCA_clustering_id'):
     """Merge all anns from source → target (keeps target's cid)."""
     if source_id == target_id:
         return
     if source_id not in grouped or target_id not in grouped:
         return
-    base_cid = grouped[target_id][0]['LCA_clustering_id']
+    base_cid = grouped[target_id][0][output_key]
     for ann in grouped[source_id]:
-        ann['LCA_clustering_id'] = base_cid
+        ann[output_key] = base_cid
     grouped[target_id].extend(grouped[source_id])
     del grouped[source_id]
 
@@ -195,7 +195,7 @@ def _update_split_no_merge_deterministic(grouped, anchor_id, other_id):
 # DATABASE OPERATIONS
 # -----------------------------------------------------------------------------
 
-def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path):
+def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path, output_key='LCA_clustering_id'):
     """Submit a pair to database, returns pair_id and existing decision if any"""
     # Order UUIDs to create consistent ID
     uuid1 = best_ann1['uuid']
@@ -208,7 +208,7 @@ def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path):
 
     # Check if this pair already exists
     exists, status, decision = check_pair_exists(uuid1, uuid2, db_path)
-    
+
     if exists:
         if status in ['checked', 'sent'] and decision != 'none':
             return {'pair_id': unique_id, 'decision': decision}
@@ -220,8 +220,8 @@ def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path):
     image_path2 = best_ann2.get('image_path')
 
     # Extract cluster information
-    cluster1 = str(best_ann1.get('LCA_clustering_id', 'UNKNOWN'))
-    cluster2 = str(best_ann2.get('LCA_clustering_id', 'UNKNOWN'))
+    cluster1 = str(best_ann1.get(output_key, 'UNKNOWN'))
+    cluster2 = str(best_ann2.get(output_key, 'UNKNOWN'))
 
     # Extract bounding boxes
     bbox1 = None
@@ -288,7 +288,7 @@ def wait_for_single_decision(db_path, pair_id, check_interval=5):
 # INTERACTIVE DISPLAY & DECISION
 # -----------------------------------------------------------------------------
 
-def pairwise_verification_interactive(grouped, c1_id, c2_id, data_context, image_dir, interactive_mode, db_path, context_message=""):
+def pairwise_verification_interactive(grouped, c1_id, c2_id, data_context, image_dir, interactive_mode, db_path, context_message="", output_key='LCA_clustering_id'):
     """Show side‑by‑side crops for two representative anns and ask the user."""
     if (c1_id not in grouped or c2_id not in grouped or not grouped[c1_id] or not grouped[c2_id]):
         return 'No'
@@ -302,7 +302,7 @@ def pairwise_verification_interactive(grouped, c1_id, c2_id, data_context, image
     if interactive_mode == 'database':
         if not DATABASE_AVAILABLE:
             raise ImportError('Database mode requires UI.db_scripts available')
-        res = submit_pair_to_database(ann1, get_cluster_best_ann_for_display(grouped[c2_id]), image_dir, db_path)
+        res = submit_pair_to_database(ann1, get_cluster_best_ann_for_display(grouped[c2_id]), image_dir, db_path, output_key)
         if res['decision'] is not None:
             return 'Yes' if res['decision']=='correct' else 'No'
         wait_for_single_decision(db_path, res['pair_id'])
@@ -326,7 +326,7 @@ def pairwise_verification_interactive(grouped, c1_id, c2_id, data_context, image
                     img = Image.open(fpath)
                     x, y, w, h = map(int, ann['bbox'])
                     ax.imshow(img.crop((x, y, x + w, y + h)))
-                    ax.set_title(f"Cls:{ann['LCA_clustering_id']}\nTID:{ann['tracking_id']}\nUUID:{ann.get('uuid', 'NA')}")
+                    ax.set_title(f"Cls:{ann[output_key]}\nTID:{ann['tracking_id']}\nUUID:{ann.get('uuid', 'NA')}")
                     ax.axis('off')
                 except Exception as e:
                     ax.text(0.5, 0.5, f"Error:\n{e}", ha='center', va='center'); ax.axis('off')
@@ -353,7 +353,7 @@ def get_single_decision(db_path, pair_id):
 # STAGE 1 – TID‑Split Verification (per‑view)
 # -----------------------------------------------------------------------------
 
-def tid_split_verification(grouped, data_view, viewpoint, image_dir, interactive_mode, db_path):
+def tid_split_verification(grouped, data_view, viewpoint, image_dir, interactive_mode, db_path, output_key='LCA_clustering_id'):
     print(f"\n--- Verifying TID‑splits for {viewpoint} Viewpoint ---")
     while True:
         tid_to_clusters = defaultdict(set)
@@ -368,10 +368,10 @@ def tid_split_verification(grouped, data_view, viewpoint, image_dir, interactive
         tid, cset = sorted(conflicts.items(), key=lambda kv: str(kv[0]))[0]
         print(f"  Conflict: TID '{tid}' appears in clusters {cset}")
         c1, c2 = sorted(list(cset), key=str)[:2]
-        decision = pairwise_verification_interactive(grouped, c1, c2, data_view, image_dir, interactive_mode, db_path)
+        decision = pairwise_verification_interactive(grouped, c1, c2, data_view, image_dir, interactive_mode, db_path, output_key=output_key)
         anchor, other = sorted([c1, c2], key=str)
         if decision == 'Yes':
-            _update_cluster_merge_deterministic(grouped, other, anchor)
+            _update_cluster_merge_deterministic(grouped, other, anchor, output_key)
         else:
             _update_split_no_merge_deterministic(grouped, anchor, other)
 
@@ -402,7 +402,7 @@ def find_conflicts(adj):
     return {node: nbrs for node, nbrs in adj.items() if len(nbrs) > 1}
 
 
-def resolve_cross_view_conflicts_interactive(conflicts, grouped_all, data_map, image_dir, interactive_mode, declined_pairs, db_path):
+def resolve_cross_view_conflicts_interactive(conflicts, grouped_all, data_map, image_dir, interactive_mode, declined_pairs, db_path, output_key='LCA_clustering_id'):
     """Attempt interactive merges; remembers user‑declined pairs via `declined_pairs`."""
     print("  Interactive conflict resolution …")
     for parent_key, targets in conflicts.items():
@@ -419,11 +419,11 @@ def resolve_cross_view_conflicts_interactive(conflicts, grouped_all, data_map, i
             ctx = "SIMULTANEOUS" if intervals_overlap(s1, e1, s2, e2) else "SEQUENTIAL"
             view = t1.split('_')[-1]
             decision = pairwise_verification_interactive(
-                grouped_all, t1, t2, data_map[view], image_dir, interactive_mode, db_path, context_message=f"Clusters appear {ctx}")
+                grouped_all, t1, t2, data_map[view], image_dir, interactive_mode, db_path, context_message=f"Clusters appear {ctx}", output_key=output_key)
 
             if decision == 'Yes':
                 anchor, other = sorted([t1, t2])
-                _update_cluster_merge_deterministic(grouped_all, other, anchor)
+                _update_cluster_merge_deterministic(grouped_all, other, anchor, output_key)
                 return True, anchor  # merge happened; tell caller which cluster mutated
             else:
                 declined_pairs.add(pair)
@@ -442,7 +442,7 @@ def generate_new_lca_id(base, existing):
             return new_id
         i += 1
 
-def split_conflicting_cluster(parent_key, targets, grouped_all, all_lca_ids_view):
+def split_conflicting_cluster(parent_key, targets, grouped_all, all_lca_ids_view, output_key='LCA_clustering_id'):
     """Split parent cluster so each numeric‑TID family gets its own cluster."""
     print(f"    Splitting {parent_key} (links to {len(targets)} clusters)")
     parent_anns = list(grouped_all[parent_key])
@@ -461,7 +461,7 @@ def split_conflicting_cluster(parent_key, targets, grouped_all, all_lca_ids_view
         new_key = f"{new_id}_{view}"
         sibling_keys.append(new_key)
         for a in anns_for_split:
-            a['LCA_clustering_id'] = new_id
+            a[output_key] = new_id
             new_parts[new_key].append(a)
             moved_uuids.add(a['uuid'])
         print(f"      → created {new_key} to link with {tkey}")
@@ -481,7 +481,7 @@ def split_conflicting_cluster(parent_key, targets, grouped_all, all_lca_ids_view
 
 # Extra verification helper to optionally merge remnants back (from v2)
 
-def verify_remnant_against_splits(sibling_keys, grouped_all, data_map, viewpoint, image_dir, interactive_mode, db_path):
+def verify_remnant_against_splits(sibling_keys, grouped_all, data_map, viewpoint, image_dir, interactive_mode, db_path, output_key='LCA_clustering_id'):
     remnant = None
     split_keys = []
     for k in sibling_keys:
@@ -496,9 +496,9 @@ def verify_remnant_against_splits(sibling_keys, grouped_all, data_map, viewpoint
         if remnant not in grouped_all or sk not in grouped_all:
             continue
         decision = pairwise_verification_interactive(
-            grouped_all, remnant, sk, data_map[viewpoint], image_dir, interactive_mode, db_path, context_message='Does remnant belong with this split‑off part?')
+            grouped_all, remnant, sk, data_map[viewpoint], image_dir, interactive_mode, db_path, context_message='Does remnant belong with this split‑off part?', output_key=output_key)
         if decision == 'Yes':
-            _update_cluster_merge_deterministic(grouped_all, remnant, sk)
+            _update_cluster_merge_deterministic(grouped_all, remnant, sk, output_key)
             return True
     return False
 
@@ -558,6 +558,9 @@ def main():
 
     # Load config
     cfg = load_config(path_from_file(__file__, "postprocessing_config.yaml"))
+
+    # Get output_key from config or use default
+    output_key = cfg.get('output_key', 'LCA_clustering_id') if cfg else 'LCA_clustering_id'
 
     # Determine interaction mode
     if args.interaction_mode:

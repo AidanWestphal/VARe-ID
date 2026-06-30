@@ -1,11 +1,13 @@
 import cv2
 import geopandas  # type: ignore
 import json
+import os
+import re
 from qreader import QReader
-from shapely import Polygon
+from shapely import MultiPolygon, Polygon, Point
 
 
-def extrapolate_ggr_gps(imgtable, doctest_mode=False):
+def extrapolate_ggr_gps(imgtable, geometry, doctest_mode=False):
     """
     Extrapolates GPS data for images taken by cameras without GPS data using
     cameras with GPS within the same cars. Synchronizes image unixtimes within each car
@@ -88,32 +90,36 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
     # Gather metadata from image hierarchy, store in ggr_hierarchy
     # Prepare additional lists for car and car/day imagesets
     for i in range(len(gid_list)):
-        # Identify car, camera, & day from image hierarchy
-        tokens = uri_list[i].split("/")
-        cam_str, day_str = "", ""
-        for token in tokens:
-            if "QR" in token:
-                cam_str = token
-            elif "Day" in token:
-                day_str = token
+        uri = uri_list[i]
+        
+        # 1. Extract Day (e.g., "Day 1")
+        day_match = re.search(r'Day\s*(\d+)', uri, re.IGNORECASE)
+        day_str = day_match.group(0) if day_match else ""
+        
+        # 2. Extract Car (e.g., "QR 101")
+        car_match = re.search(r'QR\s*(\d+)', uri, re.IGNORECASE)
+        car = "QR" + car_match.group(1) if car_match else ""
+        
+        # 3. Extract Camera Letter (A, B, C, D, E)
+        # Looks for A-E attached to the QR number (129A), preceded by space/underscore ( 160 A), 
+        # or followed by a slash or the word Day.
+        cam_match = re.search(r'(?:QR\s*\d+|[\s_])([A-E])(?:[\s/]|Day|$)', uri, re.IGNORECASE)
+        
+        # Default to camera A (index 0) if the letter is entirely omitted from the folder name
+        cam_idx = ord(cam_match.group(1).upper()) - 65 if cam_match else 0 
 
-        if cam_str == "" or day_str == "":
-            print(
-                f"[extrapolate_ggr_gps] detected improper GGR directory format: {uri_list[i]}. Skipping image..."
-            )
+        if not car or not day_str:
+            print(f"[extrapolate_ggr_gps] detected improper GGR directory format: {uri}. Skipping image...")
             continue
 
-        car = cam_str[: cam_str.find("_")]
-        cam_idx = ord(cam_str[-1]) - 65
-
-        # Handle doubly nested images in case of flaw in image hierarchy
-        while (
-            "Day" not in day_str
-            and "Other" not in day_str
-            and str_day_idx < len(tokens) - 1
-        ):
-            str_day_idx += 1
-            day_str = tokens[str_day_idx]
+        # # Handle doubly nested images in case of flaw in image hierarchy
+        # while (
+        #     "Day" not in day_str
+        #     and "Other" not in day_str
+        #     and str_day_idx < len(tokens) - 1
+        # ):
+        #     str_day_idx += 1
+        #     day_str = tokens[str_day_idx]
 
         # Add gid to ggr_hierarchy, handle data for misordered or missing cars & cameras
         if day_str[-1].isdigit():
@@ -205,12 +211,15 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
                     )
                     print("\t...skipping unixtime synchronization")
 
+    qr_gids_all = []
+
     # Synchronize unixtimes & calculate missing GPS data
     for day_idx in range(len(ggr_hierarchy)):
         for car in ggr_hierarchy[day_idx].keys():
             car_data = ggr_hierarchy[day_idx][car]
             imgsets = car_data[0]
             qr_gids = car_data[1]
+            qr_gids_all += qr_gids
             qr_times = imgtable.get_image_unixtimes(qr_gids)
             # Calculate timedeltas for each camera relative to first camera based on QR code images (taken simultaneously)
             base_times = [qr_times[0]] * len(qr_times)
@@ -218,6 +227,12 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
                 time - base_time for time, base_time in zip(qr_times, base_times)
             ]
             gps_cam_idx = -1
+            # --- NEW SPECIFIC CAMERA A CATCH ---
+            if len(imgsets) > 0 and imgsets[0]:  # Ensure Camera A actually exists for this car
+                gps_list_A = imgtable.get_image_gps(imgsets[0])
+                if all(gps == (-1, -1) for gps in gps_list_A):
+                    print(f"[extrapolate_ggr_gps] ALERT: Reference Camera A is entirely missing GPS data for {car} on {day_idx}. Cannot extrapolate.")
+            # -----------------------------------
 
             # Locate camera with GPS data in each car
             for cam_idx in range(len(imgsets)):
@@ -309,24 +324,44 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
                 B_idx = 0
                 gps_sorted_B = []
                 while B_idx < len(times_sorted_B):
-                    if (
-                        times_sorted_A <= times_sorted_B
-                        or A_idx >= len(times_sorted_A) - 1
-                    ):
-                        gps_sorted_B.append(gps_sorted_A[A_idx])
-                        B_idx += 1
-                    else:
-                        A_idx += 1
+                    # Advance A_idx if the *next* timestamp in A is closer to B than the *current* timestamp in A
+                    while A_idx < len(times_sorted_A) - 1:
+                        dist_curr = abs(times_sorted_A[A_idx] - times_sorted_B[B_idx])
+                        dist_next = abs(times_sorted_A[A_idx + 1] - times_sorted_B[B_idx])
+                        if dist_next <= dist_curr:
+                            A_idx += 1
+                        else:
+                            break
+                    
+                    gps_sorted_B.append(gps_sorted_A[A_idx])
+                    B_idx += 1
 
                 imgtable.set_image_gps(gids_sorted_B, gps_sorted_B)
 
     # Locate all images for which GPS data could not be extrapolated
+    # Get counties/land holdings for each image with GPS
+    poly_dict_c = get_ggr_polygons(filepath=geometry[0], c_or_lt=0, invert=True)
+    poly_dict_lt = get_ggr_polygons(filepath=geometry[1], c_or_lt=1, invert=True)
     gps_list = imgtable.get_image_gps(gid_list)
     uri_list = imgtable.get_image_uris_original(gid_list)
+    uuid_list = imgtable.get_image_uuids(gid_list)
     skipped_gid_list = []
+    c_lt_by_uuid = {}
+    c_prev = None
+    lt_prev = None
     for i in range(len(gid_list)):
+        c_cur = None
+        coord = Point(gps_list[i])
         if gps_list[i] == (-1, -1):
             skipped_gid_list.append(gid_list[i])
+            c_lt_by_uuid[uuid_list[i]] = (None, None)
+        else:
+            c_cur = match_point_to_poly(coord, c_prev, poly_dict_c.keys())
+            lt_cur = match_point_to_poly(coord, lt_prev, poly_dict_lt.keys())
+            c_name = poly_dict_c[c_cur] if c_cur else None
+            lt_name = poly_dict_lt[lt_cur] if lt_cur else None
+            c_lt_by_uuid[uuid_list[i]] = (c_name, lt_name)
+            
 
     print(
         "[extrapolate_ggr_gps] set GPS data for %d / %d images with missing GPS entries"
@@ -342,7 +377,33 @@ def extrapolate_ggr_gps(imgtable, doctest_mode=False):
     return skipped_gid_list
 
 
-def get_ggr_polygons(filepath="ggr_counties.json", c_or_lt=0, poly_obj=True):
+def match_point_to_poly(point, poly_prev, polys):
+    """
+    Find matching polygon in a list of polygons that a point lies within or touches. Checks most recent polygon first.
+
+    Parameters:
+        point (shapely Point object): point coordinates
+        poly_prev (shapely Polygon object): matching polygon for previous point
+        polys (list): list of Polygon objects to check
+
+    Returns:
+        poly_cur (shapely Polygon object): the polygon that the point lies within or touches, or None if there is no such polygon
+    """
+
+    poly_cur = None
+
+    if poly_prev and point.within(poly_prev):
+                poly_cur = poly_prev
+    else:
+        for p in polys:
+            if point.within(p) or point.touches(p):
+                poly_cur = p
+                break
+    
+    return poly_cur
+
+
+def get_ggr_polygons(filepath="ggr_counties.json", c_or_lt=0, poly_obj=True, invert=False):
     """
     Import GGR county/land holding polygons from 'ggr_counties.json' or another provided file.
     Converts coordinate lists to shapely Polygon objects if poly_obj is True.
@@ -393,7 +454,7 @@ def get_ggr_polygons(filepath="ggr_counties.json", c_or_lt=0, poly_obj=True):
             ]
 
             if poly_obj:
-                poly_dict[name] = [Polygon(coord_list)]
+                poly_dict[name] = Polygon(coord_list)
             else:
                 poly_dict[name] = [coord_list]
         elif county["geometry"]["type"] == "MultiPolygon":
@@ -405,13 +466,70 @@ def get_ggr_polygons(filepath="ggr_counties.json", c_or_lt=0, poly_obj=True):
                     poly_dict[name].append(Polygon(coord_list))
                 else:
                     poly_dict[name].append(coord_list)
+            
+            if poly_obj:
+                poly_dict[name] = MultiPolygon(poly_dict[name])
 
     land_type = "land tenures" if c_or_lt else "counties"
+    
     print(
         f"[ggr_funcs.get_ggr_polygons] Imported polygons for {len(poly_dict)} {land_type} from json..."
     )
+    print(poly_obj)
+
+    if invert:
+        inv_poly_dict = {value: key for key, value in poly_dict.items()}
+        return inv_poly_dict
 
     return poly_dict
+
+
+def match_ggr_polygons(imgtable, c_path, lt_path):
+    """
+    Get counties/land holdings for each image with GPS.
+
+    Parameters:
+        imgtable (ImageTable): table containing image metadata
+
+    Returns:
+        c_lt_by_uuid (dict): dictionary mapping image uuids to county, land holding tuples
+    """
+        
+    poly_dict_c = get_ggr_polygons(filepath=c_path, c_or_lt=0, invert=True)
+    poly_dict_lt = get_ggr_polygons(filepath=lt_path, c_or_lt=1, invert=True)
+    gid_list = imgtable.get_all_gids()
+    gps_list = imgtable.get_image_gps(gid_list)
+    uuid_list = imgtable.get_image_uuids(gid_list)
+    c_lt_by_uuid = {}
+    c_prev = None
+    lt_prev = None
+    print(poly_dict_c.values())
+    print(len(poly_dict_c.values()))
+    print(poly_dict_lt.values())
+    print(len(poly_dict_lt.values()))
+    c_ct = 0
+    lt_ct = 0
+    for i in range(len(gid_list)):
+        c_cur = None
+        coord = Point(gps_list[i])
+        if gps_list[i] == (-1, -1):
+            c_lt_by_uuid[uuid_list[i]] = (None, None)
+        else:
+            c_cur = match_point_to_poly(coord, c_prev, poly_dict_c.keys())
+            lt_cur = match_point_to_poly(coord, lt_prev, poly_dict_lt.keys())
+            c_name = poly_dict_c[c_cur] if c_cur else None
+            lt_name = poly_dict_lt[lt_cur] if lt_cur else None
+            c_lt_by_uuid[uuid_list[i]] = (c_name, lt_name)
+
+            if c_name:
+                c_ct += 1
+            if lt_name:
+                lt_ct += 1
+    
+    print(f"[ggr_funcs.match_ggr_polygons] Found counties for ({c_ct}/{len(gid_list)}) images")
+    print(f"[ggr_funcs.match_ggr_polygons] Found land tenures for ({lt_ct}/{len(gid_list)}) images")
+    
+    return c_lt_by_uuid
 
 
 def fix_json_lat_lon(filepath):
@@ -488,3 +606,59 @@ def convert_geofence_to_json(filepath, outpath):
     myshpfile = geopandas.read_file(filepath)
     myshpfile.to_file(outpath, driver="GeoJSON")
     fix_json_lat_lon(outpath)
+
+def append_geospatial_boundaries(imgtable):
+    """
+    Matches each image in the ImageTable to a county and land holding 
+    using its GPS coordinates.
+    """
+    print("Mapping coordinates to counties and land tenure...")
+    
+    # Load polygons once
+    poly_dict_c = get_ggr_polygons(filepath="VAREID/ggr_counties.json", 
+                                   c_or_lt=0, invert=True)
+    poly_dict_lt = get_ggr_polygons(filepath="VAREID/ggr_landtenures.json", 
+                                    c_or_lt=1, invert=True)
+    c_prev = None
+    lt_prev = None
+    
+    # 1. Get all GIDs and their corresponding GPS coordinates from the ImageTable
+    gids = imgtable.get_all_gids()
+    
+    if not gids:
+        print("No images found in table to map.")
+        return imgtable
+        
+    gps_list = imgtable.get_image_gps(gids)
+    
+    # Ensure gps_list is a list of tuples even if there's only 1 image
+    if type(gps_list) == tuple:
+        gps_list = [gps_list]
+        
+    counties = []
+    land_tenures = []
+    
+    # 2. Iterate through the coordinate pairs
+    for lat, lon in gps_list:
+        # Check for missing data (ImageTable uses -1 for missing GPS data)
+        if lat is None or lon is None or lat == -1 or lon == -1:
+            counties.append(None)
+            land_tenures.append(None)
+            continue
+
+        coord = Point((lat, lon))
+        
+        c_cur = match_point_to_poly(coord, c_prev, poly_dict_c.keys())
+        lt_cur = match_point_to_poly(coord, lt_prev, poly_dict_lt.keys())
+        
+        counties.append(poly_dict_c[c_cur] if c_cur else None)
+        land_tenures.append(poly_dict_lt[lt_cur] if lt_cur else None)
+        
+        c_prev = c_cur
+        lt_prev = lt_cur
+
+    # 3. Add the new data columns directly to the ImageTable's internal dictionary
+    imgtable.table['county'] = counties
+    imgtable.table['land tenure'] = land_tenures
+
+    return imgtable

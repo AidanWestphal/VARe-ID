@@ -1,6 +1,6 @@
-# Video-Based Animal Re-Identification (VARe-ID) from Multiview Spatio-Temporal Track Clustering
+# Great Grevy's Rally Animal Re-Identification (GGR Re-ID) from Multiview Spatio-Temporal Track Clustering
 
-This work presents a modular software pipeline and end-to-end workflow for video-based animal re-identification, which assigns consistent individual IDs by clustering multiview spatio-temporal tracks with minimal human intervention. Starting from raw video, the system detects and tracks animals, scores and selects informative left/right views, computes embeddings, clusters annotations by viewpoint, and then links clusters across time and varying perspectives using spatio-temporal continuity. Automated consistency checks resolve remaining ambiguities. Preliminary experiments demonstrate near-perfect identification accuracy with very limited manual verification. The workflow is designed to be generalizable across species. Currently, trained models support Grevy’s and Plains zebras, with plans to expand to a broader range of species.
+This work presents a modular software pipeline and end-to-end workflow for image-based animal re-identification, which assigns consistent individual IDs by clustering multiview spatio-temporal tracks with minimal human intervention. Starting from raw images, the system detects and tracks animals, scores and selects informative left/right views, computes embeddings, clusters annotations by viewpoint, and then links clusters across time and varying perspectives using spatio-temporal continuity. Automated consistency checks resolve remaining ambiguities. Preliminary experiments demonstrate near-perfect identification accuracy with very limited manual verification. The workflow is designed to be generalizable across species. Currently, trained models support Grevy’s and Plains zebras, with plans to expand to a broader range of species.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/8ddd01a3-6511-40f7-b182-41c479ad447b" alt="image" width="862" height="896">
@@ -66,10 +66,10 @@ The pipeline's workflow is built using **Snakemake**. The workflow is defined in
 The snakefile reads in a configfile structured like `config.yaml`. To build a configfile, please follow the notations found in the example `config.yaml`.
 
 #### Driver Scripts
-Driver scripts serve as connectors between the pipeline and the algorithm components. They handle determining conditional arguments passed to algorithm components (such as flags or variations in parameters based on image vs. video mode), setting up logging, building the command, and executing the algorithm component. Every algorithm component must have a driver script associated with it.
+Driver scripts serve as connectors between the pipeline and the algorithm components. They handle determining conditional arguments passed to algorithm components (such as flags or variations in parameters), setting up logging, building the command, and executing the algorithm component. Every algorithm component must have a driver script associated with it.
 
 #### Libraries
-The libraries contain all util functions used throughout the pipeline. These libraries range from database operations (e.g. image tables and directories), IO (image/video importing, loading/saving data, etc.), logging, UI, and more.
+The libraries contain all util functions used throughout the pipeline. These libraries range from database operations (e.g. image tables and directories), IO (image importing, loading/saving data, etc.), logging, UI, and more.
 
 ### Other important files and directories...
 In addition to the above structure, there's a few more important directories to note. 
@@ -130,11 +130,10 @@ flowchart LR
     style n26 stroke-width:4px,stroke-dasharray: 5
 ```
 
-One important detail to note immediately is that postprocessing is external from the pipeline's workflow! This section, as will be explained below, requires human interaction and thus is not automatically ran by the pipeline. It is run separately and for video data only.
+One important detail to note immediately is that postprocessing is external from the pipeline's workflow! This section, as will be explained below, requires human interaction and thus is not automatically ran by the pipeline. 
 
 ### Input Format
-The pipeline's input is any recursive directory structure. For image mode, the pipeline will read in ALL images within the provided directory and its child directories. For video mode, we will read all videos. **When running the pipeline on videos, each video must have a matching (same file name) SRT file located in the same directory.** In other words, the absolute paths to the video and SRT file only differ by their file extension. Each entry of the SRT file should be formatted like the following:
-
+The pipeline's input is any recursive directory structure. For image mode, the pipeline will read in ALL images within the provided directory and its child directories.
 ```
 1
 00:00:00,000 --> 00:00:00,033
@@ -147,10 +146,10 @@ The pipeline's input is any recursive directory structure. For image mode, the p
 ### Pipeline Stages & Algorithms
 
 #### 1. Import
-Importing's main goal is generating the `image_data.json` or `video_data.json` file describing each image (or frame for videos) in terms of metadata, including the absolute path to the image. For videos, this also includes splitting and saving the video into frames as well as parsing an SRT file to assign timestamps to frames.
+Importing's main goal is generating the `image_data.json` or `video_data.json` file describing each image in terms of metadata, including the absolute path to the image.
 
 #### 2. Detection
-Detection uses YOLO to create detections for all images in the json files from above. Video detection also generates tracking IDs for each detection. The detections are saved as annotations.
+Detection uses YOLO to create detections for all images in the json files from above. The detections are saved as annotations.
 
 #### 3. Species Classification
 The species of each annotation is generated via Bioclip. For now, this includes Grevys Zebras, Plains Zebras, or neither.
@@ -164,16 +163,13 @@ Each annotation is assessed for its quality and ability to be identified. They a
 #### 6. Identifiable Annotation (IA) Filtering
 This step filters out all annotations that were marked as not identifiable and simplifies the viewpoint to `left` or `right`.
 
-#### 7. *Frame Sampling*
-This is a *video only* process. This step further filters annotations by performing non-maximum supression over sets of consecutive tracking ids, maximizing the score from IA classification.
-
-#### 8. Miew-Id
+#### 7. Miew-Id
 This step generates embeddings for all remaining annotations.
 
-#### 9. Local Clusters and Alternatives (LCA) Algorithm
+#### 8. Local Clusters and Alternatives (LCA) Algorithm
 This step clusters the annotations by their embeddings and assigns cluster ids.
 
-#### 10. *Post-processing and ID Assignment*
+#### 9. *Post-processing and ID Assignment*
 Applies final consistency checks, resolves cluster overlaps, handles manual verification when needed, assigns final unique IDs, and integrates non-identifiable annotations via tracking links.
 
 ---
@@ -214,7 +210,7 @@ The following fields are **required**:
 The following fields are **optional** and either have default (recommended) values already in the configfile or are blank (fully optional):
 - `dt_gt_file` and `dt_filtered_out_file`: In the case that you're running image data with ground truth data, you can find and filter detections by IOU (Intersection over Union) with the ground truth detections.
 - `fs_stage1_out_file`: This field, if supplied, will save an additional output from frame sampling after its first stage.
-- `lca_separate_viewpoints`: This field specifies whether to split and save annotation files by each viewpoint or to save them alltogether. **In video mode, this MUST be True!**
+- `lca_separate_viewpoints`: This field specifies whether to split and save annotation files by each viewpoint or to save them alltogether. 
 
 ## Running the Pipeline
 To run the pipeline, you'll execute `snakefile.smk`. Remember: the pipeline does NOT run postprocessing. This is run separately.
