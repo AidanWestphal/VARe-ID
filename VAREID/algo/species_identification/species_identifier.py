@@ -40,24 +40,29 @@ def run_pyBioclip(bioclip_classifier, df, cp_int, cp_path):
             predicted_scores = cpdata.external_state["scores"]
 
         for _, row in tqdm(cpdata, initial=cpdata.iteration, desc="Identifying Species"):
-            x0, y0, w, h = row["bbox"]
+            try:
+                x0, y0, w, h = row["bbox"]
 
-            original_image = Image.open(row["image_path"])
-            cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
+                original_image = Image.open(row["image_path"])
+                cropped_image = original_image.crop((x0, y0, x0 + w, y0 + h))
 
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-            temp_file.close()
-            cropped_image.save(temp_file.name)
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+                temp_file.close()
+                cropped_image.save(temp_file.name)
 
-            predictions = bioclip_classifier.predict(temp_file.name)
+                predictions = bioclip_classifier.predict(temp_file.name)
 
-            top_prediction = max(predictions, key=lambda x: x["score"])
-            predicted_label = top_prediction["classification"]
-            pred_conf_score = top_prediction["score"]
+                top_prediction = max(predictions, key=lambda x: x["score"])
+                predicted_label = top_prediction["classification"]
+                pred_conf_score = top_prediction["score"]
 
-            predicted_labels.append(predicted_label)
-            predicted_scores.append(pred_conf_score)
-            os.remove(temp_file.name)
+                predicted_labels.append(predicted_label)
+                predicted_scores.append(pred_conf_score)
+                os.remove(temp_file.name)
+            except Exception as e:
+                print(f"Error occured with annotation {row['uuid']} in image {row['image_path']}: {e}")
+                predicted_labels.append(-1)
+                predicted_scores.append(-1)
 
     category_ids, _ = pd.factorize(predicted_labels)
 
