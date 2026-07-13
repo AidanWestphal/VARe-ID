@@ -32,7 +32,6 @@ rule import_images:
     shell:
         """
         python -m VAREID.drivers.import_image_driver --config {config_str}
-        python -m VAREID.tools.extrapolate_ggr_gps --config {config_str}
         """
 
 
@@ -44,5 +43,4 @@ rule import_videos:
     shell:
         """
         python -m VAREID.drivers.import_video_driver --config {config_str}
-        python -m VAREID.tools.extrapolate_ggr_gps --config {config_str}
         """

@@ -69,6 +69,8 @@ def detect_images(image_data, model, threshold, sz, cp_int, cp_path):
                             "gps_lat": image["gps_lat"],
                             "gps_lon": image["gps_lon"],
                             "image_path": image["uri_original"],
+                            "county": image.get("county"),
+                            "land tenure": image.get("land tenure"),
                         }
                     )
 
