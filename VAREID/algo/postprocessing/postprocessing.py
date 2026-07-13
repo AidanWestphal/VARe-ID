@@ -234,6 +234,9 @@ def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path, output_key
         bbox2 = json.dumps([x, y, x + w, y + h])
 
     # Add to database
+    # NOTE: pass db_path as a keyword — add_image_pair's signature has an
+    # optional `score` parameter before db_path, so a positional db_path here
+    # lands in `score` and triggers float() conversion of the path.
     add_image_pair(
         unique_id,
         uuid1,
@@ -244,7 +247,7 @@ def submit_pair_to_database(best_ann1, best_ann2, image_dir, db_path, output_key
         image_path2 or "NO_IMAGE",
         bbox2,
         cluster2,
-        db_path
+        db_path=db_path
     )
     
     return {'pair_id': unique_id, 'decision': None}
