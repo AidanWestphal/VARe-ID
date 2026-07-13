@@ -139,8 +139,10 @@ def load_next_pair():
         
         # Get instance stats for status message
         stats = get_instance_stats(db_path)
+        _score = current_pair.get('score')
+        _score_str = f"{_score:.2f}" if isinstance(_score, (int, float)) else "n/a"
         status_msg = (f"Loaded pair {current_pair['id']} | "
-                     f"Score: {current_pair['score']:.2f} | "
+                     f"Score: {_score_str} | "
                      f"Available: {stats['awaiting']} | "
                      f"Active instances: {stats['active_instances']} | "
                      f"Instance: {INSTANCE_IDENTIFIER}")
