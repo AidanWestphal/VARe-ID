@@ -5,6 +5,7 @@ algorithm_type: stability
 
 data:
   name_keys:
+    # - tracking_id
   - individual_id
   id_key: "uuid"
   n_filter_min: 1
@@ -22,6 +23,7 @@ data:
   - downright
   - frontright
   category_id_list:
+  # - 1
   - 1
   annotations_census_list:
   - true

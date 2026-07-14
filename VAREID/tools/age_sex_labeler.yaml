@@ -1,5 +1,5 @@
 # Input annotation JSON file
-image_data: "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/lca/lca_annots.json"
+image_data: "/fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/lca/beta_stability_annots.json"
 
 # Path to the SQLite database used to store state and allow pausing/restarting
 db_path: "/fs/ess/PAS2136/ggr_data/results/AGESEX/agesex_2024_labeling.db"

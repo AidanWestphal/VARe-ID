@@ -31,7 +31,7 @@ except FileNotFoundError:
     raise FileNotFoundError("Could not find 'age_sex_labeler.yaml'. Please ensure it is in the same directory.")
 
 CONFIG = {
-    "image_data": config_data.get("image_data", "lca_annots.json"),
+    "image_data": config_data.get("image_data", "beta_stability_annots.json"),
     "db": config_data.get("db_path", "cluster_labels.db"),
     "out_json": config_data.get("out_json", "lca_annots_labeled.json"),
     "port": config_data.get("port", 7860),

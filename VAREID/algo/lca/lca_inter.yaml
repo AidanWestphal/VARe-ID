@@ -27,7 +27,7 @@ data:
   representative_list:
   - true
   output_key: cluster_id
-  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/annots_fixed.db
+  ui_db_path: /fs/ess/PAS2136/ggr_data/results/GGR2024_fixed_encounter/annots_laikipia.db
 
 algorithm:
   initial_topk: 10
@@ -47,7 +47,7 @@ stability:
   target_alpha: 0.5
 
   # Maximum number of human reviews before stopping
-  max_human_reviews: 500
+  max_human_reviews: 200
 
   # Confidence added/subtracted per human review (in [0, 1] scale)
   review_confidence: 0.97

@@ -1,13 +1,12 @@
 import argparse
 import os
-import subprocess
-import sys
-import shutil
 import yaml
 
 import pandas as pd
 
-from VAREID.libraries.io.format_funcs import clone_from_github, load_config, load_json, save_json, split_dataframe, join_dataframe_dict
+from beta_stability.run_clustering_with_save import run_clustering_with_save
+
+from VAREID.libraries.io.format_funcs import load_config, load_json, save_json, split_dataframe, join_dataframe_dict
 from VAREID.libraries.utils import path_from_file
 
 
@@ -202,20 +201,20 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-    if os.path.exists(args.lca_dir) and os.path.isdir(args.lca_dir):
-        shutil.rmtree(args.lca_dir) 
-    os.makedirs(args.lca_dir)
+    # No longer wipe args.lca_dir — the old workflow needed a clean slate
+    # for its `git clone` into `<lca_dir>/lca_code`. With the direct import
+    # workflow there is no clone, and blowing away a shared results dir would
+    # both destroy sibling outputs and fail on group-restricted parents.
+    os.makedirs(args.lca_dir, exist_ok=True)
 
-    # Config for LCA itself -- not input config to LCA
+    # Config for this driver (not the input config to Beta Stability itself)
     lca_config = load_config(path_from_file(__file__, "lca_config.yaml"))
-    
+
+    # When True, run HDBSCAN via the same beta_stability entry point (config
+    # override) instead of the Beta Stability algorithm.
     lca_alternative_clustering = lca_config["lca_alternative_clustering"]
 
-    # Save to lca dir inside lca
-    lca_github_loc = os.path.join(args.lca_dir, "lca_code")
-    clone_from_github(lca_github_loc, lca_config["github_lca_url"])
-
-    # OPEN LCA INPUT CONFIG
+    # OPEN INPUT CONFIG
     if args.lca_config:
         # User-supplied config takes precedence over the mode flags.
         input_config_name = os.path.basename(args.lca_config)
@@ -262,21 +261,26 @@ if __name__ == "__main__":
     input_config["logging"]["log_file"] = args.log_subunit_file # should append LCA outputs into same log file used by this script
 
 
-    # WRITE CONFIG FILE INTO LCA
-    config_dir = os.path.join(lca_github_loc, lca_config["config_save_path"])
-    config_loc = os.path.join(config_dir, input_config_name)
+    # HDBSCAN alternative: override the algorithm_type; everything else in the
+    # config still applies. The unified beta_stability runner picks the right
+    # algorithm off `algorithm_type`.
+    if lca_alternative_clustering:
+        input_config["algorithm_type"] = "hdbscan"
+        print("Beta Stability driver: HDBSCAN alternative selected")
+    else:
+        print(
+            f"Beta Stability driver: algorithm_type="
+            f"{input_config.get('algorithm_type', 'stability')}"
+        )
 
+    # WRITE CONFIG SNAPSHOT alongside the results (for reproducibility)
+    config_loc = os.path.join(args.lca_dir, input_config_name)
     with open(config_loc, "w") as f:
         yaml.dump(input_config, f)
 
-    # RUN LCA or alternative
-    print("Begin LCA Subunit...")
-    if lca_alternative_clustering:
-        print('run hdbscan')
-        subprocess.run(["python3", f"{lca_github_loc}/lca/run_hdbscan.py", "--config", config_loc])
-    else:
-        print('run lca')
-        subprocess.run(["python3", f"{lca_github_loc}/lca/run_clustering_with_save.py", "--config", config_loc])
+    # RUN — direct import, no subprocess, no cloned repo.
+    print("Begin Beta Stability subunit...")
+    run_clustering_with_save(input_config, config_path=config_loc, save_dir=args.lca_dir)
 
     output_path = args.lca_dir
     anno_file = args.annots

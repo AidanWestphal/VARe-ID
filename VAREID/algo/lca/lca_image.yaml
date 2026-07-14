@@ -1,6 +1,6 @@
 exp_name: lca_image
 species: Grevys zebra
-algorithm_type: gc
+algorithm_type: stability
 data:
   viewpoint_list:
   - left

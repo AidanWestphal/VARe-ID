@@ -1,6 +1,9 @@
 # CONFIG FOR lca.py SCRIPT
+#
+# beta_stability is installed as a package (see the project's pyproject.toml)
+# — no git clone or config-directory magic is involved anymore.
 
-github_lca_url: https://github.com/WildMeOrg/lca.git
-config_save_path: "lca/configs/"
-
+# When True, the driver overrides the config's algorithm_type to `hdbscan`
+# so the unified beta_stability runner clusters via HDBSCAN instead of the
+# Beta Stability active-review algorithm.
 lca_alternative_clustering: False

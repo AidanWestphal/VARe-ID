@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+VAREID/__init__.py
+vare_id.egg-info/PKG-INFO
+vare_id.egg-info/SOURCES.txt
+vare_id.egg-info/dependency_links.txt
+vare_id.egg-info/requires.txt
+vare_id.egg-info/top_level.txt
