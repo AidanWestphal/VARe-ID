@@ -11,6 +11,7 @@ data_dir_out: ~
 data_dir_in: ~
 # True/False describing whether the data is in video format (True) or image format (False)
 data_video: True
+encounter_grouping: False
 
 # -------- END FILL OUT SECTION --------
 
