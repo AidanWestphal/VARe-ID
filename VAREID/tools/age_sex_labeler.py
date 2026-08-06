@@ -70,7 +70,10 @@ def setup_data_and_db(json_path, db_path):
     df['sex'] = df['sex'].fillna("")
     
     db_exists = os.path.exists(db_path)
-    conn = sqlite3.connect(db_path)
+    
+    # Added timeout and WAL mode for better multi-user concurrency
+    conn = sqlite3.connect(db_path, timeout=15.0)
+    conn.execute('PRAGMA journal_mode=WAL;') 
     c = conn.cursor()
     
     if not db_exists:
@@ -191,8 +194,9 @@ def get_cluster_images_and_captions(df, cluster_id, cache_dir):
 def export_data():
     out_json = CONFIG["out_json"]
     df = CONFIG["df"].copy()
-    
-    conn = sqlite3.connect(CONFIG["db"])
+
+    # Timeout to handle multi-user
+    conn = sqlite3.connect(CONFIG["db"], timeout=15.0)
     labels_df = pd.read_sql_query("SELECT cluster_id, age, sex FROM cluster_labels", conn)
     excluded_df = pd.read_sql_query("SELECT uuid FROM annotation_status WHERE keep = 0", conn)
     conn.close()
@@ -228,7 +232,7 @@ def export_data():
 
 
 def load_ui_data():
-    conn = sqlite3.connect(CONFIG["db"])
+    conn = sqlite3.connect(CONFIG["db"], timeout=15.0)
     c = conn.cursor()
     
     c.execute('SELECT COUNT(*) FROM cluster_labels WHERE status = "pending"')
@@ -252,9 +256,9 @@ def load_ui_data():
         ] + col_updates + img_updates + html_updates + chk_updates + zoom_updates + [
             {}, gr.update(visible=False)
         ]
-               
-    # --- NEXT CLUSTER HANDLING ---
-    c.execute('SELECT cluster_id, age, sex FROM cluster_labels WHERE status = "pending" LIMIT 1')
+
+    # Retrieve ONE random row from pending items to handle multi-user collisions
+    c.execute('SELECT cluster_id, age, sex FROM cluster_labels WHERE status = "pending" ORDER BY RANDOM() LIMIT 1')
     row = c.fetchone()
     cluster_id, age, sex = row
     
@@ -338,7 +342,8 @@ def on_submit(cid, age_val, sex_val, unlock_removal, cluster_data_json, *checkbo
     db_age = age_val
     db_sex = sex_val
 
-    conn = sqlite3.connect(CONFIG["db"])
+    # Re-connect with timeout to support multi-user commits safely
+    conn = sqlite3.connect(CONFIG["db"], timeout=15.0)
     c = conn.cursor()
     
     c.execute('UPDATE cluster_labels SET age=?, sex=?, status="labeled" WHERE cluster_id=?', (db_age, db_sex, cid))
